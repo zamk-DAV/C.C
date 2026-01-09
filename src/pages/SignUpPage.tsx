@@ -35,10 +35,11 @@ export const SignUpPage: React.FC = () => {
             // 2. Add to Firestore 'users' collection with minimal data
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
-                displayName: name,
+                name: name,
                 email: signupEmail,
                 photoURL: null,
                 coupleId: null,
+                inviteCode: '',  // Will be generated in ConnectPage
                 notionConfig: { apiKey: null, databaseId: null },
                 bgImage: null
             });

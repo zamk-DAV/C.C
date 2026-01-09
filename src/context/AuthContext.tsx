@@ -28,13 +28,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        let unsubscribeUser: (() => void) | undefined;
+
         const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+            // Clean up previous subscription if exists
+            if (unsubscribeUser) {
+                unsubscribeUser();
+                unsubscribeUser = undefined;
+            }
+
             if (firebaseUser) {
                 setUser(firebaseUser);
                 const userRef = doc(db, 'users', firebaseUser.uid);
 
                 // Subscribe to User Data
-                const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+                unsubscribeUser = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
                         const data = docSnap.data() as UserData;
                         setUserData(data);
@@ -53,10 +61,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     console.error("Error fetching user data:", error);
                     setLoading(false);
                 });
-
-                return () => {
-                    unsubscribeUser();
-                };
             } else {
                 setUser(null);
                 setUserData(null);
@@ -65,7 +69,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             }
         });
 
-        return () => unsubscribe();
+        return () => {
+            if (unsubscribeUser) {
+                unsubscribeUser();
+            }
+            unsubscribe();
+        };
     }, []);
 
     // Fetch Partner Data when userData changes
