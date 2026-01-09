@@ -43,22 +43,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                 // Subscribe to User Data
                 unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+                    console.log("[Auth] Firestore response received:", docSnap.exists());
                     if (docSnap.exists()) {
                         const data = docSnap.data() as UserData;
+                        console.log("[Auth] userData loaded, coupleId:", data.coupleId);
                         setUserData(data);
                         // If user has no coupleId, end loading immediately
                         // (Partner data useEffect won't trigger properly for this case)
                         if (!data.coupleId) {
+                            console.log("[Auth] No coupleId, ending loading");
                             setLoading(false);
                         }
                         // If coupleId exists, the second useEffect will handle loading
                     } else {
                         // Handle case where auth exists but firestore doc doesn't (rare, maybe mid-signup)
+                        console.log("[Auth] User document does not exist");
                         setUserData(null);
                         setLoading(false);
                     }
                 }, (error) => {
-                    console.error("Error fetching user data:", error);
+                    console.error("[Auth] Error fetching user data:", error);
                     setLoading(false);
                 });
             } else {
@@ -105,17 +109,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user, userData?.coupleId]);
 
-    // Safety Timeout: Force stop loading after 8 seconds to prevent infinite hang
+    // Safety Timeout: Force stop loading after 3 seconds to prevent infinite hang
     useEffect(() => {
         const timer = setTimeout(() => {
             if (loading) {
-                console.warn("Loading timed out. Forcing render.");
+                console.warn("Loading timed out. Forcing render. Current state:", { user: !!user, userData: !!userData });
                 setLoading(false);
             }
-        }, 8000); // 8 seconds timeout
+        }, 3000); // 3 seconds timeout (reduced from 8)
 
         return () => clearTimeout(timer);
-    }, [loading]);
+    }, [loading, user, userData]);
 
     const value = {
         user,
