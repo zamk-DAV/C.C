@@ -28,7 +28,7 @@ export const LoginPage: React.FC = () => {
 
     return (
         <div className="min-h-[100dvh] bg-background-light dark:bg-background-dark text-primary dark:text-white font-display flex justify-center w-full">
-            <div className="relative flex h-screen w-full flex-col overflow-x-hidden max-w-[480px] border-x border-gray-100 dark:border-zinc-800 bg-white">
+            <div className="relative flex h-screen w-full flex-col overflow-x-hidden max-w-[480px] border-x border-gray-100 dark:border-zinc-800 bg-white dark:bg-black">
                 <div className="flex items-center p-6 pb-2 justify-end">
                     {/* Placeholder for top actions if needed */}
                 </div>
