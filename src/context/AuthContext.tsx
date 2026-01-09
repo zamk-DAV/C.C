@@ -86,14 +86,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (user && userData?.coupleId) {
             const q = query(
                 collection(db, 'users'),
-                where('coupleId', '==', userData.coupleId),
-                where('uid', '!=', user.uid)
+                where('coupleId', '==', userData.coupleId)
             );
 
             // Using onSnapshot for partner real-time updates too
             const unsubscribePartner = onSnapshot(q, (snapshot) => {
                 if (!snapshot.empty) {
-                    setPartnerData(snapshot.docs[0].data() as UserData);
+                    // Filter out current user to find partner
+                    const partnerDoc = snapshot.docs.find(doc => doc.data().uid !== user.uid);
+                    if (partnerDoc) {
+                        setPartnerData(partnerDoc.data() as UserData);
+                    } else {
+                        setPartnerData(null);
+                    }
                 } else {
                     setPartnerData(null);
                 }
