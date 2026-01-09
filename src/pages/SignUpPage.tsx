@@ -29,10 +29,13 @@ export const SignUpPage: React.FC = () => {
             const signupEmail = email.includes('@') ? email : `${email}@dear23.app`;
 
             // 1. Create User
+            console.log("[SignUp] Creating Firebase Auth user...");
             const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
             const user = userCredential.user;
+            console.log("[SignUp] Auth user created:", user.uid);
 
             // 2. Add to Firestore 'users' collection with minimal data
+            console.log("[SignUp] Writing to Firestore...");
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 name: name,
@@ -43,6 +46,7 @@ export const SignUpPage: React.FC = () => {
                 notionConfig: { apiKey: null, databaseId: null },
                 bgImage: null
             });
+            console.log("[SignUp] Firestore write complete!");
 
             console.log("Signup successful", user.uid);
             // Default redirect to home/connect
