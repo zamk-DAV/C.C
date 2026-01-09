@@ -16,3 +16,14 @@ export interface CoupleData {
     chatId: string;
 }
 // Force Refresh
+
+export interface NotionItem {
+    id: string;
+    title: string;
+    date: string;
+    type: 'Diary' | 'Event' | 'Memory';
+    images: string[];
+    tags: string[];
+    author: 'Me' | 'Partner';
+    content: string;
+}

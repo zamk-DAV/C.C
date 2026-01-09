@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { User, onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { type User, onAuthStateChanged } from 'firebase/auth';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { UserData } from '../types';
 

@@ -21,7 +21,7 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
             </div>
             {/* FORCE flex-row and handling scrolling */}
             <div className="flex flex-row overflow-x-auto no-scrollbar snap-x snap-mandatory px-6 gap-8 w-full">
-                {items.map((item, index) => (
+                {items.map((item) => (
                     <div key={item.id} className="snap-center shrink-0 w-[82vw] flex flex-col gap-6">
                         {item.type === 'image' ? (
                             <div

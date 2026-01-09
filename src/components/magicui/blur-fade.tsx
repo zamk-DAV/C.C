@@ -4,13 +4,14 @@ import { useRef } from "react";
 import {
     AnimatePresence,
     motion,
-    MotionProps,
+    motion,
+    type MotionProps,
     useInView,
-    UseInViewOptions,
-    Variants,
+    type UseInViewOptions,
+    type Variants,
 } from "framer-motion";
 
-import { cn } from "../../lib/utils";
+// import { cn } from "../../lib/utils";
 
 type MarginType = UseInViewOptions["margin"];
 

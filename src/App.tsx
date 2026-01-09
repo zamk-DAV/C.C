@@ -33,10 +33,10 @@ function App() {
 }
 
 // Placeholder for other pages
-const PlaceholderPage = ({ title }: { title: string }) => (
-  <div className="flex items-center justify-center min-h-[60vh]">
-    <p className="text-2xl font-bold opacity-20">{title}</p>
-  </div>
-);
+// const PlaceholderPage = ({ title }: { title: string }) => (
+//   <div className="flex items-center justify-center min-h-[60vh]">
+//     <p className="text-2xl font-bold opacity-20">{title}</p>
+//   </div>
+// );
 
 export default App;
