@@ -36,14 +36,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 // Subscribe to User Data
                 const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
-                        setUserData(docSnap.data() as UserData);
+                        const data = docSnap.data() as UserData;
+                        setUserData(data);
+                        // If user has no coupleId, end loading immediately
+                        // (Partner data useEffect won't trigger properly for this case)
+                        if (!data.coupleId) {
+                            setLoading(false);
+                        }
+                        // If coupleId exists, the second useEffect will handle loading
                     } else {
                         // Handle case where auth exists but firestore doc doesn't (rare, maybe mid-signup)
                         setUserData(null);
+                        setLoading(false);
                     }
-                    // We don't set loading false here because we might need partner data
-                    // But for initial load, user auth is enough to stop "loading" for the auth check
-                    if (!docSnap.exists()) setLoading(false);
                 }, (error) => {
                     console.error("Error fetching user data:", error);
                     setLoading(false);
