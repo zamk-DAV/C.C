@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .grayscale-img {
+    filter: grayscale(100%);
+  }
+}
+
+@layer components {
+  .nav-item {
+    @apply flex flex-col items-center justify-center gap-1 text-primary/30 transition-colors no-underline;
+  }
+
+  .nav-item.active {
+    @apply text-primary;
+  }
+
+  .toggle-pill {
+    @apply relative w-10 h-5 bg-neutral-100 rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
+  }
+
+  .toggle-pill::after {
+    content: '';
+    @apply absolute top-1 left-1 bg-black w-3 h-3 rounded-full transition-transform duration-200 ease-in-out;
+  }
+
+  .toggle-active.toggle-pill {
+    @apply bg-black;
+  }
+
+  .toggle-active.toggle-pill::after {
+    @apply bg-white translate-x-5;
+  }
+
+  /* Chat Bubble Styles */
+  .bubble-in {
+    border-radius: 4px 18px 18px 18px;
+  }
+
+  .bubble-out {
+    border-radius: 18px 4px 18px 18px;
+  }
+
+  .image-bubble-in {
+    border-radius: 4px 18px 0px 0px;
+  }
+
+  .image-caption-in {
+    border-radius: 0px 0px 18px 18px;
+  }
+
+  .postcard-border {
+    border: 0.5px solid #000000;
+  }
+
+  .dark .postcard-border {
+    border: 0.5px solid #ffffff;
+  }
+}
+
+body {
+  background-color: #ffffff;
+  color: #000000;
+  font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+}
