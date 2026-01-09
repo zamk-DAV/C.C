@@ -3,6 +3,7 @@ import { type User, onAuthStateChanged } from 'firebase/auth';
 import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { UserData } from '../types';
+import { LoadingScreen } from '../components/common/LoadingScreen';
 
 interface AuthContextType {
     user: User | null;
