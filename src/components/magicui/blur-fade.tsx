@@ -4,7 +4,6 @@ import { useRef } from "react";
 import {
     AnimatePresence,
     motion,
-    motion,
     type MotionProps,
     useInView,
     type UseInViewOptions,
