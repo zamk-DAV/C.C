@@ -90,6 +90,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user, userData?.coupleId]);
 
+    // Safety Timeout: Force stop loading after 8 seconds to prevent infinite hang
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            if (loading) {
+                console.warn("Loading timed out. Forcing render.");
+                setLoading(false);
+            }
+        }, 8000); // 8 seconds timeout
+
+        return () => clearTimeout(timer);
+    }, [loading]);
+
     const value = {
         user,
         userData,
@@ -100,12 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (
         <AuthContext.Provider value={value}>
             {loading ? (
-                <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-black">
-                    <div className="flex flex-col items-center gap-4">
-                        <div className="w-8 h-8 border-4 border-gray-200 border-t-black dark:border-zinc-800 dark:border-t-white rounded-full animate-spin"></div>
-                        <p className="text-sm text-gray-500 font-sans animate-pulse">DEAR23 로딩중...</p>
-                    </div>
-                </div>
+                <LoadingScreen />
             ) : (
                 children
             )}
