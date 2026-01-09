@@ -1,9 +1,14 @@
 {
     "rewrites": [
         {
+            "source": "/assets/(.*)",
+            "destination": "/assets/$1"
+        },
+        {
             "source": "/(.*)",
             "destination": "/index.html"
         }
     ],
+    "cleanUrls": true,
     "framework": "vite"
 }
