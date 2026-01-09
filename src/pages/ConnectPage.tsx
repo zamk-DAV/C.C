@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, getDocs, addDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { CoupleData } from '../types';
 
@@ -24,6 +24,44 @@ export const ConnectPage: React.FC = () => {
             }
         }
     };
+
+    // Generate Invite Code if missing
+    React.useEffect(() => {
+        const generateCode = () => {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let result = '';
+            for (let i = 0; i < 6; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            return result;
+        };
+
+        const checkAndCreateCode = async () => {
+            if (user && userData && !userData.inviteCode) {
+                let unique = false;
+                let newCode = '';
+
+                // Simple collision check (retry up to 3 times)
+                let attempts = 0;
+                while (!unique && attempts < 3) {
+                    newCode = generateCode();
+                    const q = query(collection(db, 'users'), where('inviteCode', '==', newCode));
+                    const snapshot = await getDocs(q);
+                    if (snapshot.empty) {
+                        unique = true;
+                    }
+                    attempts++;
+                }
+
+                if (unique) {
+                    const userRef = doc(db, 'users', user.uid);
+                    await updateDoc(userRef, { inviteCode: newCode });
+                }
+            }
+        };
+
+        checkAndCreateCode();
+    }, [user, userData]);
 
     const handleConnect = async () => {
         if (!partnerCode || !user || !userData) return;
