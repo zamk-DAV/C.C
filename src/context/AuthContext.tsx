@@ -99,7 +99,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     return (
         <AuthContext.Provider value={value}>
-            {!loading && children}
+            {loading ? (
+                <div className="flex items-center justify-center min-h-[100dvh] bg-white dark:bg-black">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="w-8 h-8 border-4 border-gray-200 border-t-black dark:border-zinc-800 dark:border-t-white rounded-full animate-spin"></div>
+                        <p className="text-sm text-gray-500 font-sans animate-pulse">DEAR23 로딩중...</p>
+                    </div>
+                </div>
+            ) : (
+                children
+            )}
         </AuthContext.Provider>
     );
 };
