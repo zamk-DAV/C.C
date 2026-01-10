@@ -195,7 +195,7 @@ export const SettingsPage: React.FC = () => {
                             <span className="material-symbols-outlined text-gray-400">calendar_today</span>
                             <input
                                 type="date"
-                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full full-click-date-picker"
                                 value={startDate}
                                 onChange={handleDateChange}
                             />
