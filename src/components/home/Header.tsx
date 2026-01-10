@@ -21,11 +21,11 @@ export const Header: React.FC<HeaderProps> = ({
             <div className="flex items-center gap-3">
                 <div className="flex -space-x-4">
                     <div
-                        className="size-12 rounded-full border-2 border-white bg-center bg-cover grayscale-img z-10"
+                        className="size-12 rounded-full border-2 border-background bg-center bg-cover grayscale-img z-10"
                         style={{ backgroundImage: `url("${partnerImage}")` }}
                     />
                     <div
-                        className="size-12 rounded-full border-2 border-white bg-center bg-cover grayscale-img"
+                        className="size-12 rounded-full border-2 border-background bg-center bg-cover grayscale-img"
                         style={{ backgroundImage: `url("${myImage}")` }}
                     />
                 </div>

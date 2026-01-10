@@ -75,8 +75,8 @@ export const HomePage: React.FC = () => {
     if (!user) return null;
 
     // Placeholder data fallback - fallback to theme color if no image
-    const partnerImage = partnerData?.photoURL;
-    const myImage = userData?.photoURL;
+    const partnerImage = partnerData?.photoURL || "";
+    const myImage = userData?.photoURL || "";
     const partnerName = partnerData?.name || "Partner";
 
     // If not connected, show the splash screen
