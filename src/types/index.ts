@@ -7,6 +7,7 @@ export interface UserData {
     photoURL: string | null;
     notionConfig?: { apiKey: string | null; databaseId: string | null };
     bgImage?: string | null;
+    passcode?: string | null;
 }
 
 export interface CoupleData {

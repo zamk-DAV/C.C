@@ -6,6 +6,7 @@ import { auth, db } from '../lib/firebase';
 import { searchNotionDatabases } from '../lib/notion';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { PinInput } from '../components/common/PinInput';
 
 export const SettingsPage: React.FC = () => {
     const { user, userData, partnerData, coupleData } = useAuth();

@@ -11,6 +11,8 @@ interface AuthContextType {
     partnerData: UserData | null;
     coupleData: CoupleData | null;
     loading: boolean;
+    isLocked: boolean;
+    unlockApp: () => void;
 }
 
 const AuthContext = createContext<AuthContextType>({
@@ -19,6 +21,8 @@ const AuthContext = createContext<AuthContextType>({
     partnerData: null,
     coupleData: null,
     loading: true,
+    isLocked: false,
+    unlockApp: () => { },
 });
 
 export const useAuth = () => useContext(AuthContext);
@@ -29,6 +33,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [partnerData, setPartnerData] = useState<UserData | null>(null);
     const [coupleData, setCoupleData] = useState<CoupleData | null>(null);
     const [loading, setLoading] = useState(true);
+
+    const [isLocked, setIsLocked] = useState(false);
 
     useEffect(() => {
         let unsubscribeUser: (() => void) | undefined;
@@ -50,6 +56,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         console.log("[Auth] userData loaded, coupleId:", data.coupleId);
                         setUserData(data);
 
+                        // LOCK LOGIC: If passcode exists and app hasn't been unlocked yet
+                        if (data.passcode && loading) { // Only lock on initial load
+                            setIsLocked(true);
+                        }
+
                         if (!data.coupleId) {
                             console.log("[Auth] No coupleId, ending loading");
                             setLoading(false);
@@ -70,6 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setPartnerData(null);
                 setCoupleData(null);
                 setLoading(false);
+                setIsLocked(false);
             }
         });
 
@@ -77,11 +89,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             if (unsubscribeUser) unsubscribeUser();
             unsubscribe();
         };
-    }, []);
+    }, []); // Run once on mount
 
     // Fetch Partner Data & Couple Data when userData changes
     useEffect(() => {
         if (user && userData?.coupleId) {
+            // ... (rest of partner/couple fetching logic) ...
             // 1. Fetch Partner Data
             const qUser = query(
                 collection(db, 'users'),
@@ -136,12 +149,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => clearTimeout(timer);
     }, [loading]);
 
+    const unlockApp = () => setIsLocked(false);
+
     const value = {
         user,
         userData,
         partnerData,
         coupleData,
-        loading
+        loading,
+        isLocked,
+        unlockApp
     };
 
     return (

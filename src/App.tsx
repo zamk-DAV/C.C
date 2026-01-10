@@ -11,23 +11,42 @@ import { DiaryPage } from './pages/DiaryPage';
 import { CalendarPage } from './pages/CalendarPage';
 import './index.css';
 
+import { useAuth } from './context/AuthContext';
+import { LockScreen } from './components/common/LockScreen';
+
+function AppContent() {
+  const { isLocked, loading } = useAuth();
+
+  if (loading) return null; // or LoadingScreen, but AuthContext handles it internally usually. 
+  // Actually AuthContext returns loading screen, so we might not need this Check.
+  // But isLocked check should happen.
+
+  if (isLocked) {
+    return <LockScreen />;
+  }
+
+  return (
+    <Routes>
+      <Route element={<MainLayout />}>
+        <Route path="/" element={<HomePage />} />
+        {/* Future routes */}
+        <Route path="/diary" element={<DiaryPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/mailbox" element={<MailboxPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
+      <Route path="/chat" element={<ChatPage />} />
+      <Route path="/login" element={<LoginPage />} />
+      <Route path="/signup" element={<SignUpPage />} />
+      <Route path="/connect" element={<ConnectPage />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route element={<MainLayout />}>
-          <Route path="/" element={<HomePage />} />
-          {/* Future routes */}
-          <Route path="/diary" element={<DiaryPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/mailbox" element={<MailboxPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-        </Route>
-        <Route path="/chat" element={<ChatPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignUpPage />} />
-        <Route path="/connect" element={<ConnectPage />} />
-      </Routes>
+      <AppContent />
     </BrowserRouter>
   );
 }
