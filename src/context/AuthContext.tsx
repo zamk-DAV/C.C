@@ -24,6 +24,9 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [user, setUser] = useState<User | null>(null);
+    const [userData, setUserData] = useState<UserData | null>(null);
+    const [partnerData, setPartnerData] = useState<UserData | null>(null);
     const [coupleData, setCoupleData] = useState<CoupleData | null>(null);
     const [loading, setLoading] = useState(true);
 

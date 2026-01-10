@@ -31,7 +31,7 @@ export interface PaginatedNotionResponse {
     nextCursor: string | null;
 }
 
-export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter', cursor?: string): Promise<PaginatedNotionResponse> => {
+export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' | 'Memory', cursor?: string): Promise<PaginatedNotionResponse> => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
 

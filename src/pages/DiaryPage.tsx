@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { format, getWeek, parseISO } from 'date-fns';
 import type { NotionItem } from '../types';
 

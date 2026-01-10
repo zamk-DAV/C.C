@@ -15,7 +15,7 @@ interface MemoryFeedProps {
     hasMore?: boolean;
 }
 
-export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
+export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMore }) => {
     return (
         <section className="py-12">
             <div className="px-6 mb-8">
