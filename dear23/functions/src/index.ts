@@ -137,3 +137,58 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
         }
     });
 });
+
+export const searchNotionDatabases = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        // 1. Verify Authentication
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            await admin.auth().verifyIdToken(tokenId);
+
+            // 2. Get API Key from request body
+            const { apiKey } = req.body;
+            if (!apiKey) {
+                res.status(400).send({ error: "API Key is required." });
+                return;
+            }
+
+            // 3. Search Notion API for Databases
+            const notionResponse = await axios.post(
+                "https://api.notion.com/v1/search",
+                {
+                    filter: {
+                        value: "database",
+                        property: "object"
+                    },
+                    page_size: 100
+                },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            // 4. Return simplified list
+            const databases = notionResponse.data.results.map((db: any) => ({
+                id: db.id,
+                title: db.title?.[0]?.plain_text || "Untitled Database",
+                url: db.url,
+                icon: db.icon
+            }));
+
+            res.status(200).send({ data: databases });
+
+        } catch (error: any) {
+            console.error("Error searching Notion databases:", error);
+            res.status(500).send({ error: error.message });
+        }
+    });
+});
