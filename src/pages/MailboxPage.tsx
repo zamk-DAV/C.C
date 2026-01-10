@@ -31,30 +31,30 @@ export const MailboxPage: React.FC = () => {
     ];
 
     return (
-        <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-white dark:bg-[#121212] font-display text-black dark:text-white">
+        <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-background font-display text-primary transition-colors duration-300">
             {/* Header */}
-            <header className="sticky top-0 z-10 flex flex-col bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md">
+            <header className="sticky top-0 z-10 flex flex-col bg-background/95 backdrop-blur-md transition-colors duration-300">
                 <div className="flex items-center px-6 pt-6 pb-2 justify-between">
                     <div
                         onClick={() => navigate(-1)}
-                        className="flex size-10 shrink-0 items-center justify-start text-black dark:text-white cursor-pointer"
+                        className="flex size-10 shrink-0 items-center justify-start text-primary cursor-pointer"
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </div>
-                    <h2 className="text-black dark:text-white text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">우편함</h2>
+                    <h2 className="text-primary text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">우편함</h2>
                 </div>
 
                 {/* Tabs */}
-                <div className="flex w-full px-6 mt-4 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex w-full px-6 mt-4 border-b border-border">
                     <button
                         onClick={() => setActiveTab('received')}
-                        className={`flex-1 py-3 text-sm font-bold transition-colors ${activeTab === 'received' ? 'border-b-2 border-black dark:border-white text-black dark:text-white' : 'border-b-2 border-transparent text-gray-400 dark:text-gray-600'}`}
+                        className={`flex-1 py-3 text-sm font-bold transition-colors ${activeTab === 'received' ? 'border-b-2 border-primary text-primary' : 'border-b-2 border-transparent text-text-secondary'}`}
                     >
                         받은 우편
                     </button>
                     <button
                         onClick={() => setActiveTab('sent')}
-                        className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'sent' ? 'border-b-2 border-black dark:border-white text-black dark:text-white' : 'border-b-2 border-transparent text-gray-400 dark:text-gray-600'}`}
+                        className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'sent' ? 'border-b-2 border-primary text-primary' : 'border-b-2 border-transparent text-text-secondary'}`}
                     >
                         보낸 우편
                     </button>
@@ -62,36 +62,36 @@ export const MailboxPage: React.FC = () => {
 
                 {/* Filter / Count */}
                 <div className="px-6 py-4 flex justify-between items-center">
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.2em]">
+                    <p className="text-[10px] text-text-secondary font-medium uppercase tracking-[0.2em]">
                         총 {postcards.length}개의 {activeTab === 'received' ? '받은' : '보낸'} 우편
                     </p>
-                    <span className="material-symbols-outlined text-gray-300 text-sm cursor-pointer hover:text-black dark:hover:text-white transition-colors">filter_list</span>
+                    <span className="material-symbols-outlined text-text-secondary text-sm cursor-pointer hover:text-primary transition-colors">filter_list</span>
                 </div>
             </header>
 
             {/* Content Body */}
             <main className="flex-1 px-6 space-y-10 pb-32 pt-2">
                 {postcards.map((card) => (
-                    <div key={card.id} className={`postcard-border bg-white dark:bg-black overflow-hidden ${card.isRead ? 'opacity-60' : ''}`}>
+                    <div key={card.id} className={`border border-border bg-background overflow-hidden ${card.isRead ? 'opacity-60' : ''}`}>
                         <div className="p-8 pb-6">
                             <div className="mb-10">
-                                <p className="font-serif-kr text-lg leading-relaxed text-black dark:text-white line-clamp-2">
+                                <p className="font-serif-kr text-lg leading-relaxed text-primary line-clamp-2">
                                     {card.content}
                                 </p>
                             </div>
-                            <div className="flex items-end justify-between border-t border-gray-100 dark:border-gray-800 pt-6">
+                            <div className="flex items-end justify-between border-t border-border pt-6">
                                 <div className="flex flex-col gap-1">
                                     <div className="flex items-center gap-2">
-                                        {!card.isRead && <span className="w-1 h-1 rounded-full bg-black dark:bg-white"></span>}
-                                        <p className={`${card.isRead ? 'text-gray-500 dark:text-gray-400' : 'text-black dark:text-white'} text-xs font-bold tracking-tight`}>
+                                        {!card.isRead && <span className="w-1 h-1 rounded-full bg-primary"></span>}
+                                        <p className={`${card.isRead ? 'text-text-secondary' : 'text-primary'} text-xs font-bold tracking-tight`}>
                                             {card.sender}으로부터
                                         </p>
                                     </div>
-                                    <p className="text-gray-400 text-[10px] font-medium tracking-widest uppercase">{card.date}</p>
+                                    <p className="text-text-secondary text-[10px] font-medium tracking-widest uppercase">{card.date}</p>
                                 </div>
                                 <a
                                     href="#"
-                                    className={`${card.isRead ? 'text-gray-500 dark:text-gray-400 no-underline' : 'text-black dark:text-white underline underline-offset-8'} text-xs font-bold tracking-tight`}
+                                    className={`${card.isRead ? 'text-text-secondary no-underline' : 'text-primary underline underline-offset-8'} text-xs font-bold tracking-tight`}
                                 >
                                     열기
                                 </a>
@@ -101,7 +101,7 @@ export const MailboxPage: React.FC = () => {
                 ))}
 
                 <div className="py-12 text-center">
-                    <span className="material-symbols-outlined text-gray-200 dark:text-gray-800">fiber_manual_record</span>
+                    <span className="material-symbols-outlined text-border">fiber_manual_record</span>
                 </div>
             </main>
         </div>
