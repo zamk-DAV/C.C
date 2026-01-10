@@ -1,5 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { format, getWeek, parseISO } from 'date-fns';
+import { doc, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { fetchNotionData, type NotionItem } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
 
@@ -14,7 +16,10 @@ export const DiaryPage: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
+        let unsubscribe: (() => void) | undefined;
+
         const loadData = async () => {
+            // Initial Fetch
             try {
                 const data = await fetchNotionData('Diary');
                 setItems(data);
@@ -25,8 +30,32 @@ export const DiaryPage: React.FC = () => {
                 setLoading(false);
             }
         };
+
         loadData();
-    }, []);
+
+        // Real-time Sync Listener
+        if (userData?.coupleId) {
+            const coupleRef = doc(db, 'couples', userData.coupleId);
+            unsubscribe = onSnapshot(coupleRef, async (docSnap) => {
+                // If timestamp changes, refetch data
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // We can check a specific field like 'lastDiaryUpdate' or just refetch on any change
+                    console.log("[Diary] Sync signal received, refetching...");
+                    try {
+                        const newData = await fetchNotionData('Diary');
+                        setItems(newData);
+                    } catch (e) {
+                        console.error("Refetch failed", e);
+                    }
+                }
+            });
+        }
+
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
+    }, [userData?.coupleId]);
 
     // Group items by week
     const groupedItems = useMemo(() => {
