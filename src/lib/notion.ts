@@ -1,7 +1,17 @@
 import { auth } from './firebase';
 
-const CLOUD_FUNCTION_URL = "http://127.0.0.1:5001/dear23-app/us-central1/getNotionDatabase"; // Local Emulator URL
-// const CLOUD_FUNCTION_URL = "https://us-central1-YOUR-PROJECT-ID.cloudfunctions.net/getNotionDatabase"; // Production URL
+// Local Emulator URL
+// const CLOUD_FUNCTION_URL = "http://127.0.0.1:5001/dear23-app/us-central1/getNotionDatabase";
+// Production URL
+const CLOUD_FUNCTION_URL = "https://us-central1-ccdear23.cloudfunctions.net/getNotionDatabase";
+const SEARCH_FUNCTION_URL = "https://us-central1-ccdear23.cloudfunctions.net/searchNotionDatabases";
+
+export interface NotionDatabase {
+    id: string;
+    title: string;
+    url: string;
+    icon?: any;
+}
 
 export interface NotionItem {
     id: string;
@@ -12,6 +22,7 @@ export interface NotionItem {
     type?: string;
     sender?: string;
     isRead?: boolean;
+    author?: string;
 }
 
 export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter'): Promise<NotionItem[]> => {
@@ -33,6 +44,32 @@ export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter')
 
     if (!response.ok) {
         throw new Error(`Failed to fetch Notion data: ${response.statusText}`);
+    }
+
+    const json = await response.json();
+    return json.data;
+};
+
+export const searchNotionDatabases = async (apiKey: string): Promise<NotionDatabase[]> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+
+    const token = await user.getIdToken();
+
+    const response = await fetch(SEARCH_FUNCTION_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            apiKey: apiKey
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to search Notion databases`);
     }
 
     const json = await response.json();
