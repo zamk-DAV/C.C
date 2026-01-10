@@ -7,6 +7,7 @@ import { searchNotionDatabases } from '../lib/notion';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { PinInput } from '../components/common/PinInput';
+import { useTheme } from '../context/ThemeContext';
 
 export const SettingsPage: React.FC = () => {
     const { user, userData, partnerData, coupleData } = useAuth();
@@ -31,8 +32,23 @@ export const SettingsPage: React.FC = () => {
         }
     }, [coupleData]);
 
-    // Theme State
-    const [isDarkMode, setIsDarkMode] = useState(false);
+    // Theme State handled by Context
+    const { theme, setTheme } = useTheme();
+
+    const themes: { id: string; name: string; color: string }[] = [
+        { id: 'default', name: '기본', color: '#000000' },
+        { id: 'apple', name: '애플', color: '#8B3A4A' },
+        { id: 'forest-friends', name: '숲속', color: '#5A6B51' },
+        { id: 'clay', name: '지점토', color: '#6E6062' },
+        { id: 'calico-cat', name: '삼색냥', color: '#8B7875' },
+        { id: 'morning-glow', name: '노을', color: '#AA7B65' },
+        { id: 'pastel', name: '파스텔', color: '#8A92A0' },
+        { id: 'purple-milktea', name: '퍼플티', color: '#3C4362' },
+        { id: 'modern-house', name: '모던', color: '#B3B9C1' },
+        { id: 'grayscale', name: '무채색', color: '#dfdfdf' },
+        { id: 'everest-night', name: '밤하늘', color: '#a1a2ab' },
+        { id: 'dark-mode', name: '다크', color: '#ffffff' },
+    ];
 
     const [databases, setDatabases] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -206,7 +222,7 @@ export const SettingsPage: React.FC = () => {
     }
 
     return (
-        <div className="relative flex h-screen w-full flex-col max-w-[480px] mx-auto overflow-hidden bg-white dark:bg-background-dark border-x border-gray-100 font-display">
+        <div className="relative flex h-screen w-full flex-col max-w-[480px] mx-auto overflow-hidden bg-white dark:bg-background-dark border-x border-gray-100 font-display transition-colors duration-300">
             {/* TopAppBar */}
             <div className="flex items-center bg-white dark:bg-background-dark p-6 pb-2 justify-between sticky top-0 z-10">
                 <div
@@ -272,21 +288,26 @@ export const SettingsPage: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Section 4: Theme Toggle */}
-                    <div className="flex items-center justify-between">
-                        <div>
-                            <p className="text-base font-bold font-sans">다크 모드 테마</p>
-                            <p className="text-xs text-gray-400 font-sans">시스템 설정에 맞춥니다</p>
-                        </div>
-                        {/* Pill-shaped B&W Toggle */}
-                        <div
-                            onClick={() => {
-                                setIsDarkMode(!isDarkMode);
-                                document.documentElement.className = !isDarkMode ? 'dark' : 'light';
-                            }}
-                            className={`w-14 h-7 rounded-full flex items-center px-1 cursor-pointer transition-colors ${isDarkMode ? 'bg-white' : 'bg-black'}`}
-                        >
-                            <div className={`w-5 h-5 rounded-full transition-transform ${isDarkMode ? 'bg-black translate-x-7' : 'bg-white ml-auto'}`}></div>
+                    {/* Section 4: Theme Selection */}
+                    <div className="flex flex-col gap-3">
+                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">테마 설정</label>
+                        <div className="grid grid-cols-4 gap-3">
+                            {themes.map((t) => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => setTheme(t.id as any)}
+                                    className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border transition-all ${theme === t.id
+                                        ? 'border-primary scale-105 shadow-md ring-1 ring-primary'
+                                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                                        }`}
+                                >
+                                    <div
+                                        className="w-8 h-8 rounded-full shadow-sm border border-gray-200"
+                                        style={{ backgroundColor: t.color }}
+                                    />
+                                    <span className="text-[10px] font-medium text-gray-500 font-sans">{t.name}</span>
+                                </button>
+                            ))}
                         </div>
                     </div>
 

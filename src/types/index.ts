@@ -8,6 +8,7 @@ export interface UserData {
     notionConfig?: { apiKey: string | null; databaseId: string | null };
     bgImage?: string | null;
     passcode?: string | null;
+    theme?: string;
 }
 
 export interface CoupleData {

@@ -2,6 +2,159 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 
+ * Theme Definitions 
+ * Default Theme (C.C Original - Minimal Black/White)
+ */
+:root {
+  --primary-color: #000000;
+  --text-primary: #000000;
+  --text-secondary: #666666;
+  --bg-color: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --border-color: #e5e5e5;
+  --accent-color: #000000;
+  --input-bg: #ffffff;
+}
+
+/* Theme 2: Apple (Warm Red) */
+[data-theme="apple"] {
+  --primary-color: #8B3A4A;
+  --text-primary: #6B2838;
+  --text-secondary: #A05868;
+  --bg-color: #F7E6CD;
+  --bg-secondary: #EDD6BD;
+  --border-color: #E7AC98;
+  --accent-color: #8B3A4A;
+  --input-bg: #EDD6BD;
+}
+
+/* Theme 3: Forest Friends (Natural Green) */
+[data-theme="forest-friends"] {
+  --primary-color: #5A6B51;
+  --text-primary: #3E4D37;
+  --text-secondary: #6B7C62;
+  --bg-color: #fefefe;
+  --bg-secondary: #f5f5f5;
+  --border-color: #DCCBC5;
+  --accent-color: #5A6B51;
+  --input-bg: #f5f5f5;
+}
+
+/* Theme 4: Clay (Earthy) */
+[data-theme="clay"] {
+  --primary-color: #6E6062;
+  --text-primary: #4E4042;
+  --text-secondary: #8E8082;
+  --bg-color: #fefefe;
+  --bg-secondary: #f5f5f5;
+  --border-color: #DCC2C1;
+  --accent-color: #6E6062;
+  --input-bg: #f5f5f5;
+}
+
+/* Theme 5: Calico Cat (Warm Brown) */
+[data-theme="calico-cat"] {
+  --primary-color: #8B7875;
+  --text-primary: #5B4845;
+  --text-secondary: #AB9895;
+  --bg-color: #fefefe;
+  --bg-secondary: #f5f5f5;
+  --border-color: #F1D5C8;
+  --accent-color: #8B7875;
+  --input-bg: #f5f5f5;
+}
+
+/* Theme 6: Morning Glow (Soft Orange) */
+[data-theme="morning-glow"] {
+  --primary-color: #AA7B65;
+  --text-primary: #7A5B45;
+  --text-secondary: #BA8B75;
+  --bg-color: #FFFCF6;
+  --bg-secondary: #F5ECE6;
+  --border-color: #E7E4DF;
+  --accent-color: #AA7B65;
+  --input-bg: #F5ECE6;
+}
+
+/* Theme 7: Pastel (Soft Blue) */
+[data-theme="pastel"] {
+  --primary-color: #8A92A0;
+  --text-primary: #5A6270;
+  --text-secondary: #AAB2C0;
+  --bg-color: #FEFCF8;
+  --bg-secondary: #F4ECE8;
+  --border-color: #E6DFDB;
+  --accent-color: #8A92A0;
+  --input-bg: #F4ECE8;
+}
+
+/* Theme 8: Purple Milktea (Soft Purple) */
+[data-theme="purple-milktea"] {
+  --primary-color: #3C4362;
+  --text-primary: #2C3352;
+  --text-secondary: #5C5E7D;
+  --bg-color: #FFFDF6;
+  --bg-secondary: #F5EDE6;
+  --border-color: #E2D4E0;
+  --accent-color: #3C4362;
+  --input-bg: #F5EDE6;
+}
+
+/* Theme 9: Modern House (Dark Gray) */
+[data-theme="modern-house"] {
+  --primary-color: #B3B9C1;
+  --text-primary: #F6F2EE;
+  --text-secondary: #CACBCD;
+  --bg-color: #323841;
+  --bg-secondary: #2a2a2a;
+  --border-color: #77726E;
+  --accent-color: #B3B9C1;
+  --input-bg: #2a2a2a;
+}
+
+/* Theme 10: Grayscale (Dark) */
+[data-theme="grayscale"] {
+  --primary-color: #dfdfdf;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --bg-color: #262a29;
+  --bg-secondary: #1e2120;
+  --border-color: #616161;
+  --accent-color: #dfdfdf;
+  --input-bg: #1e2120;
+}
+
+/* Theme 11: Everest Night (Deep Navy) */
+[data-theme="everest-night"] {
+  --primary-color: #a1a2ab;
+  --text-primary: #f5f9f8;
+  --text-secondary: #a1a2ab;
+  --bg-color: #252330;
+  --bg-secondary: #1d1b28;
+  --border-color: #575669;
+  --accent-color: #a1a2ab;
+  --input-bg: #1d1b28;
+}
+
+/* Theme 12: Dark Mode (Classic Dark) */
+[data-theme="dark-mode"] {
+  --primary-color: #ffffff;
+  --text-primary: #ffffff;
+  --text-secondary: #a3a3a3;
+  --bg-color: #000000;
+  --bg-secondary: #1a1a1a;
+  --border-color: #333333;
+  --accent-color: #ffffff;
+  --input-bg: #1a1a1a;
+}
+
+@layer components {
+  /* Your existing or new components here if needed */
+}
+
+@tailwind utilities;
+
 @layer utilities {
   .animate-shake {
     animation: shake 0.5s cubic-bezier(.36, .07, .19, .97) both;

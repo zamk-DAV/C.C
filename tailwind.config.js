@@ -1,6 +1,4 @@
-/** @type {import('tailwindcss').Config} */
 export default {
-    darkMode: 'class',
     content: [
         "./index.html",
         "./src/**/*.{js,ts,jsx,tsx}",
@@ -8,9 +6,19 @@ export default {
     theme: {
         extend: {
             colors: {
-                "primary": "#000000",
-                "background-light": "#ffffff",
-                "background-dark": "#0a0a0a",
+                // Map Tailwind colors to CSS variables
+                primary: 'var(--primary-color)',
+                'text-primary': 'var(--text-primary)',
+                'text-secondary': 'var(--text-secondary)',
+                'background': 'var(--bg-color)',
+                'background-secondary': 'var(--bg-secondary)',
+                'border': 'var(--border-color)',
+                'accent': 'var(--accent-color)',
+                'input-bg': 'var(--input-bg)',
+
+                // Keep backward compatibility if needed, or just let these override
+                "background-light": "var(--bg-color)", // alias
+                "background-dark": "var(--bg-color)",  // alias (dynamic now)
             },
             fontFamily: {
                 "display": ["Inter", "Noto Sans KR", "sans-serif"],
@@ -25,5 +33,7 @@ export default {
             },
         },
     },
-    plugins: [],
+    plugins: [
+        require("tailwindcss-animate"),
+    ],
 }
