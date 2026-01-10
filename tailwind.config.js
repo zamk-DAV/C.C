@@ -21,9 +21,9 @@ export default {
                 "background-dark": "var(--bg-color)",  // alias (dynamic now)
             },
             fontFamily: {
-                "display": ["Inter", "Noto Sans KR", "sans-serif"],
-                "sans": ["Inter", "Noto Sans KR", "sans-serif"],
-                "serif": ["Noto Serif KR", "serif"],
+                "display": ["Gowun Dodum", "sans-serif"],
+                "sans": ["Gowun Dodum", "sans-serif"],
+                "serif": ["Gowun Dodum", "serif"],
             },
             borderRadius: {
                 "DEFAULT": "6px",

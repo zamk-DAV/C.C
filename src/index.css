@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Gowun+Dodum&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -262,7 +264,8 @@
 }
 
 body {
-  background-color: #ffffff;
-  color: #000000;
-  font-family: 'Plus Jakarta Sans', 'Noto Sans KR', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: 'Gowun Dodum', sans-serif;
+  transition: background-color 0.3s, color 0.3s;
 }
