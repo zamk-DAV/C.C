@@ -71,22 +71,22 @@ export const HomePage: React.FC = () => {
         }
     };
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-white">Loading...</div>;
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
     if (!user) return null;
 
-    // Placeholder data fallback
-    const partnerImage = partnerData?.photoURL || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3087&auto=format&fit=crop";
-    const myImage = userData?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop";
+    // Placeholder data fallback - fallback to theme color if no image
+    const partnerImage = partnerData?.photoURL;
+    const myImage = userData?.photoURL;
     const partnerName = partnerData?.name || "Partner";
 
     // If not connected, show the splash screen
     if (!userData?.coupleId) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8 space-y-4">
-                <h1 className="text-2xl font-bold font-display">DEAR23</h1>
-                <p className="text-gray-500 font-sans">파트너와 연결이 필요합니다.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background p-8 space-y-4">
+                <h1 className="text-2xl font-bold font-display text-primary">DEAR23</h1>
+                <p className="text-text-secondary font-sans">파트너와 연결이 필요합니다.</p>
                 <button
-                    className="bg-primary text-white px-6 py-3 rounded-xl font-sans text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all"
+                    className="bg-primary text-background px-6 py-3 rounded-xl font-sans text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all"
                     onClick={() => navigate('/connect')}
                 >
                     연결하러 가기
@@ -96,7 +96,7 @@ export const HomePage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background-light pb-24">
+        <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
             <Header
                 partnerName={partnerName}
                 partnerImage={partnerImage}

@@ -164,13 +164,13 @@ export const ConnectPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[100dvh] bg-background-light dark:bg-background-dark text-primary dark:text-white transition-colors duration-300 font-display flex flex-col items-center w-full">
-            <div className="relative flex min-h-screen w-full flex-col max-w-[430px] mx-auto overflow-x-hidden border-x border-neutral-100 dark:border-neutral-900 shadow-sm bg-white dark:bg-black">
+        <div className="min-h-[100dvh] bg-background text-primary transition-colors duration-300 font-display flex flex-col items-center w-full">
+            <div className="relative flex min-h-screen w-full flex-col max-w-[430px] mx-auto overflow-x-hidden border-x border-border shadow-sm bg-background">
                 {/* TopAppBar */}
                 <header className="flex items-center justify-between p-6 pt-8">
                     <div
                         onClick={() => navigate(-1)}
-                        className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors cursor-pointer"
+                        className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-secondary transition-colors cursor-pointer"
                     >
                         <span className="material-symbols-outlined text-2xl">arrow_back_ios_new</span>
                     </div>
@@ -180,18 +180,18 @@ export const ConnectPage: React.FC = () => {
                 <main className="flex-1 flex flex-col px-6">
                     {/* My Code Section */}
                     <section className="mt-12 mb-16 text-center">
-                        <h4 className="text-neutral-400 dark:text-neutral-500 text-xs font-bold uppercase tracking-widest mb-6 font-sans">나의 연결 코드</h4>
+                        <h4 className="text-text-secondary text-xs font-bold uppercase tracking-widest mb-6 font-sans">나의 연결 코드</h4>
                         <div className="relative inline-block">
-                            <h1 className="text-primary dark:text-white text-[48px] font-extrabold tracking-[0.25em] leading-tight py-4 font-sans">
+                            <h1 className="text-primary text-[48px] font-extrabold tracking-[0.25em] leading-tight py-4 font-sans">
                                 {userData?.inviteCode || 'LOADING'}
                             </h1>
                             <div className="flex justify-center mt-2">
                                 <button
                                     onClick={handleCopyCode}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-neutral-200 dark:border-neutral-800 hover:bg-neutral-50 dark:hover:bg-neutral-900 transition-all"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-full border border-border hover:bg-secondary transition-all"
                                 >
                                     <span className="material-symbols-outlined text-sm">content_copy</span>
-                                    <span className="text-xs font-medium font-sans">
+                                    <span className="text-xs font-medium font-sans text-primary">
                                         {copySuccess ? '복사되었습니다!' : '코드 복사하기'}
                                     </span>
                                 </button>
@@ -201,20 +201,20 @@ export const ConnectPage: React.FC = () => {
 
                     {/* Divider */}
                     <div className="flex items-center gap-4 mb-12">
-                        <div className="h-[1px] flex-1 bg-neutral-200 dark:bg-neutral-800"></div>
-                        <span className="text-[10px] font-bold text-neutral-300 dark:text-neutral-700 uppercase tracking-[0.2em] font-sans">또는</span>
-                        <div className="h-[1px] flex-1 bg-neutral-200 dark:bg-neutral-800"></div>
+                        <div className="h-[1px] flex-1 bg-border"></div>
+                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-[0.2em] font-sans">또는</span>
+                        <div className="h-[1px] flex-1 bg-border"></div>
                     </div>
 
                     {/* Input Section */}
                     <section className="flex flex-col gap-6">
                         <div className="flex flex-col gap-2">
-                            <label className="text-sm font-bold tracking-tight ml-1 font-sans">상대방의 코드 입력</label>
+                            <label className="text-sm font-bold tracking-tight ml-1 font-sans text-primary">상대방의 코드 입력</label>
                             <div className="relative">
                                 <input
                                     value={partnerCode}
                                     onChange={(e) => setPartnerCode(e.target.value.toUpperCase())}
-                                    className="w-full h-16 bg-neutral-50 dark:bg-neutral-900 border-2 border-neutral-100 dark:border-neutral-800 rounded-xl px-5 text-lg font-bold tracking-widest focus:border-primary dark:focus:border-white focus:ring-0 transition-all placeholder:text-neutral-300 dark:placeholder:text-neutral-700 uppercase font-sans text-center"
+                                    className="w-full h-16 bg-secondary border-2 border-border rounded-xl px-5 text-lg font-bold tracking-widest focus:border-primary focus:ring-0 transition-all placeholder:text-text-secondary/50 uppercase font-sans text-center text-primary"
                                     maxLength={6}
                                     placeholder="6자리 코드 입력"
                                     type="text"
@@ -227,7 +227,7 @@ export const ConnectPage: React.FC = () => {
                         <button
                             onClick={handleConnect}
                             disabled={isLoading || partnerCode.length !== 6}
-                            className="w-full h-16 bg-primary dark:bg-white text-white dark:text-primary rounded-xl font-bold text-lg hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-black/5 font-sans disabled:opacity-50"
+                            className="w-full h-16 bg-primary text-background rounded-xl font-bold text-lg hover:opacity-90 active:scale-[0.98] transition-all shadow-lg shadow-black/5 font-sans disabled:opacity-50"
                         >
                             {isLoading ? '연결 중...' : '연결하기'}
                         </button>
@@ -235,7 +235,7 @@ export const ConnectPage: React.FC = () => {
 
                     {/* Meta Description */}
                     <section className="mt-8">
-                        <p className="text-neutral-400 dark:text-neutral-500 text-sm font-normal leading-relaxed text-center px-8 font-sans">
+                        <p className="text-text-secondary text-sm font-normal leading-relaxed text-center px-8 font-sans">
                             코드를 공유하여 서로를 연결해보세요.<br />
                             연결이 완료되면 단 두 사람만의 공간이 생성됩니다.
                         </p>
@@ -243,7 +243,7 @@ export const ConnectPage: React.FC = () => {
                 </main>
 
                 <footer className="p-8 flex justify-center opacity-20">
-                    <div className="w-12 h-[2px] bg-primary dark:bg-white"></div>
+                    <div className="w-12 h-[2px] bg-primary"></div>
                 </footer>
             </div>
         </div>

@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-
 import { signInWithEmailAndPassword } from 'firebase/auth';
 
 export const LoginPage: React.FC = () => {
@@ -27,14 +26,14 @@ export const LoginPage: React.FC = () => {
     };
 
     return (
-        <div className="min-h-[100dvh] bg-background-light dark:bg-background-dark text-primary dark:text-white font-display flex justify-center w-full">
-            <div className="relative flex h-screen w-full flex-col overflow-x-hidden max-w-[480px] border-x border-gray-100 dark:border-zinc-800 bg-white dark:bg-black">
+        <div className="min-h-[100dvh] bg-background text-primary font-display flex justify-center w-full transition-colors duration-300">
+            <div className="relative flex h-screen w-full flex-col overflow-x-hidden max-w-[480px] border-x border-border bg-background">
                 <div className="flex items-center p-6 pb-2 justify-end">
                     {/* Placeholder for top actions if needed */}
                 </div>
 
                 <div className="px-8 pt-16 pb-20">
-                    <h1 className="text-[64px] font-extrabold leading-none tracking-tighter uppercase whitespace-nowrap">
+                    <h1 className="text-[64px] font-extrabold leading-none tracking-tighter uppercase whitespace-nowrap text-primary">
                         DEAR23
                     </h1>
                 </div>
@@ -42,11 +41,11 @@ export const LoginPage: React.FC = () => {
                 <div className="flex flex-col px-8 space-y-12">
                     {/* ID Input */}
                     <div className="flex flex-col">
-                        <label className="text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-40 font-sans">
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-40 font-sans text-text-secondary">
                             아이디
                         </label>
                         <input
-                            className="w-full bg-transparent border-t-0 border-x-0 border-b border-primary dark:border-white py-4 px-0 text-lg font-medium placeholder:text-zinc-300 dark:placeholder:text-zinc-700 focus:outline-none focus:border-b-2 focus:ring-0 transition-all font-sans"
+                            className="w-full bg-transparent border-t-0 border-x-0 border-b border-primary py-4 px-0 text-lg font-medium placeholder:text-text-secondary/30 focus:outline-none focus:border-b-2 focus:ring-0 transition-all font-sans text-primary"
                             placeholder="ID"
                             type="text"
                             value={email}
@@ -56,19 +55,19 @@ export const LoginPage: React.FC = () => {
 
                     {/* Password Input */}
                     <div className="flex flex-col relative">
-                        <label className="text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-40 font-sans">
+                        <label className="text-[10px] uppercase tracking-[0.2em] font-bold mb-1 opacity-40 font-sans text-text-secondary">
                             비밀번호
                         </label>
                         <div className="relative">
                             <input
-                                className="w-full bg-transparent border-t-0 border-x-0 border-b border-primary dark:border-white py-4 pr-10 px-0 text-lg font-medium placeholder:text-zinc-300 dark:placeholder:text-zinc-700 focus:outline-none focus:border-b-2 focus:ring-0 transition-all font-sans"
+                                className="w-full bg-transparent border-t-0 border-x-0 border-b border-primary py-4 pr-10 px-0 text-lg font-medium placeholder:text-text-secondary/30 focus:outline-none focus:border-b-2 focus:ring-0 transition-all font-sans text-primary"
                                 placeholder="••••••••"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
                             />
-                            <button className="absolute right-0 bottom-4 text-zinc-400 hover:text-primary transition-colors">
+                            <button className="absolute right-0 bottom-4 text-text-secondary hover:text-primary transition-colors">
                                 <span className="material-symbols-outlined text-[20px]">visibility</span>
                             </button>
                         </div>
@@ -79,7 +78,7 @@ export const LoginPage: React.FC = () => {
                         <button
                             onClick={handleLogin}
                             disabled={loading}
-                            className="w-full bg-primary dark:bg-white text-white dark:text-primary py-5 text-lg font-bold tracking-[0.4em] uppercase hover:opacity-90 rounded-xl transition-opacity font-sans disabled:opacity-50"
+                            className="w-full bg-primary text-background py-5 text-lg font-bold tracking-[0.4em] uppercase hover:opacity-90 rounded-xl transition-opacity font-sans disabled:opacity-50"
                         >
                             {loading ? '로그인 중...' : '로 그 인'}
                         </button>
@@ -89,10 +88,10 @@ export const LoginPage: React.FC = () => {
                 <div className="flex-grow"></div>
 
                 {/* Signup Link */}
-                <div className="flex justify-center px-8 pb-12 pt-8 border-t border-zinc-100 dark:border-zinc-900 mt-20">
+                <div className="flex justify-center px-8 pb-12 pt-8 border-t border-border mt-20">
                     <Link
                         to="/signup"
-                        className="text-[11px] uppercase tracking-[0.15em] font-medium border-b border-transparent hover:border-primary dark:hover:border-white pb-0.5 font-sans"
+                        className="text-[11px] uppercase tracking-[0.15em] font-medium border-b border-transparent hover:border-primary pb-0.5 font-sans text-text-secondary hover:text-primary"
                     >
                         회원가입
                     </Link>
