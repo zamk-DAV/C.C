@@ -67,62 +67,7 @@ export const SettingsPage: React.FC = () => {
 
     // ... inside render ...
 
-    {/* Section 6: Notion API Key & DB ID */ }
-    <div className="flex flex-col gap-3">
-        <div className="flex justify-between items-center">
-            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">Notion Configuration</label>
-            {userData?.notionConfig?.apiKey && <span className="text-[10px] text-primary font-bold font-sans">CONNECTED</span>}
-        </div>
 
-        <div className="relative">
-            <input
-                className="w-full p-4 border border-black dark:border-white rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent mb-2 font-sans"
-                placeholder="Notion API Key (secret_...)"
-                type={showKey ? "text" : "password"}
-                value={notionKey}
-                onChange={(e) => setNotionKey(e.target.value)}
-                onBlur={() => { if (notionKey.length > 10) handleSearchDatabases(); }}
-            />
-            <div className="absolute right-4 top-4 flex gap-2 cursor-pointer" onClick={() => setShowKey(!showKey)}>
-                <span className="material-symbols-outlined text-gray-400 text-lg">
-                    {showKey ? 'visibility' : 'visibility_off'}
-                </span>
-            </div>
-        </div>
-
-        {/* Database Selection */}
-        {isSearching ? (
-            <div className="text-center py-2 text-xs text-gray-400">Searching databases...</div>
-        ) : databases.length > 0 ? (
-            <div className="flex flex-col gap-2">
-                <label className="text-[10px] text-gray-400 font-sans ml-1">Select Database</label>
-                <select
-                    className="w-full p-4 border border-black dark:border-white rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans appearance-none"
-                    value={notionDbId}
-                    onChange={(e) => setNotionDbId(e.target.value)}
-                >
-                    {databases.map(db => (
-                        <option key={db.id} value={db.id} className="text-black">
-                            {db.icon?.emoji} {db.title}
-                        </option>
-                    ))}
-                </select>
-            </div>
-        ) : notionDbId ? (
-            <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900">
-                <p className="text-xs text-gray-500 text-center">Current Database ID: {notionDbId.slice(0, 8)}...</p>
-                <button onClick={handleSearchDatabases} className="w-full mt-2 text-xs text-primary font-bold underline">Re-scan Databases</button>
-            </div>
-        ) : null}
-
-        <button
-            onClick={handleSaveNotion}
-            disabled={isSaving || !notionDbId}
-            className="bg-black dark:bg-white text-white dark:text-black py-3 rounded-xl font-bold text-sm mt-1 disabled:opacity-50"
-        >
-            {isSaving ? 'Saving...' : 'Save Configuration'}
-        </button>
-    </div>
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -256,7 +201,7 @@ export const SettingsPage: React.FC = () => {
                     <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
                             <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">Notion Configuration</label>
-                            {userData?.notionConfig?.apiKey && <span className="text-[10px] text-primary font-bold font-sans">SAVED</span>}
+                            {userData?.notionConfig?.apiKey && <span className="text-[10px] text-primary font-bold font-sans">CONNECTED</span>}
                         </div>
 
                         <div className="relative">
@@ -266,6 +211,7 @@ export const SettingsPage: React.FC = () => {
                                 type={showKey ? "text" : "password"}
                                 value={notionKey}
                                 onChange={(e) => setNotionKey(e.target.value)}
+                                onBlur={() => { if (notionKey.length > 10) handleSearchDatabases(); }}
                             />
                             <div className="absolute right-4 top-4 flex gap-2 cursor-pointer" onClick={() => setShowKey(!showKey)}>
                                 <span className="material-symbols-outlined text-gray-400 text-lg">
@@ -274,20 +220,35 @@ export const SettingsPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="relative">
-                            <input
-                                className="w-full p-4 border border-black dark:border-white rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans"
-                                placeholder="Database ID"
-                                type="text"
-                                value={notionDbId}
-                                onChange={(e) => setNotionDbId(e.target.value)}
-                            />
-                        </div>
+                        {/* Database Selection */}
+                        {isSearching ? (
+                            <div className="text-center py-2 text-xs text-gray-400">Searching databases...</div>
+                        ) : databases.length > 0 ? (
+                            <div className="flex flex-col gap-2">
+                                <label className="text-[10px] text-gray-400 font-sans ml-1">Select Database</label>
+                                <select
+                                    className="w-full p-4 border border-black dark:border-white rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans appearance-none"
+                                    value={notionDbId}
+                                    onChange={(e) => setNotionDbId(e.target.value)}
+                                >
+                                    {databases.map(db => (
+                                        <option key={db.id} value={db.id} className="text-black">
+                                            {db.icon?.emoji} {db.title}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                        ) : notionDbId ? (
+                            <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900">
+                                <p className="text-xs text-gray-500 text-center">Current Database ID: {notionDbId.slice(0, 8)}...</p>
+                                <button onClick={handleSearchDatabases} className="w-full mt-2 text-xs text-primary font-bold underline">Re-scan Databases</button>
+                            </div>
+                        ) : null}
 
                         <button
                             onClick={handleSaveNotion}
-                            disabled={isSaving}
-                            className="bg-black dark:bg-white text-white dark:text-black py-3 rounded-xl font-bold text-sm mt-1"
+                            disabled={isSaving || !notionDbId}
+                            className="bg-black dark:bg-white text-white dark:text-black py-3 rounded-xl font-bold text-sm mt-1 disabled:opacity-50"
                         >
                             {isSaving ? 'Saving...' : 'Save Configuration'}
                         </button>
