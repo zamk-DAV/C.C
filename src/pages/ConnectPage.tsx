@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, getDocs, addDoc, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, updateDoc, writeBatch, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { CoupleData } from '../types';
+import type { CoupleData, UserData } from '../types';
 
 export const ConnectPage: React.FC = () => {
-    const { userData, user } = useAuth();
+    const { userData, user, loading } = useAuth();
     const navigate = useNavigate();
     const [partnerCode, setPartnerCode] = useState('');
     const [isLoading, setIsLoading] = useState(false);
@@ -37,7 +37,11 @@ export const ConnectPage: React.FC = () => {
         };
 
         const checkAndCreateCode = async () => {
-            if (user && userData && !userData.inviteCode) {
+            // Only proceed if user is logged in and not loading
+            if (user && !loading) {
+                // If inviteCode already exists, do nothing
+                if (userData?.inviteCode) return;
+
                 let unique = false;
                 let newCode = '';
 
@@ -55,13 +59,38 @@ export const ConnectPage: React.FC = () => {
 
                 if (unique) {
                     const userRef = doc(db, 'users', user.uid);
-                    await updateDoc(userRef, { inviteCode: newCode });
+
+                    try {
+                        // Check if document exists first
+                        const userSnap = await getDoc(userRef);
+
+                        if (userSnap.exists()) {
+                            // Document exists, just update
+                            await updateDoc(userRef, { inviteCode: newCode });
+                        } else {
+                            // Document doesn't exist, create it (Self-healing)
+                            const initialData: UserData = {
+                                uid: user.uid,
+                                email: user.email || '',
+                                name: user.displayName || 'User',
+                                photoURL: user.photoURL || null,
+                                inviteCode: newCode,
+                                coupleId: null,
+                                notionConfig: { apiKey: null, databaseId: null },
+                                bgImage: null
+                            };
+                            await setDoc(userRef, initialData);
+                            console.log("Created missing user document in ConnectPage");
+                        }
+                    } catch (e) {
+                        console.error("Error creating/updating user code:", e);
+                    }
                 }
             }
         };
 
         checkAndCreateCode();
-    }, [user, userData]);
+    }, [user, userData, loading]);
 
     const handleConnect = async () => {
         if (!partnerCode || !user || !userData) return;
