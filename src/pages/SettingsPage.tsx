@@ -222,18 +222,18 @@ export const SettingsPage: React.FC = () => {
     }
 
     return (
-        <div className="relative flex h-screen w-full flex-col max-w-[480px] mx-auto overflow-hidden bg-white dark:bg-background-dark border-x border-gray-100 font-display transition-colors duration-300">
+        <div className="relative flex h-screen w-full flex-col max-w-[480px] mx-auto overflow-hidden bg-background border-x border-border font-display transition-colors duration-300">
             {/* TopAppBar */}
-            <div className="flex items-center bg-white dark:bg-background-dark p-6 pb-2 justify-between sticky top-0 z-10">
+            <div className="flex items-center bg-background p-6 pb-2 justify-between sticky top-0 z-10">
                 <div
                     onClick={() => navigate(-1)}
-                    className="text-[#000000] dark:text-white flex size-10 shrink-0 items-center justify-start cursor-pointer"
+                    className="text-primary flex size-10 shrink-0 items-center justify-start cursor-pointer"
                     data-icon="ArrowBack"
                     data-size="24px"
                 >
                     <span className="material-symbols-outlined">arrow_back_ios</span>
                 </div>
-                <h2 className="text-[#000000] dark:text-white text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">설정</h2>
+                <h2 className="text-primary text-lg font-bold leading-tight tracking-tight flex-1 text-center pr-10">설정</h2>
             </div>
 
             {/* Scrollable Area */}
@@ -242,43 +242,43 @@ export const SettingsPage: React.FC = () => {
                 <div className="flex px-6 py-8 justify-between items-center gap-4">
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-black dark:border-white grayscale-img"
-                            style={{ backgroundImage: `url(${userData?.photoURL || 'https://via.placeholder.com/150'})` }}
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border grayscale-img bg-secondary"
+                            style={userData?.photoURL ? { backgroundImage: `url(${userData.photoURL})` } : {}}
                         ></div>
                         <div className="text-center">
-                            <p className="text-[#000000] dark:text-white text-xs font-medium uppercase tracking-widest opacity-50 font-sans">내 프로필</p>
-                            <p className="text-[#000000] dark:text-white text-base font-bold font-sans">{userData?.name || '나'}</p>
+                            <p className="text-text-secondary text-xs font-medium uppercase tracking-widest opacity-50 font-sans">내 프로필</p>
+                            <p className="text-primary text-base font-bold font-sans">{userData?.name || '나'}</p>
                         </div>
                     </div>
                     <div className="flex items-center">
-                        <span className="material-symbols-outlined text-gray-300">favorite</span>
+                        <span className="material-symbols-outlined text-border">favorite</span>
                     </div>
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-black dark:border-white grayscale-img"
-                            style={{ backgroundImage: `url(${partnerData?.photoURL || 'https://via.placeholder.com/150'})` }}
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border grayscale-img bg-secondary"
+                            style={partnerData?.photoURL ? { backgroundImage: `url(${partnerData.photoURL})` } : {}}
                         ></div>
                         <div className="text-center">
-                            <p className="text-[#000000] dark:text-white text-xs font-medium uppercase tracking-widest opacity-50 font-sans">상대방 프로필</p>
-                            <p className="text-[#000000] dark:text-white text-base font-bold font-sans">{partnerData?.name || '기다리는 중'}</p>
+                            <p className="text-text-secondary text-xs font-medium uppercase tracking-widest opacity-50 font-sans">상대방 프로필</p>
+                            <p className="text-primary text-base font-bold font-sans">{partnerData?.name || '기다리는 중'}</p>
                         </div>
                     </div>
                 </div>
 
                 {/* D-Day Center Section */}
-                <div className="py-10 border-y border-gray-100 dark:border-gray-800">
-                    <p className="text-[#000000] dark:text-white text-sm font-medium tracking-[0.2em] text-center uppercase mb-2 font-sans">우리가 함께한 날</p>
-                    <h1 className="text-[#000000] dark:text-white tracking-tighter text-[56px] font-extrabold leading-none text-center font-sans">{calculateDday()}일</h1>
+                <div className="py-10 border-y border-border">
+                    <p className="text-primary text-sm font-medium tracking-[0.2em] text-center uppercase mb-2 font-sans">우리가 함께한 날</p>
+                    <h1 className="text-primary tracking-tighter text-[56px] font-extrabold leading-none text-center font-sans">{calculateDday()}일</h1>
                 </div>
 
                 {/* Settings Sections */}
                 <div className="px-6 py-8 flex flex-col gap-10">
                     {/* Section 3: Date Picker Area */}
                     <div className="flex flex-col gap-3">
-                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">처음 만난 날 설정</label>
-                        <div className="flex items-center justify-between p-4 border border-black dark:border-white rounded-xl relative">
-                            <span className="text-base font-medium font-sans">{startDate || '날짜를 선택하세요'}</span>
-                            <span className="material-symbols-outlined text-gray-400">calendar_today</span>
+                        <label className="text-[11px] font-bold uppercase tracking-widest text-text-secondary font-sans">처음 만난 날 설정</label>
+                        <div className="flex items-center justify-between p-4 border border-border rounded-xl relative">
+                            <span className="text-base font-medium font-sans text-primary">{startDate || '날짜를 선택하세요'}</span>
+                            <span className="material-symbols-outlined text-text-secondary">calendar_today</span>
                             <input
                                 type="date"
                                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full full-click-date-picker"
@@ -290,7 +290,7 @@ export const SettingsPage: React.FC = () => {
 
                     {/* Section 4: Theme Selection */}
                     <div className="flex flex-col gap-3">
-                        <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">테마 설정</label>
+                        <label className="text-[11px] font-bold uppercase tracking-widest text-text-secondary font-sans">테마 설정</label>
                         <div className="grid grid-cols-4 gap-3">
                             {themes.map((t) => (
                                 <button
@@ -298,14 +298,14 @@ export const SettingsPage: React.FC = () => {
                                     onClick={() => setTheme(t.id as any)}
                                     className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border transition-all ${theme === t.id
                                         ? 'border-primary scale-105 shadow-md ring-1 ring-primary'
-                                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-800'
+                                        : 'border-transparent hover:bg-secondary'
                                         }`}
                                 >
                                     <div
                                         className="w-8 h-8 rounded-full shadow-sm border border-gray-200"
                                         style={{ backgroundColor: t.color }}
                                     />
-                                    <span className="text-[10px] font-medium text-gray-500 font-sans">{t.name}</span>
+                                    <span className="text-[10px] font-medium text-text-secondary font-sans">{t.name}</span>
                                 </button>
                             ))}
                         </div>
@@ -314,12 +314,12 @@ export const SettingsPage: React.FC = () => {
                     {/* Section 5: Passcode */}
                     <div className="flex items-center justify-between cursor-pointer" onClick={handlePasscodeClick}>
                         <div>
-                            <p className="text-base font-bold font-sans">암호 잠금</p>
-                            <p className="text-xs text-gray-400 font-sans">
+                            <p className="text-base font-bold font-sans text-primary">암호 잠금</p>
+                            <p className="text-xs text-text-secondary font-sans">
                                 {userData?.passcode ? '앱 실행 시 암호 입력 (설정됨)' : '사용하지 않음'}
                             </p>
                         </div>
-                        <span className={`material-symbols-outlined ${userData?.passcode ? 'text-primary' : 'text-gray-400'}`}>
+                        <span className={`material-symbols-outlined ${userData?.passcode ? 'text-primary' : 'text-text-secondary'}`}>
                             {userData?.passcode ? 'lock' : 'lock_open'}
                         </span>
                     </div>
@@ -327,13 +327,13 @@ export const SettingsPage: React.FC = () => {
                     {/* Section 6: Notion API Key & DB ID */}
                     <div className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
-                            <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">노션 연동 설정</label>
+                            <label className="text-[11px] font-bold uppercase tracking-widest text-text-secondary font-sans">노션 연동 설정</label>
                             {userData?.notionConfig?.apiKey && <span className="text-[10px] text-primary font-bold font-sans">연동됨</span>}
                         </div>
 
                         <div className="relative">
                             <input
-                                className="w-full p-4 border border-black dark:border-white rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent mb-2 font-sans"
+                                className="w-full p-4 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent mb-2 font-sans text-primary"
                                 placeholder="노션 API 키 (secret_...)"
                                 type={showKey ? "text" : "password"}
                                 value={notionKey}
@@ -341,7 +341,7 @@ export const SettingsPage: React.FC = () => {
                                 onBlur={() => { if (notionKey.length > 10) handleSearchDatabases(); }}
                             />
                             <div className="absolute right-4 top-4 flex gap-2 cursor-pointer" onClick={() => setShowKey(!showKey)}>
-                                <span className="material-symbols-outlined text-gray-400 text-lg">
+                                <span className="material-symbols-outlined text-text-secondary text-lg">
                                     {showKey ? 'visibility' : 'visibility_off'}
                                 </span>
                             </div>
@@ -349,12 +349,12 @@ export const SettingsPage: React.FC = () => {
 
                         {/* Database Selection */}
                         {isSearching ? (
-                            <div className="text-center py-2 text-xs text-gray-400">데이터베이스 검색 중...</div>
+                            <div className="text-center py-2 text-xs text-text-secondary">데이터베이스 검색 중...</div>
                         ) : databases.length > 0 ? (
                             <div className="flex flex-col gap-2">
-                                <label className="text-[10px] text-gray-400 font-sans ml-1">데이터베이스 선택</label>
+                                <label className="text-[10px] text-text-secondary font-sans ml-1">데이터베이스 선택</label>
                                 <select
-                                    className="w-full p-4 border border-black dark:border-white rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans appearance-none"
+                                    className="w-full p-4 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans appearance-none text-primary"
                                     value={notionDbId}
                                     onChange={(e) => setNotionDbId(e.target.value)}
                                 >
@@ -366,8 +366,8 @@ export const SettingsPage: React.FC = () => {
                                 </select>
                             </div>
                         ) : notionDbId ? (
-                            <div className="p-4 border border-gray-200 dark:border-gray-800 rounded-xl bg-gray-50 dark:bg-gray-900">
-                                <p className="text-xs text-gray-500 text-center">현재 데이터베이스 ID: {notionDbId.slice(0, 8)}...</p>
+                            <div className="p-4 border border-border rounded-xl bg-secondary">
+                                <p className="text-xs text-text-secondary text-center">현재 데이터베이스 ID: {notionDbId.slice(0, 8)}...</p>
                                 <button onClick={handleSearchDatabases} className="w-full mt-2 text-xs text-primary font-bold underline">데이터베이스 다시 검색</button>
                             </div>
                         ) : null}
@@ -375,7 +375,7 @@ export const SettingsPage: React.FC = () => {
                         <button
                             onClick={handleSaveNotion}
                             disabled={isSaving || !notionDbId}
-                            className="bg-black dark:bg-white text-white dark:text-black py-3 rounded-xl font-bold text-sm mt-1 disabled:opacity-50"
+                            className="bg-primary text-background py-3 rounded-xl font-bold text-sm mt-1 disabled:opacity-50"
                         >
                             {isSaving ? '저장 중...' : '설정 저장'}
                         </button>
@@ -383,30 +383,30 @@ export const SettingsPage: React.FC = () => {
 
                     {/* Section 7: Danger Zone */}
                     <div className="flex flex-col gap-4 pt-4">
-                        <button onClick={handleLogout} className="text-left text-sm text-gray-400 font-medium hover:text-red-500 transition-colors font-sans">로그아웃</button>
-                        <button onClick={handleDisconnect} className="text-left text-sm text-gray-400 font-medium hover:text-red-500 transition-colors font-sans">연결 끊기</button>
+                        <button onClick={handleLogout} className="text-left text-sm text-text-secondary font-medium hover:text-red-500 transition-colors font-sans">로그아웃</button>
+                        <button onClick={handleDisconnect} className="text-left text-sm text-text-secondary font-medium hover:text-red-500 transition-colors font-sans">연결 끊기</button>
                     </div>
                 </div>
             </div>
 
             {/* Passcode Modal Overlay */}
             {isPasscodeModalOpen && (
-                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-black text-black dark:text-white pb-20 animate-in fade-in zoom-in duration-300">
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background text-primary pb-20 animate-in fade-in zoom-in duration-300">
                     <button
                         onClick={() => setIsPasscodeModalOpen(false)}
-                        className="absolute top-6 right-6 p-2 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                        className="absolute top-6 right-6 p-2 text-text-secondary hover:text-primary transition-colors"
                     >
                         <span className="material-symbols-outlined text-3xl">close</span>
                     </button>
 
                     <div className="mb-12 flex flex-col items-center gap-4">
-                        <span className="material-symbols-outlined text-4xl text-gray-400">lock</span>
-                        <p className="text-sm font-medium tracking-widest uppercase text-gray-500">
+                        <span className="material-symbols-outlined text-4xl text-text-secondary">lock</span>
+                        <p className="text-sm font-medium tracking-widest uppercase text-text-secondary">
                             {passcodeMode === 'SET' && '새로운 암호 설정'}
                             {passcodeMode === 'CONFIRM' && '암호 확인'}
                             {passcodeMode === 'DISABLE' && '암호 해제'}
                         </p>
-                        <h1 className="text-2xl font-bold font-display">
+                        <h1 className="text-2xl font-bold font-display text-primary">
                             {passcodeMode === 'CONFIRM' ? '한 번 더 입력해주세요' : '4자리 암호를 입력해주세요'}
                         </h1>
                     </div>
