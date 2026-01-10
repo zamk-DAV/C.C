@@ -1,5 +1,5 @@
-import React from 'react';
-import React from 'react';
+
+
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
@@ -46,17 +46,17 @@ export const MainLayout = () => {
                                     {/* Badge */}
                                     <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-background-dark"></span>
                                 </div>
-                                <span className="text-[10px] font-medium transition-colors", isActive('/mailbox') ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white")}>우편함</span>
-                        </Link>
+                                <span className={cn("text-[10px] font-medium transition-colors", isActive('/mailbox') ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white")}>우편함</span>
+                            </Link>
 
-                        <Link to="/settings" className="flex flex-col items-center space-y-1.5 w-14 group">
-                            <span className={cn("material-icons-outlined text-[22px] transition-colors", isActive('/settings') ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white")}>settings</span>
-                            <span className={cn("text-[10px] font-medium transition-colors", isActive('/settings') ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white")}>설정</span>
-                        </Link>
-                    </div>
+                            <Link to="/settings" className="flex flex-col items-center space-y-1.5 w-14 group">
+                                <span className={cn("material-icons-outlined text-[22px] transition-colors", isActive('/settings') ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white")}>settings</span>
+                                <span className={cn("text-[10px] font-medium transition-colors", isActive('/settings') ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500 group-hover:text-black dark:group-hover:text-white")}>설정</span>
+                            </Link>
+                        </div>
                     </nav>
                 )}
-        </div>
+            </div>
         </div >
     );
 };
