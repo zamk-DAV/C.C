@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { auth, db } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
 
 export const SettingsPage: React.FC = () => {
     const { user, userData, partnerData } = useAuth();
@@ -49,9 +49,27 @@ export const SettingsPage: React.FC = () => {
 
     const handleDisconnect = async () => {
         if (window.confirm("정말로 연결을 끊으시겠습니까? 모든 데이터 연결이 해제됩니다.")) {
-            if (!user) return;
-            await updateDoc(doc(db, 'users', user.uid), { coupleId: null });
-            navigate('/');
+            if (!user || !userData) return;
+
+            try {
+                const batch = writeBatch(db);
+
+                // 1. Disconnect Me
+                const myRef = doc(db, 'users', user.uid);
+                batch.update(myRef, { coupleId: null });
+
+                // 2. Disconnect Partner (if exists)
+                if (partnerData?.uid) {
+                    const partnerRef = doc(db, 'users', partnerData.uid);
+                    batch.update(partnerRef, { coupleId: null });
+                }
+
+                await batch.commit();
+                navigate('/');
+            } catch (error) {
+                console.error("Disconnect failed:", error);
+                alert("연결 끊기에 실패했습니다. 다시 시도해주세요.");
+            }
         }
     };
 
