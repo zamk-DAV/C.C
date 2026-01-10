@@ -25,6 +25,13 @@ export const ConnectPage: React.FC = () => {
         }
     };
 
+    // Auto-redirect if connected
+    React.useEffect(() => {
+        if (userData?.coupleId) {
+            navigate('/');
+        }
+    }, [userData?.coupleId, navigate]);
+
     // Generate Invite Code if missing
     React.useEffect(() => {
         const generateCode = () => {

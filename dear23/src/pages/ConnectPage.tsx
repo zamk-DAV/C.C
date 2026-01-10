@@ -25,6 +25,13 @@ export const ConnectPage: React.FC = () => {
         }
     };
 
+    // Auto-redirect if connected
+    React.useEffect(() => {
+        if (userData?.coupleId) {
+            navigate('/');
+        }
+    }, [userData?.coupleId, navigate]);
+
     const handleConnect = async () => {
         if (!partnerCode || !user || !userData) return;
 
