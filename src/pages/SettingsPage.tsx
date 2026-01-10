@@ -13,10 +13,17 @@ export const SettingsPage: React.FC = () => {
     const navigate = useNavigate();
 
     const [notionKey, setNotionKey] = useState('');
-    const [notionDbId, setNotionDbId] = useState(''); // Added DB ID input as it's required for the proxy
+    const [notionDbId, setNotionDbId] = useState('');
     const [isSaving, setIsSaving] = useState(false);
     const [showKey, setShowKey] = useState(false);
     const [startDate, setStartDate] = useState('');
+
+    // Passcode State
+    const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
+    const [passcodeMode, setPasscodeMode] = useState<'SET' | 'CONFIRM' | 'DISABLE' | 'VERIFY_TO_SET'>('SET');
+    const [tempPasscode, setTempPasscode] = useState('');
+    const [passcodeInput, setPasscodeInput] = useState('');
+    const [passcodeError, setPasscodeError] = useState(false);
 
     useEffect(() => {
         if (coupleData?.startDate) {
@@ -24,7 +31,7 @@ export const SettingsPage: React.FC = () => {
         }
     }, [coupleData]);
 
-    // Theme State (Mocked for now, persists in local storage usually)
+    // Theme State
     const [isDarkMode, setIsDarkMode] = useState(false);
 
     const [databases, setDatabases] = useState<any[]>([]);
@@ -73,10 +80,6 @@ export const SettingsPage: React.FC = () => {
             setIsSaving(false);
         }
     };
-
-    // ... inside render ...
-
-
 
     const handleLogout = async () => {
         await signOut(auth);
@@ -135,6 +138,72 @@ export const SettingsPage: React.FC = () => {
             alert("파트너와 연결되지 않아 날짜를 저장할 수 없습니다.");
         }
     };
+
+    const handlePasscodeClick = () => {
+        setPasscodeInput('');
+        setPasscodeError(false);
+        setTempPasscode('');
+
+        if (userData?.passcode) {
+            // Already has passcode -> Try to disable
+            setPasscodeMode('DISABLE');
+        } else {
+            // No passcode -> Set new one
+            setPasscodeMode('SET');
+        }
+        setIsPasscodeModalOpen(true);
+    };
+
+    const handlePinComplete = async (pin: string) => {
+        if (passcodeMode === 'SET') {
+            setTempPasscode(pin);
+            setPasscodeInput('');
+            setPasscodeMode('CONFIRM');
+        } else if (passcodeMode === 'CONFIRM') {
+            if (pin === tempPasscode) {
+                // Save to Firestore
+                try {
+                    if (!user) return;
+                    await updateDoc(doc(db, 'users', user.uid), {
+                        passcode: pin
+                    });
+                    alert("암호가 설정되었습니다.");
+                    setIsPasscodeModalOpen(false);
+                } catch (error) {
+                    console.error("Failed to set passcode", error);
+                    alert("암호 설정 실패");
+                }
+            } else {
+                setPasscodeError(true);
+                setTimeout(() => {
+                    setPasscodeInput('');
+                    setPasscodeError(false);
+                    // Stay in CONFIRM mode but clear input
+                }, 500);
+            }
+        } else if (passcodeMode === 'DISABLE') {
+            if (pin === userData?.passcode) {
+                // Remove from Firestore
+                try {
+                    if (!user) return;
+                    await updateDoc(doc(db, 'users', user.uid), {
+                        passcode: null // Remove field
+                    });
+                    alert("암호 잠금이 해제되었습니다.");
+                    setIsPasscodeModalOpen(false);
+                } catch (error) {
+                    console.error("Failed to remove passcode", error);
+                    alert("암호 해제 실패");
+                }
+            } else {
+                setPasscodeError(true);
+                setTimeout(() => {
+                    setPasscodeInput('');
+                    setPasscodeError(false);
+                }, 500);
+            }
+        }
+    }
 
     return (
         <div className="relative flex h-screen w-full flex-col max-w-[480px] mx-auto overflow-hidden bg-white dark:bg-background-dark border-x border-gray-100 font-display">
@@ -222,12 +291,16 @@ export const SettingsPage: React.FC = () => {
                     </div>
 
                     {/* Section 5: Passcode */}
-                    <div className="flex items-center justify-between cursor-pointer">
+                    <div className="flex items-center justify-between cursor-pointer" onClick={handlePasscodeClick}>
                         <div>
                             <p className="text-base font-bold font-sans">암호 잠금</p>
-                            <p className="text-xs text-gray-400 font-sans">앱 실행 시 4자리 비밀번호 사용</p>
+                            <p className="text-xs text-gray-400 font-sans">
+                                {userData?.passcode ? '앱 실행 시 암호 입력 (설정됨)' : '사용하지 않음'}
+                            </p>
                         </div>
-                        <span className="material-symbols-outlined">lock_open</span>
+                        <span className={`material-symbols-outlined ${userData?.passcode ? 'text-primary' : 'text-gray-400'}`}>
+                            {userData?.passcode ? 'lock' : 'lock_open'}
+                        </span>
                     </div>
 
                     {/* Section 6: Notion API Key & DB ID */}
@@ -294,10 +367,39 @@ export const SettingsPage: React.FC = () => {
                     </div>
                 </div>
             </div>
-            {/* Bottom Nav is handled by MainLayout if this is nested, but the design shows it here. 
-                If we use MainLayout, we don't need it here. User's HTML included it. 
-                Since we have MainLayout, I will relying on that for Nav. 
-            */}
+
+            {/* Passcode Modal Overlay */}
+            {isPasscodeModalOpen && (
+                <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-white dark:bg-black text-black dark:text-white pb-20 animate-in fade-in zoom-in duration-300">
+                    <button
+                        onClick={() => setIsPasscodeModalOpen(false)}
+                        className="absolute top-6 right-6 p-2 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-3xl">close</span>
+                    </button>
+
+                    <div className="mb-12 flex flex-col items-center gap-4">
+                        <span className="material-symbols-outlined text-4xl text-gray-400">lock</span>
+                        <p className="text-sm font-medium tracking-widest uppercase text-gray-500">
+                            {passcodeMode === 'SET' && '새로운 암호 설정'}
+                            {passcodeMode === 'CONFIRM' && '암호 확인'}
+                            {passcodeMode === 'DISABLE' && '암호 해제'}
+                        </p>
+                        <h1 className="text-2xl font-bold font-display">
+                            {passcodeMode === 'CONFIRM' ? '한 번 더 입력해주세요' : '4자리 암호를 입력해주세요'}
+                        </h1>
+                    </div>
+
+                    <div className="w-full max-w-[320px]">
+                        <PinInput
+                            value={passcodeInput}
+                            onChange={setPasscodeInput}
+                            onComplete={handlePinComplete}
+                            error={passcodeError}
+                        />
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
