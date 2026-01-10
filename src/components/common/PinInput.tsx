@@ -52,8 +52,8 @@ export const PinInput: React.FC<PinInputProps> = ({
                     <div
                         key={i}
                         className={`w-4 h-4 rounded-full transition-all duration-300 ${i < value.length
-                            ? 'bg-black dark:bg-white scale-110'
-                            : 'bg-gray-200 dark:bg-gray-700'
+                            ? 'bg-primary scale-110'
+                            : 'bg-secondary'
                             }`}
                     />
                 ))}
@@ -65,7 +65,7 @@ export const PinInput: React.FC<PinInputProps> = ({
                     <button
                         key={num}
                         onClick={() => handleNumberClick(num)}
-                        className="flex items-center justify-center w-16 h-16 rounded-full text-2xl font-medium text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-95 mx-auto"
+                        className="flex items-center justify-center w-16 h-16 rounded-full text-2xl font-medium text-primary hover:bg-secondary transition-colors active:scale-95 mx-auto"
                     >
                         {num}
                     </button>
@@ -74,13 +74,13 @@ export const PinInput: React.FC<PinInputProps> = ({
                 <div />
                 <button
                     onClick={() => handleNumberClick(0)}
-                    className="flex items-center justify-center w-16 h-16 rounded-full text-2xl font-medium text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-95 mx-auto"
+                    className="flex items-center justify-center w-16 h-16 rounded-full text-2xl font-medium text-primary hover:bg-secondary transition-colors active:scale-95 mx-auto"
                 >
                     0
                 </button>
                 <button
                     onClick={handleDelete}
-                    className="flex items-center justify-center w-16 h-16 rounded-full text-black dark:text-white hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors active:scale-95 mx-auto"
+                    className="flex items-center justify-center w-16 h-16 rounded-full text-primary hover:bg-secondary transition-colors active:scale-95 mx-auto"
                 >
                     <span className="material-symbols-outlined text-2xl">backspace</span>
                 </button>
