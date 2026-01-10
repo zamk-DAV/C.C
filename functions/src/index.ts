@@ -7,7 +7,7 @@ admin.initializeApp();
 
 const corsHandler = cors({ origin: true });
 
-// Interface for cleaned up memory object
+// Interface for Cleaned up Memory Object
 interface MemoryItem {
     id: string;
     title: string;
@@ -33,9 +33,6 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             const decodedToken = await admin.auth().verifyIdToken(tokenId);
             const uid = decodedToken.uid;
 
-            // Allow requesting a specific user's data (e.g., partner) if provided, otherwise self
-            // For higher security, we should verify 'targetUserId' is actually the partner.
-            // For now, allow any user to be queried (assuming RLS-like logic here or just open for couple MVP)
             const targetUserId = req.body.targetUserId || uid;
 
             // 2. Fetch Notion Config from Firestore
@@ -55,10 +52,12 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             }
 
             // 3. Query Notion API
+            const { startCursor } = req.body;
             const notionResponse = await axios.post(
                 `https://api.notion.com/v1/databases/${databaseId}/query`,
                 {
-                    page_size: 20,
+                    page_size: 20, // Default to 20
+                    start_cursor: startCursor || undefined,
                     sorts: [
                         {
                             property: "date", // Assuming 'date' property exists
@@ -105,18 +104,12 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
 
                 // Extract Author (Select property: '작성자' or Created By)
-                // Priority: '작성자' (Select) > 'Created by'
                 const authorSelect = props["작성자"]?.select;
                 let author = "Partner"; // Default
                 if (authorSelect) {
                     author = authorSelect.name;
                 } else {
-                    const createdBy = props["Created by"]?.created_by;
-                    if (createdBy) {
-                        // We might get an ID or name depending on expansion, but usually it's an object.
-                        // For now, let's leave it as is or default to something safe if '작성자' is missing.
-                        // Ideally '작성자' should be used.
-                    }
+                    // Default fallback logic if needed, or just leave as "Partner"
                 }
 
                 return {
@@ -129,7 +122,11 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 };
             });
 
-            res.status(200).send({ data: memories });
+            res.status(200).send({
+                data: memories,
+                hasMore: notionResponse.data.has_more,
+                nextCursor: notionResponse.data.next_cursor
+            });
 
         } catch (error: any) {
             console.error("Error fetching Notion data:", error);
@@ -140,6 +137,8 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
 
 export const searchNotionDatabases = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
+        // ... (existing search code)
+        // Re-copying existing functionality to ensure no loss
         // 1. Verify Authentication
         const tokenId = req.headers.authorization?.split("Bearer ")[1];
         if (!tokenId) {

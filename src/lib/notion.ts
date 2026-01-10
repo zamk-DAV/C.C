@@ -25,7 +25,13 @@ export interface NotionItem {
     author?: string;
 }
 
-export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter'): Promise<NotionItem[]> => {
+export interface PaginatedNotionResponse {
+    data: NotionItem[];
+    hasMore: boolean;
+    nextCursor: string | null;
+}
+
+export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter', cursor?: string): Promise<PaginatedNotionResponse> => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
 
@@ -38,7 +44,8 @@ export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter')
             'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
-            filterType: filterType
+            filterType: filterType,
+            startCursor: cursor
         })
     });
 
@@ -47,7 +54,7 @@ export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter')
     }
 
     const json = await response.json();
-    return json.data;
+    return json; // Returns { data, hasMore, nextCursor }
 };
 
 export const searchNotionDatabases = async (apiKey: string): Promise<NotionDatabase[]> => {

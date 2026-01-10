@@ -7,13 +7,20 @@ import { signOut } from 'firebase/auth';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 
 export const SettingsPage: React.FC = () => {
-    const { user, userData, partnerData } = useAuth();
+    const { user, userData, partnerData, coupleData } = useAuth();
     const navigate = useNavigate();
 
     const [notionKey, setNotionKey] = useState('');
     const [notionDbId, setNotionDbId] = useState(''); // Added DB ID input as it's required for the proxy
     const [isSaving, setIsSaving] = useState(false);
     const [showKey, setShowKey] = useState(false);
+    const [startDate, setStartDate] = useState('');
+
+    useEffect(() => {
+        if (coupleData?.startDate) {
+            setStartDate(coupleData.startDate);
+        }
+    }, [coupleData]);
 
     // Theme State (Mocked for now, persists in local storage usually)
     const [isDarkMode, setIsDarkMode] = useState(false);
@@ -102,11 +109,27 @@ export const SettingsPage: React.FC = () => {
 
     // Calculate D-Day
     const calculateDday = () => {
-        if (!userData?.coupleId) return "0";
-        // Ensure to fetch start date from Couple Doc if not in user data (it is in CoupleData)
-        // For MVP, assuming static or fetching couple data in AuthContext would be better.
-        // Let's use a placeholder or 1 if data missing.
-        return "1234";
+        if (!coupleData?.startDate) return "0";
+        const start = new Date(coupleData.startDate);
+        const now = new Date();
+        const diff = now.getTime() - start.getTime();
+        return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+    };
+
+    const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newDate = e.target.value;
+        setStartDate(newDate);
+
+        if (userData?.coupleId) {
+            try {
+                await updateDoc(doc(db, 'couples', userData.coupleId), {
+                    startDate: newDate
+                });
+            } catch (error) {
+                console.error("Failed to update start date:", error);
+                alert("날짜 변경에 실패했습니다.");
+            }
+        }
     };
 
     return (
@@ -164,9 +187,15 @@ export const SettingsPage: React.FC = () => {
                     {/* Section 3: Date Picker Area */}
                     <div className="flex flex-col gap-3">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-gray-400 font-sans">처음 만난 날 설정</label>
-                        <div className="flex items-center justify-between p-4 border border-black dark:border-white rounded-xl">
-                            <span className="text-base font-medium font-sans">2020년 10월 14일</span>
+                        <div className="flex items-center justify-between p-4 border border-black dark:border-white rounded-xl relative">
+                            <span className="text-base font-medium font-sans">{startDate || '날짜를 선택하세요'}</span>
                             <span className="material-symbols-outlined text-gray-400">calendar_today</span>
+                            <input
+                                type="date"
+                                className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                                value={startDate}
+                                onChange={handleDateChange}
+                            />
                         </div>
                     </div>
 

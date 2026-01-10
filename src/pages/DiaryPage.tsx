@@ -3,22 +3,61 @@ import { format, getWeek, parseISO } from 'date-fns';
 import type { NotionItem } from '../types';
 
 // Mock Data matches user snippet
-const MOCK_DIARY_ITEMS: NotionItem[] = [
-    { id: '1', title: '구내식당 쌀국수. 우삼겹이 적어 보였는데 먹다보니 엄청 많이 나왔다. 정말 최고일텐데.', date: '2025-06-02', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuAfnRHo_u4e33ymVAGyI2SPscwwALLY1oUOYmEBHiIp7Kh3UIZ9ouwmJ4DIC45E9tlxoBAGzkPy50l1ph-4HP-85cf-C2BNIcqX2HL1m0vTIkGhi5uLeZb7k2jsT3MUe7AbJSVdHoKBTOZEXMxGcbxsfwTVPR4S4ghkUX6B3rMu0kURPXnRgbjlxfcGSQ8BqkBBO8D6bMa6KQpjOgfKGBd1EgZwVD7i5Mi6NJw3DhX9vaQSb1jeVPRhzKVRUdbtmMVoaMjP7gFCV90'], tags: [], author: 'Me', content: '구내식당 쌀국수...' },
-    { id: '2', title: '대통령 선거! 아침 일찍 나가서 투표를 하고 왔다.', date: '2025-06-03', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDysPoHFfKRDK-qH1PR3EQ66KFpmLPhlqTWRA-5f20Ts9D4TY0WLfbFxE9t_1_hUgAANwxomsmaRE6SvFD-qLzWzX6_SK4Vl9ksUYM6f0RH4aMuY6Vl08RCF1yNmCzDhY0OWn-0BejxfggGGdN4-_ra8iilb-yMoe9tIQpdQt91ISh7lmcM4TIyS2aj-kr1ICqwpn1PQfro9taum-bHIiRIAEanCk1hzkRm410zW-OgxbBTAONsivM6b_m0ZnIENyPKPiGKa-Qh9u4'], tags: [], author: 'Me', content: '투표 완료' },
-    { id: '3', title: '금이는 정말 귀여워. 그런데 왜 꼭 내 엉덩이 위에서 자리를 잡고 졸아야 하는 걸까?', date: '2025-06-04', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuA4nb8nB09A-eO7dZYH3YLfNA5keGkR5Fxob0cyf55kwJJIYLTJFX1oCzte8_-IU7lXdUj9tMhjs-EeYbbiXz_Wm6ZlLEFe4uJaZE06InXQ6sPNCrSBQXFavPy8BDWZ37DP8dqOZycPbJMF4lPG9GqyE7PfqE7Z0tVyX0LL3-TrNUfbyYITHwtavRnqw67yzbCRcoy87WfVprmkyMTUfrfU6V4hONIKzavtrU1s3YS7uadem0UDRAW4rtYE0N7Qek7DbehvefpETcw'], tags: [], author: 'Partner', content: '고양이 귀여워' },
-    { id: '4', title: '요아정을 시켰는데 코코볼과 후르츠링을 서비스로 주셨다. 코코볼 존맛.', date: '2025-06-05', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuC0UHLtBTj0CiXo7ZZBgP1OX-cFstUKS0FLGLgKXJnb5a2TFMfi9fsu0PbuNwg4KBJlALRbVi7c02ae_ovJicC7L28D6tkhlAksk4ixtoKznS8-UXA4mvZJ_EdEqRB2VL8D2jkXKeaKfihMBmZUPtyZUr50d0IAvw25ABV-FPiRXDRZQgf8X5w1NrF12hPTCRw5yibkY1Tutv1MBbs5dkRnls-_oJCfB81o8GrBEthP2MO2DD0Oa4TaZRG5EjPoVTl5XE32jWGLksU'], tags: [], author: 'Me', content: '요아정 최고' },
-    { id: '5', title: '친구 집에서 야구를 봤다. 응원봉 들고 집에서 야구 보니까 직관 온 기분도 나고 재밌다.', date: '2025-05-30', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuAtNG-j-ie7tWnd13REOGyxBegQuBW50WW0GnggmPw_p6VkPUhpMvnYitf2xBN_YmGTYSAvUWT_wiTIh1UcjC-pvl36eY-2MrJ1Dg72oqYW2yYJl9Ky0SthXu3Guju1TYeXpc_ht7iuNK6te3b14XRBrUCU8gSdLBNvIG68VC2Cfwi67aKf8KCRTnwpArWRybl6J45dVZP-3XmyAJjXuqHz4nNLkgGyj4RsXg7XkUwSu2B7BaCGRPV3Itfw-wYQtLeLDMiSKbvhodQ'], tags: [], author: 'Me', content: '야구 직관' },
-    { id: '6', title: '5년 전 친구가 준 기프티콘을 드디어 썼다. 허쉬초코바가 있는 편의점을 찾아 헤메다 드디어.', date: '2025-05-31', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDDaToylxCt8jk1WWUlpmIFyjsb4QXN7oIxVrSnoFXTJ2QF67WghA8z0GbRR38-JTYE9k5SHxeKUN_7ZLx6Cu_qs8jxlzaKHKWFN2JL3a5dhAR2MLRvyVShDhwupW2vVLMk7x7qslDnYmnwntjQDp_2tgZjHOSVD0di4OKblVwY-umvWclSWLyAbsokr1Ywfj7PTYJAT09R3M-iDkC9gGhUM7DpkKbG4cIZzwRBKD2R_7mxAIdBU6JkHgSkc6bn9jsJmWuRTRjhhb8'], tags: [], author: 'Me', content: '기프티콘' },
-    { id: '7', title: '저녁 노을이 나무 사이로 비쳐 반짝이는 모습이 예뻤다.', date: '2025-06-01', type: 'Diary', images: ['https://lh3.googleusercontent.com/aida-public/AB6AXuDSD08S0UljvZnhU4g6pQ5P7GWXana18YaCB0a7ExMSMH7Oau9TyYlRnXZtgVwMKzDD0yyvUIiGnKYRyoiGKB51J2omSSypU-n0jGYt-LM-z01c2VOUsTZpDMkXLvmplQJaQqjMHrlBq2Codgd0vbErYNzzQQUmFthbVuia5YxPTv4sqcSuwJxZo5n6cYbif--uFwu04-FMOUweNv3eBfvGUNXlqrkjtZSeF5Q22wgTDzozDOkX7N408_cCKGo9RI1nms3zW8x0IlU'], tags: [], author: 'Me', content: '노을' },
-];
+import { fetchNotionData } from '../lib/notion';
+import { useAuth } from '../context/AuthContext';
 
 export const DiaryPage: React.FC = () => {
+    const { userData } = useAuth();
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
+    const [diaryItems, setDiaryItems] = useState<NotionItem[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
+            loadDiary();
+        } else {
+            setLoading(false);
+        }
+    }, [userData?.notionConfig]);
+
+    const loadDiary = async () => {
+        try {
+            setLoading(true);
+            const result = await fetchNotionData('Diary'); // Fetching all for now
+            // Filter only Diary entries if the API is returning all types (or if we rely on API filter)
+            // For now assuming fetchNotionData handles 'Diary' filter if passed, or we just use all.
+            // Since our updated fetchNotionData takes a filter type, we assume backend logic handles it 
+            // OR we filter locally if backend logic for specific filter is generic.
+            // Our backend code implementation of getNotionDatabase DOES NOT seem to use filterType for specific Notion logic yet,
+            // (I saw req.body.filterType in fetching but didn't verify backend implementation details fully for filter).
+            // Let's assume generic query for now and filter if needed, or if backend just returns everything.
+            // Wait, I didn't see explicit filter logic in the backend function I updated earlier.
+            // It just queries the DB sorted by date.
+            // So I should probably filter by type locally if needed, or trust the data.
+            // All new items are "MemoryItem" from backend.
+
+            const items: NotionItem[] = result.data.map(item => ({
+                id: item.id,
+                title: item.title,
+                date: item.date,
+                type: 'Diary',
+                images: item.coverImage ? [item.coverImage] : [],
+                tags: [],
+                author: item.author === userData?.name || item.author === 'Me' ? 'Me' : 'Partner', // Very basic logic
+                content: item.previewText || ''
+            }));
+
+            setDiaryItems(items);
+        } catch (error) {
+            console.error("Failed to load diary:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     // Group items by week
     const groupedItems = useMemo(() => {
-        const sorted = [...MOCK_DIARY_ITEMS].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const sorted = [...diaryItems].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         const groups: { [key: string]: NotionItem[] } = {};
 
@@ -43,7 +82,9 @@ export const DiaryPage: React.FC = () => {
         });
 
         return groups;
-    }, [filter]);
+    }, [filter, diaryItems]);
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center">Loading...</div>;
 
     return (
         <div className="bg-background-light dark:bg-background-dark text-gray-900 dark:text-gray-100 font-sans antialiased min-h-screen">

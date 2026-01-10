@@ -11,6 +11,8 @@ interface MemoryItem {
 
 interface MemoryFeedProps {
     items: MemoryItem[];
+    onLoadMore?: () => void;
+    hasMore?: boolean;
 }
 
 export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
@@ -41,6 +43,17 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
                         </div>
                     </div>
                 ))}
+
+                {hasMore && (
+                    <div className="snap-center shrink-0 w-[40vw] flex items-center justify-center">
+                        <button
+                            onClick={onLoadMore}
+                            className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 active:scale-95 transition-all"
+                        >
+                            <span className="material-symbols-outlined text-gray-400">arrow_forward</span>
+                        </button>
+                    </div>
+                )}
             </div>
         </section>
     );

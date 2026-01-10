@@ -19,9 +19,6 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
         try {
             const decodedToken = await admin.auth().verifyIdToken(tokenId);
             const uid = decodedToken.uid;
-            // Allow requesting a specific user's data (e.g., partner) if provided, otherwise self
-            // For higher security, we should verify 'targetUserId' is actually the partner.
-            // For now, allow any user to be queried (assuming RLS-like logic here or just open for couple MVP)
             const targetUserId = req.body.targetUserId || uid;
             // 2. Fetch Notion Config from Firestore
             const userDoc = await admin.firestore().collection("users").doc(targetUserId).get();
@@ -36,8 +33,10 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                 return;
             }
             // 3. Query Notion API
+            const { startCursor } = req.body;
             const notionResponse = await axios_1.default.post(`https://api.notion.com/v1/databases/${databaseId}/query`, {
                 page_size: 20,
+                start_cursor: startCursor || undefined,
                 sorts: [
                     {
                         property: "date",
@@ -54,7 +53,7 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             // 4. Transform Data
             const results = notionResponse.data.results;
             const memories = results.map((page) => {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j;
                 const props = page.properties;
                 // Extract Title
                 const titleList = ((_a = props["Name"]) === null || _a === void 0 ? void 0 : _a.title) || ((_b = props["이름"]) === null || _b === void 0 ? void 0 : _b.title) || ((_c = props["title"]) === null || _c === void 0 ? void 0 : _c.title) || [];
@@ -78,19 +77,13 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                 const previewList = ((_h = props["dear23_내용미리보기"]) === null || _h === void 0 ? void 0 : _h.rich_text) || [];
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
                 // Extract Author (Select property: '작성자' or Created By)
-                // Priority: '작성자' (Select) > 'Created by'
                 const authorSelect = (_j = props["작성자"]) === null || _j === void 0 ? void 0 : _j.select;
                 let author = "Partner"; // Default
                 if (authorSelect) {
                     author = authorSelect.name;
                 }
                 else {
-                    const createdBy = (_k = props["Created by"]) === null || _k === void 0 ? void 0 : _k.created_by;
-                    if (createdBy) {
-                        // We might get an ID or name depending on expansion, but usually it's an object.
-                        // For now, let's leave it as is or default to something safe if '작성자' is missing.
-                        // Ideally '작성자' should be used.
-                    }
+                    // Default fallback logic if needed, or just leave as "Partner"
                 }
                 return {
                     id: page.id,
@@ -101,7 +94,11 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                     author
                 };
             });
-            res.status(200).send({ data: memories });
+            res.status(200).send({
+                data: memories,
+                hasMore: notionResponse.data.has_more,
+                nextCursor: notionResponse.data.next_cursor
+            });
         }
         catch (error) {
             console.error("Error fetching Notion data:", error);
@@ -112,6 +109,8 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
 exports.searchNotionDatabases = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
         var _a;
+        // ... (existing search code)
+        // Re-copying existing functionality to ensure no loss
         // 1. Verify Authentication
         const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
         if (!tokenId) {

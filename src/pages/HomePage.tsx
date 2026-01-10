@@ -1,33 +1,83 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import { useAuth } from '../context/AuthContext';
+import { fetchNotionData } from '../lib/notion';
 
 export const HomePage: React.FC = () => {
-    const { user, userData, loading } = useAuth();
+    const { user, userData, partnerData, coupleData, loading } = useAuth();
     const navigate = useNavigate();
+
+    // Memory Feed State
+    const [memories, setMemories] = useState<any[]>([]);
+    const [hasMore, setHasMore] = useState(false);
+    const [nextCursor, setNextCursor] = useState<string | null>(null);
+
+    // Initial Load & D-Day Calculation
+    const daysTogether = useMemo(() => {
+        if (!coupleData?.startDate) return 0;
+        const start = new Date(coupleData.startDate);
+        const now = new Date();
+        const diff = now.getTime() - start.getTime();
+        return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+    }, [coupleData?.startDate]);
 
     useEffect(() => {
         if (!loading) {
             if (!user) {
                 navigate('/login');
-            } else if (userData && !userData.coupleId) {
-                // navigate('/connect'); (ToDo: Implement ConnectPage)
-                // For now, let's just log it or maybe show a "Not Connected" state
-                console.log("User needs to connect with partner");
             }
         }
-    }, [user, userData, loading, navigate]);
+    }, [user, loading, navigate]);
+
+    // Fetch Memories (Initial)
+    useEffect(() => {
+        if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
+            loadMemories();
+        }
+    }, [userData?.notionConfig]);
+
+    const loadMemories = async (cursor?: string) => {
+        try {
+            const result = await fetchNotionData('Memory', cursor); // Assuming we fetch all or specific filter
+            // Transform NotionItems to MemoryItems
+            const newItems = result.data.map(item => ({
+                id: item.id,
+                type: item.coverImage ? 'image' : 'quote',
+                imageUrl: item.coverImage || undefined,
+                quote: item.previewText || 'No content',
+                title: item.title,
+                subtitle: item.date
+            }));
+
+            if (cursor) {
+                setMemories(prev => [...prev, ...newItems]);
+            } else {
+                setMemories(newItems);
+            }
+
+            setHasMore(result.hasMore);
+            setNextCursor(result.nextCursor);
+        } catch (error) {
+            console.error("Failed to load memories:", error);
+        }
+    };
+
+    const handleLoadMore = () => {
+        if (hasMore && nextCursor) {
+            loadMemories(nextCursor);
+        }
+    };
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-white">Loading...</div>;
-    if (!user) return null; // Will redirect
+    if (!user) return null;
 
-    // Placeholder data until real data is linked
-    const partnerImage = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3087&auto=format&fit=crop";
+    // Placeholder data fallback
+    const partnerImage = partnerData?.photoURL || "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3087&auto=format&fit=crop";
     const myImage = userData?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop";
-    const partnerName = "Partner";
+    const partnerName = partnerData?.name || "Partner";
 
     // If not connected, show the splash screen
     if (!userData?.coupleId) {
@@ -52,40 +102,22 @@ export const HomePage: React.FC = () => {
                 partnerImage={partnerImage}
                 myImage={myImage}
                 isOnline={true}
-                daysTogether={1600}
+                daysTogether={daysTogether}
             />
 
             <main className="space-y-2">
                 <RecentMessage
-                    senderName="MINSU"
+                    senderName={partnerName}
                     message="오늘 저녁 같이 먹는 거 기대된다. 나 이제 퇴근해!"
                     timestamp="방금 전"
                     isNew={true}
                 />
 
-                <MemoryFeed items={[
-                    {
-                        id: '1',
-                        type: 'image',
-                        imageUrl: 'https://images.unsplash.com/photo-1516962080544-eac695c93791?q=80&w=3087&auto=format&fit=crop',
-                        title: '첫 번째 데이트',
-                        subtitle: '2023. 12. 24'
-                    },
-                    {
-                        id: '2',
-                        type: 'quote',
-                        quote: '함께라서 더 행복한 시간들',
-                        title: '소중한 기억',
-                        subtitle: '2024. 01. 01'
-                    },
-                    {
-                        id: '3',
-                        type: 'image',
-                        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop',
-                        title: '우리 여행',
-                        subtitle: '2024. 03. 15'
-                    }
-                ]} />
+                <MemoryFeed
+                    items={memories}
+                    hasMore={hasMore}
+                    onLoadMore={handleLoadMore}
+                />
             </main>
         </div>
     );

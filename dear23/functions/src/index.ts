@@ -55,10 +55,12 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             }
 
             // 3. Query Notion API
+            const { startCursor } = req.body;
             const notionResponse = await axios.post(
                 `https://api.notion.com/v1/databases/${databaseId}/query`,
                 {
-                    page_size: 20,
+                    page_size: 20, // Default to 20
+                    start_cursor: startCursor || undefined,
                     sorts: [
                         {
                             property: "date", // Assuming 'date' property exists
@@ -129,7 +131,11 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 };
             });
 
-            res.status(200).send({ data: memories });
+            res.status(200).send({
+                data: memories,
+                hasMore: notionResponse.data.has_more,
+                nextCursor: notionResponse.data.next_cursor
+            });
 
         } catch (error: any) {
             console.error("Error fetching Notion data:", error);
