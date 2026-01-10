@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
@@ -18,10 +19,9 @@ export const HomePage: React.FC = () => {
     // Initial Load & D-Day Calculation
     const daysTogether = useMemo(() => {
         if (!coupleData?.startDate) return 0;
-        const start = new Date(coupleData.startDate);
+        const start = parseISO(coupleData.startDate);
         const now = new Date();
-        const diff = now.getTime() - start.getTime();
-        return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+        return differenceInCalendarDays(now, start) + 1;
     }, [coupleData?.startDate]);
 
     useEffect(() => {

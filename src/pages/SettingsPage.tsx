@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { auth, db } from '../lib/firebase';
@@ -110,10 +111,9 @@ export const SettingsPage: React.FC = () => {
     // Calculate D-Day
     const calculateDday = () => {
         if (!coupleData?.startDate) return "0";
-        const start = new Date(coupleData.startDate);
+        const start = parseISO(coupleData.startDate);
         const now = new Date();
-        const diff = now.getTime() - start.getTime();
-        return Math.floor(diff / (1000 * 60 * 60 * 24)) + 1;
+        return differenceInCalendarDays(now, start) + 1;
     };
 
     const handleDateChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -129,6 +129,9 @@ export const SettingsPage: React.FC = () => {
                 console.error("Failed to update start date:", error);
                 alert("날짜 변경에 실패했습니다.");
             }
+        } else {
+            console.error("No coupleId found in userData");
+            alert("파트너와 연결되지 않아 날짜를 저장할 수 없습니다.");
         }
     };
 

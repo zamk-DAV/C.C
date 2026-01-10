@@ -57,7 +57,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 `https://api.notion.com/v1/databases/${databaseId}/query`,
                 {
                     page_size: 20, // Default to 20
-                    start_cursor: startCursor || undefined,
+                    start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
                     sorts: [
                         {
                             property: "date", // Assuming 'date' property exists

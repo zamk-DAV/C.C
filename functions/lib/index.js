@@ -36,7 +36,7 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             const { startCursor } = req.body;
             const notionResponse = await axios_1.default.post(`https://api.notion.com/v1/databases/${databaseId}/query`, {
                 page_size: 20,
-                start_cursor: startCursor || undefined,
+                start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
                 sorts: [
                     {
                         property: "date",
