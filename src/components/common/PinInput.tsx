@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 
 interface PinInputProps {
     value: string;
@@ -31,6 +31,19 @@ export const PinInput: React.FC<PinInputProps> = ({
         }
     };
 
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key >= '0' && e.key <= '9') {
+                handleNumberClick(parseInt(e.key));
+            } else if (e.key === 'Backspace') {
+                handleDelete();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [value, onChange, onComplete, maxLength]);
+
     return (
         <div className="flex flex-col items-center gap-8 w-full max-w-[320px] mx-auto animate-in fade-in duration-500">
             {/* Dots Display */}
@@ -39,8 +52,8 @@ export const PinInput: React.FC<PinInputProps> = ({
                     <div
                         key={i}
                         className={`w-4 h-4 rounded-full transition-all duration-300 ${i < value.length
-                                ? 'bg-black dark:bg-white scale-110'
-                                : 'bg-gray-200 dark:bg-gray-700'
+                            ? 'bg-black dark:bg-white scale-110'
+                            : 'bg-gray-200 dark:bg-gray-700'
                             }`}
                     />
                 ))}

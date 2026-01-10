@@ -1,11 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { PinInput } from './PinInput';
 
 export const LockScreen: React.FC = () => {
     const { userData, unlockApp } = useAuth();
     const [pin, setPin] = useState('');
-    const [error, setError] = useState(false);
     const [shake, setShake] = useState(false);
 
     const handlePinComplete = (enteredPin: string) => {
@@ -14,11 +13,9 @@ export const LockScreen: React.FC = () => {
             unlockApp();
         } else {
             // Error
-            setError(true);
             setShake(true);
             setTimeout(() => {
                 setPin('');
-                setError(false);
                 setShake(false);
             }, 500);
         }
