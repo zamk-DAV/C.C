@@ -14,11 +14,9 @@ export const HomePage: React.FC = () => {
             if (!user) {
                 navigate('/login');
             } else if (userData && !userData.coupleId) {
-                // If user is logged in but no coupleId, redirect to connection page
                 // navigate('/connect'); (ToDo: Implement ConnectPage)
                 // For now, let's just log it or maybe show a "Not Connected" state
-                // console.log("User needs to connect with partner");
-                navigate('/connect');
+                console.log("User needs to connect with partner");
             }
         }
     }, [user, userData, loading, navigate]);
@@ -31,9 +29,21 @@ export const HomePage: React.FC = () => {
     const myImage = userData?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop";
     const partnerName = "Partner";
 
-    // If not connected, we redirect (handled in useEffect), so we don't need to render anything special here
-    // But to prevent flash, we can return null if no coupleId
-    if (!userData?.coupleId) return null;
+    // If not connected, show the splash screen
+    if (!userData?.coupleId) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8 space-y-4">
+                <h1 className="text-2xl font-bold font-display">DEAR23</h1>
+                <p className="text-gray-500 font-sans">파트너와 연결이 필요합니다.</p>
+                <button
+                    className="bg-primary text-white px-6 py-3 rounded-xl font-sans text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all"
+                    onClick={() => navigate('/connect')}
+                >
+                    연결하러 가기
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-background-light pb-24">
