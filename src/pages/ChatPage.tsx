@@ -335,6 +335,17 @@ export const ChatPage: React.FC = () => {
         await updateDoc(msgRef, { reactions: newReactions });
     };
 
+    // Group messages by date
+    const groupedMessages: { [key: string]: ChatMessage[] } = {};
+    messages.forEach(msg => {
+        const date = msg.createdAt?.toDate ? msg.createdAt.toDate() : new Date();
+        const dateKey = format(date, 'yyyy. MM. dd');
+        if (!groupedMessages[dateKey]) {
+            groupedMessages[dateKey] = [];
+        }
+        groupedMessages[dateKey].push(msg);
+    });
+
     return (
         <div className="min-h-[100dvh] bg-background text-primary font-display antialiased flex justify-center w-full transition-colors duration-300">
             <div className="w-full max-w-md relative flex flex-col min-h-[100dvh] bg-background shadow-xl">
