@@ -1,7 +1,7 @@
 import React from 'react';
 import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { ChatMessage } from '../../types';
+import type { ChatMessage } from '../../types';
 
 interface MessageBubbleProps {
     message: ChatMessage;
@@ -40,11 +40,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         onContextMenu(e, msg);
     };
 
-    const handleLongPress = (e: React.TouchEvent) => {
-        // Simple long press implementation could be improved with custom hook
-        // For now, relying on native context menu or user tap
-        onContextMenu(e, msg);
-    };
+
 
     // Deleted Message View
     if (msg.isDeleted) {

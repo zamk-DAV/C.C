@@ -1,12 +1,14 @@
+
 import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import type { ChatMessage } from '../types';
 import { format } from 'date-fns';
 import { ContextMenu } from '../components/chat/ContextMenu';
+import useFcmToken from '../hooks/useFcmToken';
 // import { ko } from 'date-fns/locale';
 
 export const ChatPage: React.FC = () => {
@@ -25,7 +27,7 @@ export const ChatPage: React.FC = () => {
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
 
     const [typingStatus, setTypingStatus] = useState<boolean>(false);
-    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // Auto-scroll to bottom combined with messages and typing status
     const scrollToBottom = () => {
@@ -89,7 +91,7 @@ export const ChatPage: React.FC = () => {
 
         // Set typing true
         updateDoc(doc(db, 'couples', coupleData.id), {
-            [`typing.${user.uid}`]: true
+            [`typing.${user.uid} `]: true
         });
 
         // Clear existing timeout
@@ -100,9 +102,37 @@ export const ChatPage: React.FC = () => {
         // Set timeout to clear typing status
         typingTimeoutRef.current = setTimeout(() => {
             updateDoc(doc(db, 'couples', coupleData.id), {
-                [`typing.${user.uid}`]: false
+                [`typing.${user.uid} `]: false
             });
         }, 2000);
+    };
+
+    // Hooks
+    useFcmToken();
+
+
+
+    const sendPushNotification = async (text: string) => {
+        if (!partnerData?.uid) return;
+
+        // Fetch partner's tokens
+        const partnerDoc = await getDoc(doc(db, 'users', partnerData.uid));
+        if (partnerDoc.exists()) {
+            const data = partnerDoc.data();
+            const tokens = data.fcmTokens || [];
+            if (tokens.length > 0) {
+                await fetch('/api/send-push', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        tokens,
+                        title: user?.displayName || 'C.C',
+                        body: text,
+                        icon: '/icon-192x192.png'
+                    })
+                });
+            }
+        }
     };
 
     const handleSendMessage = async () => {
@@ -131,13 +161,17 @@ export const ChatPage: React.FC = () => {
             }
 
             await addDoc(collection(db, 'couples', coupleData.id, 'messages'), messageData);
+
+            // Send Push Notification
+            sendPushNotification(inputText);
+
             setInputText('');
             setReplyTarget(null);
 
             // Clear typing immediately on send
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             updateDoc(doc(db, 'couples', coupleData.id), {
-                [`typing.${user.uid}`]: false
+                [`typing.${user.uid} `]: false
             });
 
         } catch (error) {
@@ -286,7 +320,6 @@ export const ChatPage: React.FC = () => {
                             </div>
                             <div className="mb-6">
                                 {groupedMessages[dateKey].map((msg: ChatMessage, index: number) => {
-                                    const date = msg.createdAt instanceof Timestamp ? msg.createdAt.toDate() : new Date();
                                     const isMine = msg.senderId === user?.uid;
 
                                     // Grouping Logic
