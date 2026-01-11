@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc, increment } from 'firebase/firestore';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import type { ChatMessage } from '../types';
 import { format } from 'date-fns';
@@ -108,6 +108,19 @@ export const ChatPage: React.FC = () => {
     };
 
     // Hooks
+    // Clear unread count when entering or receiving messages while active
+    useEffect(() => {
+        if (user?.uid) {
+            const userRef = doc(db, 'users', user.uid);
+            updateDoc(userRef, { unreadCount: 0 });
+
+            // App Badging API (Native icon badge)
+            if ('setAppBadge' in navigator) {
+                (navigator as any).setAppBadge(0).catch(console.error);
+            }
+        }
+    }, [user?.uid, messages.length]);
+
     useFcmToken();
 
 
@@ -124,6 +137,8 @@ export const ChatPage: React.FC = () => {
             if (data.isPushEnabled === false) return;
 
             const tokens = data.fcmTokens || [];
+            const badgeCount = data.unreadCount || 0;
+
             if (tokens.length > 0) {
                 try {
                     const response = await fetch('/api/send-push', {
@@ -133,7 +148,8 @@ export const ChatPage: React.FC = () => {
                             tokens,
                             title: user?.displayName || 'C.C',
                             body: text,
-                            icon: '/icon-192x192.png'
+                            icon: user?.photoURL || '/icon-192x192.png',
+                            badge: badgeCount
                         })
                     });
 
@@ -175,6 +191,13 @@ export const ChatPage: React.FC = () => {
 
             await addDoc(collection(db, 'couples', coupleData.id, 'messages'), messageData);
 
+            // Increment partner's unread count
+            if (partnerData?.uid) {
+                await updateDoc(doc(db, 'users', partnerData.uid), {
+                    unreadCount: increment(1)
+                });
+            }
+
             // Send Push Notification
             sendPushNotification(inputText);
 
@@ -184,7 +207,7 @@ export const ChatPage: React.FC = () => {
             // Clear typing immediately on send
             if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
             updateDoc(doc(db, 'couples', coupleData.id), {
-                [`typing.${user.uid} `]: false
+                [`typing.${user.uid}`]: false
             });
 
         } catch (error) {

@@ -10,6 +10,8 @@ export interface UserData {
     passcode?: string | null;
     theme?: string;
     isPushEnabled?: boolean; // Notification Setting
+    fcmTokens?: string[];
+    unreadCount?: number;
 }
 
 export interface CoupleData {

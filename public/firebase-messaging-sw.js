@@ -19,12 +19,12 @@ const messaging = firebase.messaging();
 
 messaging.onBackgroundMessage((payload) => {
     console.log('[firebase-messaging-sw.js] Received background message ', payload);
-    // Customize notification here
-    const notificationTitle = payload.notification.title;
-    const notificationOptions = {
-        body: payload.notification.body,
-        icon: '/icon-192x192.png' // Ensure you have an icon
-    };
 
-    self.registration.showNotification(notificationTitle, notificationOptions);
+    // Set numeric badge if provided in data or notification
+    const badge = payload.data?.badge || payload.notification?.badge;
+    if (badge && 'setAppBadge' in navigator) {
+        navigator.setAppBadge(Number(badge)).catch(console.error);
+    }
+
+    // FCM manages the notification display automatically when the 'notification' property is present in the payload.
 });

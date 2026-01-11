@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         app = getApps()[0];
     }
 
-    const { tokens, title, body, icon } = req.body;
+    const { tokens, title, body, icon, badge } = req.body;
 
     if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
         return res.status(400).json({ error: 'Missing tokens' });
@@ -64,10 +64,31 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 title: title || 'New Message',
                 body: body || 'You have a new message!',
             },
+            data: {
+                badge: badge ? String(badge) : '0'
+            },
             tokens: tokens,
             webpush: {
+                notification: {
+                    badge: icon || '/icon-192x192.png', // This is for the notification bar icon on Android
+                    icon: icon || '/icon-192x192.png',
+                },
                 fcmOptions: {
                     link: 'https://c-c-mauve.vercel.app/chat'
+                }
+            },
+            // Android specific for badge count (Launcher icon)
+            android: {
+                notification: {
+                    notificationCount: badge ? Number(badge) : undefined,
+                }
+            },
+            // APNs specific for iOS badge
+            apns: {
+                payload: {
+                    aps: {
+                        badge: badge ? Number(badge) : undefined,
+                    }
                 }
             }
         };
