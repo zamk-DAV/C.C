@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.searchNotionDatabases = exports.getNotionDatabase = void 0;
+exports.validateNotionSchema = exports.searchNotionDatabases = exports.getNotionDatabase = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios_1 = require("axios");
@@ -154,6 +154,85 @@ exports.searchNotionDatabases = functions.https.onRequest((req, res) => {
         catch (error) {
             console.error("Error searching Notion databases:", error);
             res.status(500).send({ error: error.message });
+        }
+    });
+});
+// ... (existing code)
+exports.validateNotionSchema = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        var _a, _b, _c;
+        // 1. Verify Authentication
+        const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+        try {
+            await admin.auth().verifyIdToken(tokenId);
+            const { apiKey, databaseId } = req.body;
+            if (!apiKey || !databaseId) {
+                res.status(400).send({ error: "API Key and Database ID are required." });
+                return;
+            }
+            // 2. Define Required Schema
+            const requiredProperties = {
+                // Common
+                "구분": { select: { options: [{ name: "일기", color: "blue" }, { name: "일정", color: "green" }, { name: "편지", color: "pink" }, { name: "추억", color: "yellow" }] } },
+                "작성자": { select: {} },
+                "내용미리보기": { rich_text: {} },
+                "나만보기": { checkbox: {} },
+                "좋아요": { checkbox: {} },
+                "작성일시": { created_time: {} },
+                "수정일시": { last_edited_time: {} },
+                // Diary
+                "dear23_대표이미지": { files: {} },
+                "대표이미지": { files: {} },
+                "기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }] } },
+                "날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
+                "상대방한마디": { rich_text: {} },
+                // Calendar
+                "함께하기": { checkbox: {} },
+                "중요": { checkbox: {} },
+                "장소": { rich_text: {} },
+                // Letter
+                "읽음": { checkbox: {} },
+                "개봉일": { date: {} }
+            };
+            // 3. Fetch Current Schema
+            const dbResponse = await axios_1.default.get(`https://api.notion.com/v1/databases/${databaseId}`, {
+                headers: {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Notion-Version": "2022-06-28",
+                },
+            });
+            const currentProperties = dbResponse.data.properties;
+            const propertiesToCreate = {};
+            const missingList = [];
+            // 4. Check for missing properties
+            for (const [name, config] of Object.entries(requiredProperties)) {
+                if (!currentProperties[name]) {
+                    propertiesToCreate[name] = config;
+                    missingList.push(name);
+                }
+            }
+            // 5. Update Database if needed
+            if (Object.keys(propertiesToCreate).length > 0) {
+                await axios_1.default.patch(`https://api.notion.com/v1/databases/${databaseId}`, { properties: propertiesToCreate }, {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                });
+                res.status(200).send({ status: "updated", created: missingList });
+            }
+            else {
+                res.status(200).send({ status: "ok", message: "Schema is already perfect!" });
+            }
+        }
+        catch (error) {
+            console.error("Error validating Notion schema:", ((_b = error.response) === null || _b === void 0 ? void 0 : _b.data) || error);
+            res.status(500).send({ error: error.message, details: (_c = error.response) === null || _c === void 0 ? void 0 : _c.data });
         }
     });
 });

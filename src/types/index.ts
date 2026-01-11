@@ -16,6 +16,7 @@ export interface CoupleData {
     members: string[]; // [uid1, uid2]
     startDate: string; // ISO string
     chatId: string;
+    notionConfig?: { apiKey: string | null; databaseId: string | null };
 }
 // Force Refresh
 

@@ -3,7 +3,7 @@ import { differenceInCalendarDays, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { auth, db } from '../lib/firebase';
-import { searchNotionDatabases } from '../lib/notion';
+import { searchNotionDatabases, validateNotionSchema } from '../lib/notion';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { PinInput } from '../components/common/PinInput';
@@ -54,11 +54,15 @@ export const SettingsPage: React.FC = () => {
     const [isSearching, setIsSearching] = useState(false);
 
     useEffect(() => {
-        if (userData?.notionConfig) {
+        if (coupleData?.notionConfig) {
+            setNotionKey(coupleData.notionConfig.apiKey || '');
+            setNotionDbId(coupleData.notionConfig.databaseId || '');
+        } else if (userData?.notionConfig) {
+            // Fallback for legacy data
             setNotionKey(userData.notionConfig.apiKey || '');
             setNotionDbId(userData.notionConfig.databaseId || '');
         }
-    }, [userData]);
+    }, [userData, coupleData]);
 
     const handleSearchDatabases = async () => {
         if (!notionKey) return;
@@ -80,18 +84,31 @@ export const SettingsPage: React.FC = () => {
     };
 
     const handleSaveNotion = async () => {
-        if (!user) return;
+        if (!user || !userData?.coupleId) {
+            alert("파트너와 연결된 상태에서만 설정할 수 있습니다.");
+            return;
+        }
         setIsSaving(true);
         try {
-            await updateDoc(doc(db, 'users', user.uid), {
+            // 1. Smart Initialization (Schema Validation)
+            const validation = await validateNotionSchema(notionKey, notionDbId);
+
+            let message = "노션 연동이 완료되었습니다!";
+            if (validation.created && validation.created.length > 0) {
+                message += `\n(자동 생성된 속성: ${validation.created.join(', ')})`;
+            }
+
+            // 2. Shared Config Save
+            await updateDoc(doc(db, 'couples', userData.coupleId), {
                 notionConfig: {
                     apiKey: notionKey,
                     databaseId: notionDbId
                 }
             });
-            alert("Notion configuration saved!");
-        } catch (error) {
+            alert(message);
+        } catch (error: any) {
             console.error("Failed to save Notion config", error);
+            alert(`설정 저장 실패: ${error.message}`);
         } finally {
             setIsSaving(false);
         }
