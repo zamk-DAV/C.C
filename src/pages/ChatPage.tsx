@@ -1,3 +1,4 @@
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
@@ -61,7 +62,7 @@ export const ChatPage: React.FC = () => {
     };
 
     // Group messages by date
-    const groupedMessages = messages.reduce((groups, message) => {
+    const groupedMessages = messages.reduce((groups: Record<string, ChatMessage[]>, message: ChatMessage) => {
         const date = message.createdAt instanceof Timestamp
             ? message.createdAt.toDate()
             : new Date(); // Fallback for pending writes
@@ -104,7 +105,7 @@ export const ChatPage: React.FC = () => {
                                 <div className="h-[1px] flex-1 bg-border"></div>
                             </div>
                             <div className="space-y-4">
-                                {groupedMessages[dateKey].map((msg) => {
+                                {groupedMessages[dateKey].map((msg: ChatMessage) => {
                                     const date = msg.createdAt instanceof Timestamp ? msg.createdAt.toDate() : new Date();
                                     return (
                                         <MessageBubble
