@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { format, parseISO } from 'date-fns';
+import { format, parseISO, isValid } from 'date-fns';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { fetchNotionData, type NotionItem } from '../lib/notion';
@@ -92,8 +92,14 @@ export const DiaryPage: React.FC = () => {
                 )}
 
                 {!loading && sortedItems.map((item) => {
-                    const dateObj = parseISO(item.date);
-                    const dateStr = format(dateObj, 'MM.dd'); // e.g., 10.24
+                    const date = parseISO(item.date);
+                    let dateStr = '';
+                    if (isValid(date)) {
+                        dateStr = format(date, 'MM.dd');
+                    } else {
+                        console.error('Invalid date:', item.date);
+                        dateStr = '--.--';
+                    } // e.g., 10.24
 
                     // Visual Entry (Full Width Card)
                     if (item.coverImage) {
