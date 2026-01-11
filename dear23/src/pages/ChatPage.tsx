@@ -74,7 +74,7 @@ export const ChatPage: React.FC = () => {
                                             <span className="text-[12px] text-neutral-500 dark:text-neutral-400 mb-1 font-medium">{partnerName}</span>
 
                                             {/* Bubble + Time/Read */}
-                                            <div className="flex items-end gap-1.5 group">
+                                            <div className="flex items-end gap-1 group">
                                                 {/* Message Bubble */}
                                                 <div className="bg-neutral-100 dark:bg-zinc-800 px-3 py-2.5 rounded-2xl rounded-tl-sm">
                                                     {msg.imageUrl && (
@@ -101,7 +101,7 @@ export const ChatPage: React.FC = () => {
 
                                                     {/* Time & Read (Base) */}
                                                     <div className={`col-start-1 row-start-1 flex flex-col items-start gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-0' : 'opacity-100'}`}>
-                                                        {!msg.isRead && <span className="text-yellow-500 font-bold">1</span>}
+                                                        {!msg.isRead && <span className="material-symbols-outlined text-[10px] text-yellow-500">favorite</span>}
                                                         <span>{msg.time}</span>
                                                     </div>
                                                 </div>
@@ -112,7 +112,7 @@ export const ChatPage: React.FC = () => {
 
                                 {/* My Message */}
                                 {msg.sender === 'me' && (
-                                    <div className="flex items-end gap-1.5 max-w-[80%] group">
+                                    <div className="flex items-end gap-1 max-w-[80%] group">
                                         {/* Time/Read vs Actions Swap (Grid Stacking) */}
                                         <div className="grid items-end justify-items-end">
                                             {/* Action Buttons (Overlay) */}
@@ -124,7 +124,7 @@ export const ChatPage: React.FC = () => {
 
                                             {/* Time & Read (Base) */}
                                             <div className={`col-start-1 row-start-1 flex flex-col items-end gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-0' : 'opacity-100'}`}>
-                                                {!msg.isRead && <span className="text-yellow-500 font-bold">1</span>}
+                                                {!msg.isRead && <span className="material-symbols-outlined text-[10px] text-yellow-500">favorite</span>}
                                                 <span>{msg.time}</span>
                                             </div>
                                         </div>
