@@ -99,10 +99,7 @@ export const HomePage: React.FC = () => {
         <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
             <Header
                 partnerName={partnerName}
-                partnerImage={partnerImage}
-                myImage={myImage}
                 isOnline={true}
-                daysTogether={daysTogether}
             />
 
             <main className="space-y-2">
