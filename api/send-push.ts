@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import * as admin from 'firebase-admin';
+import { initializeApp, getApps, cert, type ServiceAccount } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
     // Enable CORS
@@ -21,7 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Initialize Firebase Admin (lazy load with error handling)
-    if (!admin.apps.length) {
+    if (getApps().length === 0) {
         try {
             const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
 
@@ -31,7 +32,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
 
             // Handle potential JSON parsing error
-            let serviceAccount;
+            let serviceAccount: ServiceAccount;
             try {
                 serviceAccount = JSON.parse(serviceAccountKey);
             } catch (e) {
@@ -39,8 +40,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(500).json({ error: 'Server Config Error: Invalid JSON in FIREBASE_SERVICE_ACCOUNT_KEY' });
             }
 
-            admin.initializeApp({
-                credential: admin.credential.cert(serviceAccount),
+            initializeApp({
+                credential: cert(serviceAccount),
             });
         } catch (error: any) {
             console.error("Firebase Admin Init Error:", error);
@@ -68,7 +69,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         };
 
-        const response = await admin.messaging().sendMulticast(message);
+        const response = await getMessaging().sendMulticast(message);
         return res.status(200).json({ success: true, response });
 
     } catch (error: any) {
