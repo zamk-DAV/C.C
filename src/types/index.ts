@@ -30,3 +30,13 @@ export interface NotionItem {
     author: 'Me' | 'Partner';
     content: string;
 }
+
+export interface ChatMessage {
+    id: string;
+    text: string;
+    senderId: string;
+    createdAt: any; // Firestore Timestamp
+    type: 'text' | 'image';
+    imageUrl?: string;
+    isRead: boolean;
+}
