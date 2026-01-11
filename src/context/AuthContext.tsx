@@ -58,7 +58,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
                         // LOCK LOGIC: If passcode exists and app hasn't been unlocked yet
                         if (data.passcode && loading) { // Only lock on initial load
-                            setIsLocked(true);
+                            const sessionUnlocked = sessionStorage.getItem('app_unlocked');
+                            if (sessionUnlocked !== 'true') {
+                                setIsLocked(true);
+                            }
                         }
 
                         if (!data.coupleId) {
@@ -82,6 +85,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setCoupleData(null);
                 setLoading(false);
                 setIsLocked(false);
+                sessionStorage.removeItem('app_unlocked');
             }
         });
 
@@ -149,7 +153,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => clearTimeout(timer);
     }, [loading]);
 
-    const unlockApp = () => setIsLocked(false);
+    const unlockApp = () => {
+        sessionStorage.setItem('app_unlocked', 'true');
+        setIsLocked(false);
+    };
 
     const value = {
         user,
