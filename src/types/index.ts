@@ -17,6 +17,7 @@ export interface CoupleData {
     startDate: string; // ISO string
     chatId: string;
     notionConfig?: { apiKey: string | null; databaseId: string | null };
+    notice?: { text: string; id: string; createdAt: any };
 }
 // Force Refresh
 
@@ -39,4 +40,6 @@ export interface ChatMessage {
     type: 'text' | 'image';
     imageUrl?: string;
     isRead: boolean;
+    isDeleted?: boolean;
+    replyTo?: { id: string; text: string; senderName: string };
 }

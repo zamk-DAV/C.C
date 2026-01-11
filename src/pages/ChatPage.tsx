@@ -2,10 +2,11 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc } from 'firebase/firestore';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import type { ChatMessage } from '../types';
 import { format } from 'date-fns';
+import { ContextMenu } from '../components/chat/ContextMenu';
 // import { ko } from 'date-fns/locale';
 
 export const ChatPage: React.FC = () => {
@@ -14,6 +15,14 @@ export const ChatPage: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const [notice, setNotice] = useState<{ text: string, id: string } | null>(null);
+
+    // Context Menu State
+    const [menuLocation, setMenuLocation] = useState<{ x: number, y: number } | null>(null);
+    const [selectedMsg, setSelectedMsg] = useState<ChatMessage | null>(null);
+
+    // Reply State
+    const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
 
     // Auto-scroll to bottom
     const scrollToBottom = () => {
@@ -22,18 +31,19 @@ export const ChatPage: React.FC = () => {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [messages, replyTarget]);
 
-    // Fetch Messages
+    // Fetch Messages & Notice
     useEffect(() => {
         if (!coupleData?.id) return;
 
+        // Messages
         const q = query(
             collection(db, 'couples', coupleData.id, 'messages'),
             orderBy('createdAt', 'asc')
         );
 
-        const unsubscribe = onSnapshot(q, (snapshot) => {
+        const unsubscribeMsgs = onSnapshot(q, (snapshot) => {
             const msgs = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
@@ -41,7 +51,19 @@ export const ChatPage: React.FC = () => {
             setMessages(msgs);
         });
 
-        return () => unsubscribe();
+        // Notice (from couple doc)
+        const unsubscribeCouple = onSnapshot(doc(db, 'couples', coupleData.id), (docSnap) => {
+            if (docSnap.exists() && docSnap.data().notice) {
+                setNotice(docSnap.data().notice);
+            } else {
+                setNotice(null);
+            }
+        });
+
+        return () => {
+            unsubscribeMsgs();
+            unsubscribeCouple();
+        };
     }, [coupleData?.id]);
 
     const handleSendMessage = async () => {
@@ -53,17 +75,71 @@ export const ChatPage: React.FC = () => {
         }
 
         try {
-            await addDoc(collection(db, 'couples', coupleData.id, 'messages'), {
+            const messageData: any = {
                 text: inputText,
                 senderId: user.uid,
                 createdAt: serverTimestamp(),
                 type: 'text',
                 isRead: false
-            });
+            };
+
+            if (replyTarget) {
+                messageData.replyTo = {
+                    id: replyTarget.id,
+                    text: replyTarget.text,
+                    senderName: replyTarget.senderId === user.uid ? '나' : (partnerData?.name || 'Partner')
+                };
+            }
+
+            await addDoc(collection(db, 'couples', coupleData.id, 'messages'), messageData);
             setInputText('');
+            setReplyTarget(null);
         } catch (error) {
             console.error("Error sending message:", error);
         }
+    };
+
+    const handleContextMenu = (e: React.MouseEvent | React.TouchEvent, msg: ChatMessage) => {
+        e.preventDefault();
+        // Determine coordinates
+        let x = 0, y = 0;
+        if ('touches' in e) {
+            x = e.touches[0].clientX;
+            y = e.touches[0].clientY;
+        } else {
+            x = (e as React.MouseEvent).clientX;
+            y = (e as React.MouseEvent).clientY;
+        }
+        setMenuLocation({ x, y });
+        setSelectedMsg(msg);
+    };
+
+    const handleAction = async (action: 'reply' | 'copy' | 'notice' | 'delete') => {
+        if (!selectedMsg || !coupleData?.id) return;
+        setMenuLocation(null);
+
+        switch (action) {
+            case 'reply':
+                setReplyTarget(selectedMsg);
+                break;
+            case 'copy':
+                navigator.clipboard.writeText(selectedMsg.text);
+                break;
+            case 'notice':
+                const noticeData = { text: selectedMsg.text, id: selectedMsg.id, createdAt: new Date().toISOString() };
+                await updateDoc(doc(db, 'couples', coupleData.id), { notice: noticeData });
+                break;
+            case 'delete':
+                if (window.confirm("메시지를 삭제하시겠습니까? (상대방에게도 '삭제된 메시지'로 보입니다)")) {
+                    await updateDoc(doc(db, 'couples', coupleData.id, 'messages', selectedMsg.id), {
+                        isDeleted: true,
+                        text: '', // clear text for privacy
+                        type: 'text' // reset type
+                    });
+                }
+                break;
+        }
+        setSelectedMsg(null);
     };
 
     // Group messages by date
@@ -84,27 +160,50 @@ export const ChatPage: React.FC = () => {
     return (
         <div className="min-h-[100dvh] bg-background text-primary font-display antialiased flex justify-center w-full transition-colors duration-300">
             <div className="w-full max-w-md relative flex flex-col min-h-[100dvh] bg-background shadow-xl">
-                {/* Header */}
-                <header className="fixed top-0 max-w-md w-full bg-background/80 backdrop-blur-md z-50 px-6 pt-14 pb-6 border-b border-border flex items-center justify-between transition-colors duration-300">
-                    <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => navigate(-1)}
-                            className="material-symbols-outlined text-[24px] font-light hover:text-text-secondary transition-colors text-primary"
-                        >
-                            arrow_back
-                        </button>
-                        <div className="flex flex-col">
-                            <h1 className="text-[17px] font-bold tracking-tight text-primary">{partnerData?.name || 'Partner'}</h1>
+                {/* Header with Notice */}
+                <header className="fixed top-0 max-w-md w-full bg-background/80 backdrop-blur-md z-50 px-6 pt-14 pb-2 border-b border-border flex flex-col transition-colors duration-300">
+                    <div className="flex items-center justify-between pb-4">
+                        <div className="flex items-center gap-4">
+                            <button
+                                onClick={() => navigate(-1)}
+                                className="material-symbols-outlined text-[24px] font-light hover:text-text-secondary transition-colors text-primary"
+                            >
+                                arrow_back
+                            </button>
+                            <div className="flex flex-col">
+                                <h1 className="text-[17px] font-bold tracking-tight text-primary">{partnerData?.name || 'Partner'}</h1>
+                            </div>
                         </div>
+                        <button className="material-symbols-outlined text-[22px] font-light text-primary">search</button>
                     </div>
-                    <button className="material-symbols-outlined text-[22px] font-light text-primary">search</button>
+
+                    {/* Notice Banner */}
+                    {notice && (
+                        <div className="flex items-center justify-between bg-secondary/30 p-2 rounded-lg mb-2 cursor-pointer hover:bg-secondary/50 transition-colors">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                <span className="material-symbols-outlined text-[16px] text-primary shrink-0">campaign</span>
+                                <span className="text-[12px] text-primary truncate">{notice.text}</span>
+                            </div>
+                            <button
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    if (window.confirm("공지를 내리시겠습니까?")) {
+                                        if (coupleData?.id) updateDoc(doc(db, 'couples', coupleData.id), { notice: null });
+                                    }
+                                }}
+                                className="material-symbols-outlined text-[14px] text-text-secondary hover:text-primary shrink-0"
+                            >
+                                close
+                            </button>
+                        </div>
+                    )}
                 </header>
 
                 {/* Main Chat Area */}
-                <main className="flex-1 mt-[110px] mb-[100px] px-6 overflow-y-auto no-scrollbar">
+                <main className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar">
                     {Object.keys(groupedMessages).map((dateKey) => (
                         <div key={dateKey}>
-                            <div className="flex items-center gap-4 my-12">
+                            <div className="flex items-center gap-4 my-8">
                                 <div className="h-[1px] flex-1 bg-border"></div>
                                 <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary">{dateKey}</span>
                                 <div className="h-[1px] flex-1 bg-border"></div>
@@ -129,16 +228,13 @@ export const ChatPage: React.FC = () => {
                                     return (
                                         <MessageBubble
                                             key={msg.id}
-                                            message={msg.text}
-                                            timestamp={format(date, 'a h:mm').replace('AM', '오전').replace('PM', '오후')}
+                                            message={msg}
                                             isMine={isMine}
                                             senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
                                             avatarUrl={isMine ? undefined : partnerData?.photoURL}
-                                            type={msg.type}
-                                            imageUrl={msg.imageUrl}
-                                            isRead={msg.isRead}
                                             showProfile={!isMine && isFirstInGroup}
                                             showTime={isLastInGroup}
+                                            onContextMenu={handleContextMenu}
                                         />
                                     );
                                 })}
@@ -148,9 +244,35 @@ export const ChatPage: React.FC = () => {
                     <div ref={messagesEndRef} />
                 </main>
 
-                {/* Footer Input */}
+                {/* Context Menu */}
+                {menuLocation && selectedMsg && (
+                    <ContextMenu
+                        x={menuLocation.x}
+                        y={menuLocation.y}
+                        onClose={() => setMenuLocation(null)}
+                        onReply={() => handleAction('reply')}
+                        onCopy={() => handleAction('copy')}
+                        onNotice={() => handleAction('notice')}
+                        onDelete={() => handleAction('delete')}
+                        isMine={selectedMsg.senderId === user?.uid}
+                    />
+                )}
+
                 {/* Footer Input */}
                 <footer className="fixed bottom-0 max-w-md w-full bg-background px-6 pb-10 pt-4 z-50 transition-colors duration-300">
+                    {/* Reply Preview */}
+                    {replyTarget && (
+                        <div className="flex items-center justify-between bg-secondary/50 p-2 rounded-t-lg border-b border-primary/20 mb-2">
+                            <div className="flex flex-col text-[12px] border-l-2 border-primary pl-2">
+                                <span className="font-bold text-primary">{replyTarget.senderId === user?.uid ? '나' : (partnerData?.name || 'Partner')}에게 답장</span>
+                                <span className="text-text-secondary truncate max-w-[200px]">{replyTarget.text}</span>
+                            </div>
+                            <button onClick={() => setReplyTarget(null)}>
+                                <span className="material-symbols-outlined text-[18px]">close</span>
+                            </button>
+                        </div>
+                    )}
+
                     <form
                         className="flex items-center gap-4 border-b border-primary pb-3"
                         onSubmit={(e) => {
