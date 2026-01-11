@@ -21,9 +21,9 @@ export default {
                 "background-dark": "var(--bg-color)",  // alias (dynamic now)
             },
             fontFamily: {
-                "display": ["Gowun Dodum", "sans-serif"],
-                "sans": ["Gowun Dodum", "sans-serif"],
-                "serif": ["Gowun Dodum", "serif"],
+                "display": ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
+                "sans": ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
+                "serif": ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "Malgun Gothic", "serif"],
             },
             borderRadius: {
                 "DEFAULT": "6px",
