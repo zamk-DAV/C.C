@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
+import { Heart, ThumbsUp, Smile, Frown, Sparkles, Reply } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ChatMessage } from '../../types';
 
@@ -11,6 +11,8 @@ interface MessageBubbleProps {
     showProfile?: boolean;
     showTime?: boolean;
     onContextMenu: (e: React.MouseEvent | React.TouchEvent, message: ChatMessage) => void;
+    onReply?: (message: ChatMessage) => void;
+    onReaction?: (message: ChatMessage, emoji: string) => void;
 }
 
 const ReactionIcons: Record<string, any> = {
@@ -28,7 +30,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     avatarUrl,
     showProfile = true,
     showTime = true,
-    onContextMenu
+    onContextMenu,
+    onReply,
+    onReaction
 }) => {
     // Format timestamp
     const timestamp = msg.createdAt?.toDate ?
@@ -66,7 +70,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     // Normal Message View
     return (
         <div
-            className={cn("flex flex-col max-w-[85%] mb-1 select-none", isMine ? "items-end ml-auto" : "items-start")}
+            className={cn("group flex flex-col max-w-[85%] mb-1 select-none", isMine ? "items-end ml-auto" : "items-start")}
             onContextMenu={handleContextMenu}
         >
             {/* Name (Only show if profile is shown for partner) */}
@@ -128,6 +132,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         )}
                     </div>
 
+
+
+                    {/* Hover Actions (Desktop) - Only for Partner Messages */}
+                    {!isMine && (
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 self-center ml-1 bg-secondary/80 backdrop-blur-sm border border-border p-1.5 rounded-xl shadow-sm">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onReply?.(msg); }}
+                                className="text-text-secondary hover:text-primary transition-colors p-0.5"
+                                title="답장"
+                            >
+                                <Reply size={14} />
+                            </button>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onReaction?.(msg, 'heart'); }}
+                                className="text-text-secondary hover:text-red-400 transition-colors p-0.5"
+                                title="좋아요"
+                            >
+                                <Heart size={14} />
+                            </button>
+                        </div>
+                    )}
+
                     {/* Time (Partner) */}
                     {!isMine && (
                         <div className="flex flex-col items-start gap-0.5 mb-[2px]">
@@ -139,22 +165,26 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
 
                 {/* Reactions Display */}
                 {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                    <div className={cn("flex gap-1 -mt-2 z-10", isMine ? "mr-1" : "ml-10")}>
+                    <div className={cn("flex flex-wrap gap-1 mt-1 z-10", isMine ? "justify-end mr-1" : "justify-start ml-10")}>
                         {Object.entries(msg.reactions).map(([emoji, userIds]) => {
                             if (!userIds || userIds.length === 0) return null;
                             const IconConfig = ReactionIcons[emoji];
                             if (!IconConfig) return null;
 
                             return (
-                                <div key={emoji} className="bg-background border border-border rounded-full px-1.5 py-0.5 flex items-center shadow-sm">
+                                <button
+                                    key={emoji}
+                                    onClick={(e) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
+                                    className="bg-background border border-border rounded-full px-2 py-1 flex items-center gap-1 shadow-sm hover:bg-secondary/50 transition-colors"
+                                >
                                     <IconConfig.icon className={cn("w-3 h-3", IconConfig.color)} />
-                                    {userIds.length > 1 && <span className="text-[10px] ml-1 font-bold">{userIds.length}</span>}
-                                </div>
+                                    <span className="text-[10px] font-bold text-text-secondary">{userIds.length}</span>
+                                </button>
                             );
                         })}
                     </div>
                 )}
             </div>
-        </div>
-    );
+
+            );
 };

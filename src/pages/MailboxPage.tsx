@@ -1,34 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
+import { format } from 'date-fns';
+import type { Postcard } from '../types';
 
 export const MailboxPage: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
 
-    // Mock Data
-    const postcards = [
-        {
-            id: 1,
-            sender: '지은',
-            date: '2023. 10. 24',
-            content: '오늘 아침 창가에 비친 햇살이 유난히 밝아서 문득 네 생각이 났어. 우리가 함께 걷던 그 길도...',
-            isRead: false
-        },
-        {
-            id: 2,
-            sender: '지은',
-            date: '2023. 10. 22',
-            content: '바쁜 하루였지만 네 목소리를 들으니 모든 피로가 풀리는 기분이야. 내일은 더 따뜻했으면 좋겠다.',
-            isRead: false
-        },
-        {
-            id: 3,
-            sender: '지은',
-            date: '2023. 10. 15',
-            content: '벌써 우리가 만난 지 백 일이 되었네. 고맙다는 말로 다 표현할 수 없을 만큼 소중한 시간들이야.',
-            isRead: true
-        }
-    ];
+    // Firestore Integration
+    const { user, coupleData } = useAuth();
+    const [postcards, setPostcards] = useState<Postcard[]>([]);
+
+    useEffect(() => {
+        if (!coupleData?.id) return;
+
+        const q = query(
+            collection(db, 'couples', coupleData.id, 'postcards'),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    // Ensure date is formatted if it's a Timestamp, fallback to string if legacy
+                    date: data.createdAt?.toDate ? format(data.createdAt.toDate(), 'yyyy. MM. dd') : data.date
+                } as Postcard;
+            });
+            setPostcards(items);
+        });
+
+        return () => unsubscribe();
+    }, [coupleData?.id]);
+
+    // Local filter for tabs
+    const filteredPostcards = postcards.filter(card => {
+        if (activeTab === 'received') return card.senderId !== user?.uid;
+        if (activeTab === 'sent') return card.senderId === user?.uid;
+        return true;
+    });
 
     return (
         <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-background font-display text-primary transition-colors duration-300">
@@ -63,7 +78,7 @@ export const MailboxPage: React.FC = () => {
                 {/* Filter / Count */}
                 <div className="px-6 py-4 flex justify-between items-center">
                     <p className="text-[10px] text-text-secondary font-medium uppercase tracking-[0.2em]">
-                        총 {postcards.length}개의 {activeTab === 'received' ? '받은' : '보낸'} 우편
+                        총 {filteredPostcards.length}개의 {activeTab === 'received' ? '받은' : '보낸'} 우편
                     </p>
                     <span className="material-symbols-outlined text-text-secondary text-sm cursor-pointer hover:text-primary transition-colors">filter_list</span>
                 </div>
@@ -71,7 +86,7 @@ export const MailboxPage: React.FC = () => {
 
             {/* Content Body */}
             <main className="flex-1 px-6 space-y-10 pb-32 pt-2">
-                {postcards.map((card) => (
+                {filteredPostcards.map((card) => (
                     <div key={card.id} className={`border border-border bg-background overflow-hidden ${card.isRead ? 'opacity-60' : ''}`}>
                         <div className="p-8 pb-6">
                             <div className="mb-10">
@@ -84,7 +99,7 @@ export const MailboxPage: React.FC = () => {
                                     <div className="flex items-center gap-2">
                                         {!card.isRead && <span className="w-1 h-1 rounded-full bg-primary"></span>}
                                         <p className={`${card.isRead ? 'text-text-secondary' : 'text-primary'} text-xs font-bold tracking-tight`}>
-                                            {card.sender}으로부터
+                                            {card.senderName}으로부터
                                         </p>
                                     </div>
                                     <p className="text-text-secondary text-[10px] font-medium tracking-widest uppercase">{card.date}</p>

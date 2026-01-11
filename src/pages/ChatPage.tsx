@@ -163,9 +163,9 @@ export const ChatPage: React.FC = () => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             tokens,
-                            title: user?.displayName || 'C.C',
+                            title: user?.displayName || '새로운 메시지',
                             body: text,
-                            icon: user?.photoURL || '/icon-192x192.png',
+                            icon: '/icon2.png',
                             badge: badgeCount
                         })
                     });
@@ -305,20 +305,35 @@ export const ChatPage: React.FC = () => {
         setSelectedMsg(null);
     };
 
-    // Group messages by date
-    const groupedMessages = messages.reduce((groups: Record<string, ChatMessage[]>, message: ChatMessage) => {
-        const date = message.createdAt instanceof Timestamp
-            ? message.createdAt.toDate()
-            : new Date(); // Fallback for pending writes
+    const handleDirectReply = (msg: ChatMessage) => {
+        setReplyTarget(msg);
+    };
 
-        const dateKey = format(date, 'yyyy. MM. dd');
+    const handleDirectReaction = async (msg: ChatMessage, emoji: string) => {
+        if (!coupleData?.id || !user) return;
 
-        if (!groups[dateKey]) {
-            groups[dateKey] = [];
+        const msgRef = doc(db, 'couples', coupleData.id, 'messages', msg.id);
+        const currentReactions = msg.reactions || {};
+        const userIds = currentReactions[emoji] || [];
+
+        let newIds;
+        if (userIds.includes(user.uid)) {
+            newIds = userIds.filter(id => id !== user.uid);
+        } else {
+            newIds = [...userIds, user.uid];
         }
-        groups[dateKey].push(message);
-        return groups;
-    }, {} as Record<string, ChatMessage[]>);
+
+        const newReactions = {
+            ...currentReactions,
+            [emoji]: newIds
+        };
+
+        if (newIds.length === 0) {
+            delete newReactions[emoji];
+        }
+
+        await updateDoc(msgRef, { reactions: newReactions });
+    };
 
     return (
         <div className="min-h-[100dvh] bg-background text-primary font-display antialiased flex justify-center w-full transition-colors duration-300">
@@ -397,6 +412,8 @@ export const ChatPage: React.FC = () => {
                                             showProfile={!isMine && isFirstInGroup}
                                             showTime={isLastInGroup}
                                             onContextMenu={handleContextMenu}
+                                            onReply={handleDirectReply}
+                                            onReaction={handleDirectReaction}
                                         />
                                     );
                                 })}

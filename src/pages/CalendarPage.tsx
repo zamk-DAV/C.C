@@ -1,5 +1,9 @@
-import React, { useState } from 'react';
-// import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import { fetchNotionData } from '../lib/notion';
+import type { CalendarEvent } from '../types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 
@@ -8,13 +12,56 @@ export const CalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date()); // Calendar view date
     const [selectedDate, setSelectedDate] = useState(new Date()); // Selected specific date
 
-    // Mock Events Data (Unified Schema simulation)
-    const events = [
-        { id: 1, date: new Date(2025, 0, 14), title: '우리 기념일', note: '항구에서 저녁 식사', time: '19:00', type: 'Event' },
-        { id: 2, date: new Date(2025, 0, 14), title: '밤 산책', note: '함께 공원 걷기', time: '22:30', type: 'Event' },
-        { id: 3, date: new Date(2025, 0, 14), title: '일기 쓰기', note: '', time: '23:15', type: 'Diary' },
-        // Adjust year/month to match current date for demo if needed, sticking to Jan 2025 for now based on context
-    ];
+    const { coupleData, userData } = useAuth();
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        if (!coupleData?.id) return;
+
+        setLoading(true);
+
+        // 1. Fetch Firestore Events
+        const eventsQuery = query(collection(db, 'couples', coupleData.id, 'events'), orderBy('date', 'asc'));
+
+        const unsubscribeEvents = onSnapshot(eventsQuery, async (snapshot) => {
+            const firestoreEvents = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    date: data.date?.toDate ? data.date.toDate() : new Date(data.date), // Handle Timestamp
+                    type: 'Event'
+                } as CalendarEvent;
+            });
+
+            // 2. Fetch Notion Diary (if configured)
+            let diaryEvents: CalendarEvent[] = [];
+            if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
+                try {
+                    const notionResult = await fetchNotionData('Diary');
+                    diaryEvents = notionResult.data.map(item => ({
+                        id: item.id,
+                        title: item.title, // "Title"
+                        date: new Date(item.date),
+                        time: '00:00', // Default for diary
+                        type: 'Diary',
+                        note: item.previewText || '',
+                        author: item.author === userData.name || item.author === 'Me' ? 'Me' : 'Partner'
+                    }));
+                } catch (e) {
+                    console.error("Failed to fetch Notion diary for Calendar:", e);
+                }
+            }
+
+            // 3. Merge & Deduplicate
+            // (Simple merge for now, assuming IDs are unique across systems or distinct enough)
+            setEvents([...firestoreEvents, ...diaryEvents]);
+            setLoading(false);
+        });
+
+        return () => unsubscribeEvents();
+    }, [coupleData?.id, userData?.notionConfig]);
 
     // Calendar Grid Logic
     const monthStart = startOfMonth(currentDate);
@@ -105,7 +152,11 @@ export const CalendarPage: React.FC = () => {
             {/* Events List */}
             <div className="px-8 flex-1 pb-32">
                 <div className="divide-y divide-border">
-                    {selectedDateEvents.length > 0 ? (
+                    {loading ? (
+                        <div className="py-10 text-center text-text-secondary/50 font-light italic">
+                            로딩 중...
+                        </div>
+                    ) : selectedDateEvents.length > 0 ? (
                         selectedDateEvents.map(event => (
                             <div key={event.id} className="py-6 flex items-baseline gap-6">
                                 <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]">

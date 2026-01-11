@@ -2,15 +2,18 @@ import React from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
+import { db } from '../../lib/firebase';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
 export const MainLayout = () => {
     const location = useLocation();
-    const { userData } = useAuth();
-
     const isActive = (path: string) => location.pathname === path;
 
     const [hasNewDiary, setHasNewDiary] = React.useState(false);
+    const [unreadMailCount, setUnreadMailCount] = React.useState(0);
+    const { user, userData, coupleData } = useAuth();
 
+    // Check for New Diary
     React.useEffect(() => {
         const checkNewDiary = async () => {
             if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId && userData?.lastCheckedDiary) {
@@ -34,6 +37,30 @@ export const MainLayout = () => {
             checkNewDiary();
         }
     }, [userData?.notionConfig, userData?.lastCheckedDiary]);
+
+    // Check for Unread Mail
+    React.useEffect(() => {
+        if (!coupleData?.id || !user?.uid) return;
+
+        // Query for postcards where I am NOT the sender (received) AND isRead is false
+        // Note: '!=' queries can be tricky in Firestore rules/indexes. 
+        // If this fails, consider fetching all unread and filtering in JS.
+        const q = query(
+            collection(db, 'couples', coupleData.id, 'postcards'),
+            where('isRead', '==', false)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            // Client-side filter to ensure we count only mail received BY me
+            const myUnreadCount = snapshot.docs.filter(doc => {
+                const data = doc.data();
+                return data.senderId !== user.uid;
+            }).length;
+            setUnreadMailCount(myUnreadCount);
+        });
+
+        return () => unsubscribe();
+    }, [coupleData?.id, user?.uid]);
 
     return (
         <div className="min-h-[100dvh] bg-background-light text-primary flex justify-center w-full transition-colors duration-300">
@@ -73,8 +100,9 @@ export const MainLayout = () => {
                             <Link to="/mailbox" className="flex flex-col items-center space-y-1.5 w-14 group">
                                 <div className="relative">
                                     <span className={cn("material-icons-outlined text-[22px] transition-colors", isActive('/mailbox') ? "text-primary" : "text-text-secondary group-hover:text-primary")}>mail_outline</span>
-                                    {/* Badge (Fake for now as Mailbox is mock) */}
-                                    <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-background hidden"></span>
+                                    {unreadMailCount > 0 && (
+                                        <span className="absolute top-0 right-0 w-2 h-2 bg-red-500 rounded-full border-2 border-background animate-pulse"></span>
+                                    )}
                                 </div>
                                 <span className={cn("text-[10px] font-medium transition-colors", isActive('/mailbox') ? "text-primary" : "text-text-secondary group-hover:text-primary")}>우편함</span>
                             </Link>

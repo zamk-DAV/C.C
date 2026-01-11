@@ -52,3 +52,24 @@ export interface ChatMessage {
     replyTo?: { id: string; text: string; senderName: string };
     reactions?: Record<string, string[]>; // { 'heart': ['uid1', 'uid2'] }
 }
+
+export interface Postcard {
+    id: string;
+    senderId: string; // 'sender' in mock was name, but better to use ID
+    senderName: string; // denormalized for ease
+    date: string; // or Timestamp, but mock used string '2023. 10. 24'
+    content: string;
+    isRead: boolean;
+    type: 'received' | 'sent';
+    createdAt?: any; // Timestamp
+}
+
+export interface CalendarEvent {
+    id: string;
+    title: string;
+    date: Date; // Keep as Date object for internal use (or Timestamp for DB)
+    time?: string; // '19:00'
+    type: 'Event' | 'Diary';
+    note?: string;
+    author?: string; // 'Me' | 'Partner' for filtering
+}
