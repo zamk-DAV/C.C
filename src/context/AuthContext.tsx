@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const coupleRef = doc(db, 'couples', userData.coupleId);
             const unsubscribeCouple = onSnapshot(coupleRef, (docSnap) => {
                 if (docSnap.exists()) {
-                    setCoupleData(docSnap.data() as CoupleData);
+                    setCoupleData({ id: docSnap.id, ...docSnap.data() } as CoupleData);
                 } else {
                     console.log("Couple document not found");
                     setCoupleData(null);
