@@ -45,7 +45,12 @@ export const ChatPage: React.FC = () => {
     }, [coupleData?.id]);
 
     const handleSendMessage = async () => {
-        if (!inputText.trim() || !user || !coupleData?.id) return;
+        if (!inputText.trim()) return;
+
+        if (!user || !coupleData?.id) {
+            console.error("Cannot send message: Missing user or coupleData", { user: !!user, coupleId: coupleData?.id });
+            return;
+        }
 
         try {
             await addDoc(collection(db, 'couples', coupleData.id, 'messages'), {
@@ -127,28 +132,32 @@ export const ChatPage: React.FC = () => {
                 </main>
 
                 {/* Footer Input */}
+                {/* Footer Input */}
                 <footer className="fixed bottom-0 max-w-md w-full bg-background px-6 pb-10 pt-4 z-50 transition-colors duration-300">
-                    <div className="flex items-center gap-4 border-b border-primary pb-3">
-                        <button className="material-symbols-outlined text-[24px] font-light text-text-secondary hover:text-primary transition-colors">add</button>
+                    <form
+                        className="flex items-center gap-4 border-b border-primary pb-3"
+                        onSubmit={(e) => {
+                            e.preventDefault();
+                            handleSendMessage();
+                        }}
+                    >
+                        <button type="button" className="material-symbols-outlined text-[24px] font-light text-text-secondary hover:text-primary transition-colors">add</button>
                         <input
                             className="flex-1 border-none focus:ring-0 text-[14px] placeholder:text-text-secondary/50 px-0 bg-transparent outline-none text-primary"
                             placeholder="메시지를 입력하세요"
                             type="text"
                             value={inputText}
                             onChange={(e) => setInputText(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
-                                    handleSendMessage();
-                                }
-                            }}
+                            // onKeyDown removed in favor of form submit
+                            autoComplete="off"
                         />
                         <button
+                            type="submit"
                             className="flex items-center justify-center"
-                            onClick={handleSendMessage}
                         >
                             <span className="material-symbols-outlined text-[24px] font-light rotate-[-45deg] relative left-[2px] text-primary">send</span>
                         </button>
-                    </div>
+                    </form>
                 </footer>
             </div>
         </div>
