@@ -22,6 +22,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     // Initialize Firebase Admin (lazy load with error handling)
+    let app;
     if (getApps().length === 0) {
         try {
             const serviceAccountKey = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -40,13 +41,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 return res.status(500).json({ error: 'Server Config Error: Invalid JSON in FIREBASE_SERVICE_ACCOUNT_KEY' });
             }
 
-            initializeApp({
+            app = initializeApp({
                 credential: cert(serviceAccount),
             });
         } catch (error: any) {
             console.error("Firebase Admin Init Error:", error);
             return res.status(500).json({ error: `Firebase Admin Init Failed: ${error.message}` });
         }
+    } else {
+        app = getApps()[0];
     }
 
     const { tokens, title, body, icon } = req.body;
@@ -69,7 +72,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             }
         };
 
-        const response = await getMessaging().sendMulticast(message);
+        // Use modern sendEachForMulticast
+        const messaging = getMessaging(app);
+        const response = await messaging.sendEachForMulticast(message);
+
         return res.status(200).json({ success: true, response });
 
     } catch (error: any) {
