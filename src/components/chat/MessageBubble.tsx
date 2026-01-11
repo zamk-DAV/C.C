@@ -216,10 +216,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 <button
                                     key={emoji}
                                     onClick={(e) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
-                                    className="bg-background border border-border rounded-full px-2 py-1 flex items-center gap-1 shadow-sm hover:bg-secondary/50 transition-colors"
+                                    className="bg-background border border-border rounded-full p-1.5 flex items-center justify-center shadow-sm hover:bg-secondary/50 transition-colors"
                                 >
                                     <IconConfig.icon className={cn("w-3 h-3", IconConfig.color)} />
-                                    <span className="text-[10px] font-bold text-text-secondary">{userIds.length}</span>
                                 </button>
                             );
                         })}

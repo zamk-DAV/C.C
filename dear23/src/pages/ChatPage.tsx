@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MessageBubble } from '../components/chat/MessageBubble';
 
 // Message type definition
 interface Message {
@@ -57,85 +58,27 @@ export const ChatPage: React.FC = () => {
 
                     <div className="space-y-4 pb-10">
                         {mockMessages.map((msg) => (
-                            <div
+                            <MessageBubble
                                 key={msg.id}
-                                className={`flex ${msg.sender === 'me' ? 'justify-end' : 'justify-start'}`}
-                                onMouseEnter={() => setHoveredMessageId(msg.id)}
-                                onMouseLeave={() => setHoveredMessageId(null)}
-                            >
-                                {/* Partner Message */}
-                                {msg.sender === 'partner' && (
-                                    <div className="flex gap-2 max-w-[80%]">
-                                        {/* Avatar */}
-                                        <img src={partnerAvatar} alt={partnerName} className="w-9 h-9 rounded-full object-cover shrink-0 mt-0.5" />
-
-                                        <div className="flex flex-col">
-                                            {/* Name */}
-                                            <span className="text-[12px] text-neutral-500 dark:text-neutral-400 mb-1 font-medium">{partnerName}</span>
-
-                                            {/* Bubble + Time/Read */}
-                                            <div className="flex items-end gap-1 group">
-                                                {/* Message Bubble */}
-                                                <div className="bg-neutral-100 dark:bg-zinc-800 px-3 py-2.5 rounded-2xl rounded-tl-sm">
-                                                    {msg.imageUrl && (
-                                                        <img
-                                                            src={msg.imageUrl}
-                                                            alt="shared"
-                                                            className="w-48 h-48 object-cover rounded-xl mb-2"
-                                                        />
-                                                    )}
-                                                    <p className="text-[14px] leading-relaxed">{msg.content}</p>
-                                                </div>
-
-                                                {/* Time/Read vs Actions Swap (Grid Stacking) */}
-                                                <div className="grid items-end justify-items-start">
-                                                    {/* Action Buttons (Overlay) */}
-                                                    <div className={`col-start-1 row-start-1 flex items-center gap-1 mb-0.5 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                                        <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
-                                                            <span className="material-symbols-outlined text-[18px] text-neutral-400">favorite_border</span>
-                                                        </button>
-                                                        <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
-                                                            <span className="material-symbols-outlined text-[18px] text-neutral-400">reply</span>
-                                                        </button>
-                                                    </div>
-
-                                                    {/* Time & Read (Base) */}
-                                                    <div className={`col-start-1 row-start-1 flex flex-col items-start gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-0' : 'opacity-100'}`}>
-                                                        {!msg.isRead && <span className="material-symbols-outlined text-[10px] text-yellow-500">favorite</span>}
-                                                        <span>{msg.time}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* My Message */}
-                                {msg.sender === 'me' && (
-                                    <div className="flex items-end gap-1 max-w-[80%] group">
-                                        {/* Time/Read vs Actions Swap (Grid Stacking) */}
-                                        <div className="grid items-end justify-items-end">
-                                            {/* Action Buttons (Overlay) */}
-                                            <div className={`col-start-1 row-start-1 flex items-center gap-1 mb-0.5 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-                                                <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px] text-neutral-400">reply</span>
-                                                </button>
-                                            </div>
-
-                                            {/* Time & Read (Base) */}
-                                            <div className={`col-start-1 row-start-1 flex flex-col items-end gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-0' : 'opacity-100'}`}>
-                                                {!msg.isRead && <span className="material-symbols-outlined text-[10px] text-yellow-500">favorite</span>}
-                                                <span>{msg.time}</span>
-                                            </div>
-                                        </div>
-
-                                        {/* Message Bubble */}
-                                        <div className="bg-primary dark:bg-blue-600 text-white px-3 py-2.5 rounded-2xl rounded-tr-sm">
-                                            <p className="text-[14px] leading-relaxed">{msg.content}</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
+                                message={{
+                                    id: msg.id,
+                                    text: msg.content,
+                                    senderId: msg.sender === 'me' ? 'me' : 'partner',
+                                    createdAt: { toDate: () => new Date() }, // Mock timestamp
+                                    type: msg.imageUrl ? 'image' : 'text',
+                                    imageUrl: msg.imageUrl,
+                                    isRead: msg.isRead,
+                                    reactions: { 'heart': ['partner'] } // Mock reaction for design check
+                                }}
+                                isMine={msg.sender === 'me'}
+                                senderName={msg.sender === 'partner' ? partnerName : undefined}
+                                avatarUrl={msg.sender === 'partner' ? partnerAvatar : undefined}
+                                showProfile={msg.sender === 'partner'}
+                                showTime={true}
+                                onContextMenu={(e) => console.log('context menu', e)}
+                                onReply={(m) => console.log('reply', m)}
+                                onReaction={(m, e) => console.log('react', m, e)}
+                            />
                         ))}
                     </div>
                 </main>
