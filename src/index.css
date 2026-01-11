@@ -221,20 +221,23 @@
   }
 
   .toggle-pill {
-    @apply relative w-[60px] h-[30px] bg-neutral-100 rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
+    @apply relative w-[60px] h-[30px] rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
+    background-color: var(--bg-secondary);
   }
 
   .toggle-pill::after {
     content: '';
-    @apply absolute top-[6px] left-[6px] bg-black w-[18px] h-[18px] rounded-full transition-transform duration-200 ease-in-out;
+    @apply absolute top-[6px] left-[6px] w-[18px] h-[18px] rounded-full transition-transform duration-200 ease-in-out;
+    background-color: var(--primary-color);
   }
 
   .toggle-active.toggle-pill {
-    @apply bg-black;
+    background-color: var(--primary-color);
   }
 
   .toggle-active.toggle-pill::after {
-    @apply bg-white translate-x-[30px];
+    @apply translate-x-[30px];
+    background-color: var(--bg-color);
   }
 
   /* Chat Bubble Styles */
