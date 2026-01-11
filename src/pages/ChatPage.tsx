@@ -385,7 +385,13 @@ export const ChatPage: React.FC = () => {
                     <div className="flex items-center justify-between pb-4">
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={() => navigate(-1)}
+                                onClick={() => {
+                                    if (window.history.length > 2) {
+                                        navigate(-1);
+                                    } else {
+                                        navigate('/', { replace: true });
+                                    }
+                                }}
                                 className="material-symbols-outlined text-[24px] font-light hover:text-text-secondary transition-colors text-primary"
                             >
                                 arrow_back

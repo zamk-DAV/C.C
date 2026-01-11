@@ -63,7 +63,7 @@ export const MainLayout = () => {
     }, [coupleData?.id, user?.uid]);
 
     return (
-        <div className="min-h-[100dvh] bg-background-light text-primary flex justify-center w-full transition-colors duration-300">
+        <div className="min-h-[100dvh] bg-background text-primary flex justify-center w-full transition-colors duration-300">
             <div className="w-full max-w-md relative flex flex-col min-h-[100dvh] shadow-xl bg-background transition-colors duration-300">
                 {/* Content Area */}
                 <main className="flex-1 pb-24">
