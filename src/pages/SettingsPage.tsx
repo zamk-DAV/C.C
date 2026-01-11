@@ -70,7 +70,8 @@ export const SettingsPage: React.FC = () => {
         try {
             const dbs = await searchNotionDatabases(notionKey);
             setDatabases(dbs);
-            if (dbs.length > 0 && !notionDbId) {
+            if (dbs.length > 0) {
+                // API Key가 변경되면 해당 Integration이 접근 가능한 첫 번째 데이터베이스로 자동 설정
                 setNotionDbId(dbs[0].id);
             } else if (dbs.length === 0) {
                 alert("No databases found. Please check your API Key and ensure the integration is connected to your pages.");
