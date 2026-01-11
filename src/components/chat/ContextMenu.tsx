@@ -1,5 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
+import { cn } from '../../lib/utils';
 
 interface ContextMenuProps {
     x: number;
@@ -9,11 +11,12 @@ interface ContextMenuProps {
     onCopy: () => void;
     onNotice: () => void;
     onDelete: () => void;
+    onReaction: (emoji: string) => void;
     isMine: boolean;
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({
-    x, y, onClose, onReply, onCopy, onNotice, onDelete, isMine
+    x, y, onClose, onReply, onCopy, onNotice, onDelete, onReaction, isMine
 }) => {
     const menuRef = useRef<HTMLDivElement>(null);
 
@@ -35,13 +38,36 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
         >
             <div
                 ref={menuRef}
-                className="absolute bg-background/90 backdrop-blur-md border border-border rounded-xl shadow-2xl p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-200"
+                className="absolute bg-background/90 backdrop-blur-md border border-border rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in zoom-in-95 duration-200"
                 style={{
                     top: y,
                     left: x,
                     transform: 'translate(-10%, -10%)'
                 }}
             >
+                {/* Emoji Reactions */}
+                <div className="flex items-center justify-between gap-1 mb-2 bg-secondary/30 p-1.5 rounded-lg">
+                    {[
+                        { id: 'heart', icon: Heart, color: 'text-red-400' },
+                        { id: 'thumb', icon: ThumbsUp, color: 'text-primary' },
+                        { id: 'smile', icon: Smile, color: 'text-orange-400' },
+                        { id: 'sad', icon: Frown, color: 'text-blue-400' },
+                        { id: 'wow', icon: Sparkles, color: 'text-purple-400' },
+                    ].map((emoji) => (
+                        <button
+                            key={emoji.id}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onReaction(emoji.id);
+                                onClose();
+                            }}
+                            className={cn("p-1.5 rounded-full hover:bg-background transition-colors", emoji.color)}
+                        >
+                            <emoji.icon className="w-5 h-5 fill-current opacity-80" />
+                        </button>
+                    ))}
+                </div>
+
                 <div className="flex flex-col gap-1">
                     <button
                         onClick={onReply}

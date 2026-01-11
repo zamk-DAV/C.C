@@ -1,5 +1,5 @@
 import React from 'react';
-import { Heart } from 'lucide-react';
+import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { ChatMessage } from '../../types';
 
@@ -12,6 +12,14 @@ interface MessageBubbleProps {
     showTime?: boolean;
     onContextMenu: (e: React.MouseEvent | React.TouchEvent, message: ChatMessage) => void;
 }
+
+const ReactionIcons: Record<string, any> = {
+    heart: { icon: Heart, color: 'text-red-400 fill-red-400' },
+    thumb: { icon: ThumbsUp, color: 'text-primary fill-primary' },
+    smile: { icon: Smile, color: 'text-orange-400 fill-orange-400' },
+    sad: { icon: Frown, color: 'text-blue-400 fill-blue-400' },
+    wow: { icon: Sparkles, color: 'text-purple-400 fill-purple-400' },
+};
 
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
     message: msg,
@@ -132,6 +140,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         </div>
                     )}
                 </div>
+
+                {/* Reactions Display */}
+                {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                    <div className={cn("flex gap-1 -mt-2 z-10", isMine ? "mr-1" : "ml-10")}>
+                        {Object.entries(msg.reactions).map(([emoji, userIds]) => {
+                            if (!userIds || userIds.length === 0) return null;
+                            const IconConfig = ReactionIcons[emoji];
+                            if (!IconConfig) return null;
+
+                            return (
+                                <div key={emoji} className="bg-background border border-border rounded-full px-1.5 py-0.5 flex items-center shadow-sm">
+                                    <IconConfig.icon className={cn("w-3 h-3", IconConfig.color)} />
+                                    {userIds.length > 1 && <span className="text-[10px] ml-1 font-bold">{userIds.length}</span>}
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
         </div>
     );

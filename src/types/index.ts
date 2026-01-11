@@ -18,6 +18,7 @@ export interface CoupleData {
     chatId: string;
     notionConfig?: { apiKey: string | null; databaseId: string | null };
     notice?: { text: string; id: string; createdAt: any };
+    typing?: Record<string, boolean>; // { [userId]: isTyping }
 }
 // Force Refresh
 
@@ -42,4 +43,5 @@ export interface ChatMessage {
     isRead: boolean;
     isDeleted?: boolean;
     replyTo?: { id: string; text: string; senderName: string };
+    reactions?: Record<string, string[]>; // { 'heart': ['uid1', 'uid2'] }
 }

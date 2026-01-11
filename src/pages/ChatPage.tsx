@@ -24,16 +24,19 @@ export const ChatPage: React.FC = () => {
     // Reply State
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
 
-    // Auto-scroll to bottom
+    const [typingStatus, setTypingStatus] = useState<boolean>(false);
+    const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Auto-scroll to bottom combined with messages and typing status
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages, replyTarget]);
+    }, [messages, replyTarget, typingStatus]);
 
-    // Fetch Messages & Notice
+    // Fetch Messages & Notice & Typing Status
     useEffect(() => {
         if (!coupleData?.id) return;
 
@@ -51,12 +54,24 @@ export const ChatPage: React.FC = () => {
             setMessages(msgs);
         });
 
-        // Notice (from couple doc)
+        // Couple Doc (Notice + Typing)
         const unsubscribeCouple = onSnapshot(doc(db, 'couples', coupleData.id), (docSnap) => {
-            if (docSnap.exists() && docSnap.data().notice) {
-                setNotice(docSnap.data().notice);
+            if (docSnap.exists()) {
+                const data = docSnap.data();
+                setNotice(data.notice || null);
+
+                // Typing Status Check
+                if (data.typing) {
+                    const partnerId = partnerData?.uid;
+                    if (partnerId && data.typing[partnerId]) {
+                        setTypingStatus(true);
+                    } else {
+                        setTypingStatus(false);
+                    }
+                }
             } else {
                 setNotice(null);
+                setTypingStatus(false);
             }
         });
 
@@ -64,7 +79,31 @@ export const ChatPage: React.FC = () => {
             unsubscribeMsgs();
             unsubscribeCouple();
         };
-    }, [coupleData?.id]);
+    }, [coupleData?.id, partnerData?.uid]);
+
+    // Typing Indicator Handler
+    const handleInputChange = (text: string) => {
+        setInputText(text);
+
+        if (!user || !coupleData?.id) return;
+
+        // Set typing true
+        updateDoc(doc(db, 'couples', coupleData.id), {
+            [`typing.${user.uid}`]: true
+        });
+
+        // Clear existing timeout
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Set timeout to clear typing status
+        typingTimeoutRef.current = setTimeout(() => {
+            updateDoc(doc(db, 'couples', coupleData.id), {
+                [`typing.${user.uid}`]: false
+            });
+        }, 2000);
+    };
 
     const handleSendMessage = async () => {
         if (!inputText.trim()) return;
@@ -94,6 +133,13 @@ export const ChatPage: React.FC = () => {
             await addDoc(collection(db, 'couples', coupleData.id, 'messages'), messageData);
             setInputText('');
             setReplyTarget(null);
+
+            // Clear typing immediately on send
+            if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+            updateDoc(doc(db, 'couples', coupleData.id), {
+                [`typing.${user.uid}`]: false
+            });
+
         } catch (error) {
             console.error("Error sending message:", error);
         }
@@ -139,6 +185,36 @@ export const ChatPage: React.FC = () => {
                 }
                 break;
         }
+        setSelectedMsg(null);
+    };
+
+    const handleReaction = async (emoji: string) => {
+        if (!selectedMsg || !coupleData?.id || !user) return;
+        setMenuLocation(null);
+
+        const msgRef = doc(db, 'couples', coupleData.id, 'messages', selectedMsg.id);
+        const currentReactions = selectedMsg.reactions || {};
+        const userIds = currentReactions[emoji] || [];
+
+        // Toggle logic
+        let newIds;
+        if (userIds.includes(user.uid)) {
+            newIds = userIds.filter(id => id !== user.uid);
+        } else {
+            newIds = [...userIds, user.uid];
+        }
+
+        const newReactions = {
+            ...currentReactions,
+            [emoji]: newIds
+        };
+
+        // Remove empty arrays
+        if (newIds.length === 0) {
+            delete newReactions[emoji];
+        }
+
+        await updateDoc(msgRef, { reactions: newReactions });
         setSelectedMsg(null);
     };
 
@@ -241,6 +317,26 @@ export const ChatPage: React.FC = () => {
                             </div>
                         </div>
                     ))}
+
+                    {/* Typing Indicator Bubble */}
+                    {typingStatus && (
+                        <div className="flex flex-col items-start max-w-[85%] mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                            <div className="flex items-start gap-2">
+                                <div
+                                    className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 grayscale-img self-start"
+                                    style={{ backgroundImage: partnerData?.photoURL ? `url(${partnerData.photoURL})` : undefined }}
+                                />
+                                <div className="border border-border px-4 py-3 bg-background bubble-in rounded-2xl rounded-tl-sm">
+                                    <div className="flex gap-1">
+                                        <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                        <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                        <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div ref={messagesEndRef} />
                 </main>
 
@@ -254,6 +350,7 @@ export const ChatPage: React.FC = () => {
                         onCopy={() => handleAction('copy')}
                         onNotice={() => handleAction('notice')}
                         onDelete={() => handleAction('delete')}
+                        onReaction={handleReaction}
                         isMine={selectedMsg.senderId === user?.uid}
                     />
                 )}
@@ -286,7 +383,7 @@ export const ChatPage: React.FC = () => {
                             placeholder="메시지를 입력하세요"
                             type="text"
                             value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
+                            onChange={(e) => handleInputChange(e.target.value)}
                             // onKeyDown removed in favor of form submit
                             autoComplete="off"
                         />
