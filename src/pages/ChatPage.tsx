@@ -109,19 +109,36 @@ export const ChatPage: React.FC = () => {
                                 <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary">{dateKey}</span>
                                 <div className="h-[1px] flex-1 bg-border"></div>
                             </div>
-                            <div className="space-y-4">
-                                {groupedMessages[dateKey].map((msg: ChatMessage) => {
+                            <div className="mb-6">
+                                {groupedMessages[dateKey].map((msg: ChatMessage, index: number) => {
                                     const date = msg.createdAt instanceof Timestamp ? msg.createdAt.toDate() : new Date();
+                                    const isMine = msg.senderId === user?.uid;
+
+                                    // Grouping Logic
+                                    const nextMsg = groupedMessages[dateKey][index + 1];
+                                    const prevMsg = groupedMessages[dateKey][index - 1];
+
+                                    const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId ||
+                                        (nextMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
+                                            Math.abs(nextMsg.createdAt.toMillis() - msg.createdAt.toMillis()) > 60000); // 1 minute diff
+
+                                    const isFirstInGroup = !prevMsg || prevMsg.senderId !== msg.senderId ||
+                                        (prevMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
+                                            Math.abs(msg.createdAt.toMillis() - prevMsg.createdAt.toMillis()) > 60000);
+
                                     return (
                                         <MessageBubble
                                             key={msg.id}
                                             message={msg.text}
-                                            timestamp={format(date, 'hh:mm a')}
-                                            isMine={msg.senderId === user?.uid}
-                                            senderName={msg.senderId === user?.uid ? undefined : (partnerData?.name || 'Partner')}
-                                            avatarUrl={msg.senderId === user?.uid ? undefined : partnerData?.photoURL}
+                                            timestamp={format(date, 'a h:mm').replace('AM', '오전').replace('PM', '오후')}
+                                            isMine={isMine}
+                                            senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
+                                            avatarUrl={isMine ? undefined : partnerData?.photoURL}
                                             type={msg.type}
                                             imageUrl={msg.imageUrl}
+                                            isRead={msg.isRead}
+                                            showProfile={!isMine && isFirstInGroup}
+                                            showTime={isLastInGroup}
                                         />
                                     );
                                 })}
