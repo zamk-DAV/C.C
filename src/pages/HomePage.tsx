@@ -12,9 +12,58 @@ export const HomePage: React.FC = () => {
     const navigate = useNavigate();
 
     // Memory Feed State
-    const [memories, setMemories] = useState<any[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (!loading) {
+            if (!user) {
+                navigate('/login');
+            }
+        }
+    }, [user, loading, navigate]);
+
+    // Fetch Memories (Initial)
+    useEffect(() => {
+        if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
+            loadMemories();
+        }
+    }, [userData?.notionConfig]);
+
+    const loadMemories = async (cursor?: string) => {
+        try {
+            const result = await fetchNotionData('Memory', cursor); // Assuming we fetch all or specific filter
+            // Transform NotionItems to MemoryItems
+            const newItems = result.data.map(item => ({
+                id: item.id,
+                type: item.coverImage ? 'image' : 'quote',
+                imageUrl: item.coverImage || undefined,
+                quote: item.previewText || 'No content',
+                title: item.title,
+                subtitle: item.date
+            }));
+
+            if (cursor) {
+                setMemories(prev => [...prev, ...newItems]);
+            } else {
+                setMemories(newItems);
+            }
+
+            setHasMore(result.hasMore);
+            setNextCursor(result.nextCursor);
+        } catch (error) {
+            console.error("Failed to load memories:", error);
+        }
+    };
+
+    const handleLoadMore = () => {
+        if (hasMore && nextCursor) {
+            loadMemories(nextCursor);
+        }
+    };
+
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
+    if (!user) return null;
 
     const partnerName = partnerData?.name || "Partner";
 
