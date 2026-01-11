@@ -87,23 +87,23 @@ export const ChatPage: React.FC = () => {
                                                     <p className="text-[14px] leading-relaxed">{msg.content}</p>
                                                 </div>
 
-                                                {/* Time/Read vs Actions Swap */}
-                                                <div className="flex flex-col justify-end min-w-[40px]">
-                                                    {hoveredMessageId === msg.id ? (
-                                                        <div className="flex items-center gap-1 mb-0.5 animate-in fade-in duration-200">
-                                                            <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
-                                                                <span className="material-symbols-outlined text-[18px] text-neutral-400">favorite_border</span>
-                                                            </button>
-                                                            <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
-                                                                <span className="material-symbols-outlined text-[18px] text-neutral-400">reply</span>
-                                                            </button>
-                                                        </div>
-                                                    ) : (
-                                                        <div className="flex flex-col items-start gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 animate-in fade-in duration-200">
-                                                            {!msg.isRead && <span className="text-yellow-500 font-bold">1</span>}
-                                                            <span>{msg.time}</span>
-                                                        </div>
-                                                    )}
+                                                {/* Time/Read vs Actions Swap (Grid Stacking) */}
+                                                <div className="grid items-end justify-items-start">
+                                                    {/* Action Buttons (Overlay) */}
+                                                    <div className={`col-start-1 row-start-1 flex items-center gap-1 mb-0.5 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                                        <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
+                                                            <span className="material-symbols-outlined text-[18px] text-neutral-400">favorite_border</span>
+                                                        </button>
+                                                        <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
+                                                            <span className="material-symbols-outlined text-[18px] text-neutral-400">reply</span>
+                                                        </button>
+                                                    </div>
+
+                                                    {/* Time & Read (Base) */}
+                                                    <div className={`col-start-1 row-start-1 flex flex-col items-start gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-0' : 'opacity-100'}`}>
+                                                        {!msg.isRead && <span className="text-yellow-500 font-bold">1</span>}
+                                                        <span>{msg.time}</span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -113,20 +113,20 @@ export const ChatPage: React.FC = () => {
                                 {/* My Message */}
                                 {msg.sender === 'me' && (
                                     <div className="flex items-end gap-1.5 max-w-[80%] group">
-                                        {/* Time/Read vs Actions Swap */}
-                                        <div className="flex flex-col justify-end items-end min-w-[40px]">
-                                            {hoveredMessageId === msg.id ? (
-                                                <div className="flex items-center gap-1 mb-0.5 animate-in fade-in duration-200">
-                                                    <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
-                                                        <span className="material-symbols-outlined text-[18px] text-neutral-400">reply</span>
-                                                    </button>
-                                                </div>
-                                            ) : (
-                                                <div className="flex flex-col items-end gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 animate-in fade-in duration-200">
-                                                    {!msg.isRead && <span className="text-yellow-500 font-bold">1</span>}
-                                                    <span>{msg.time}</span>
-                                                </div>
-                                            )}
+                                        {/* Time/Read vs Actions Swap (Grid Stacking) */}
+                                        <div className="grid items-end justify-items-end">
+                                            {/* Action Buttons (Overlay) */}
+                                            <div className={`col-start-1 row-start-1 flex items-center gap-1 mb-0.5 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
+                                                <button className="p-1 hover:bg-neutral-200 dark:hover:bg-zinc-700 rounded-full transition-colors">
+                                                    <span className="material-symbols-outlined text-[18px] text-neutral-400">reply</span>
+                                                </button>
+                                            </div>
+
+                                            {/* Time & Read (Base) */}
+                                            <div className={`col-start-1 row-start-1 flex flex-col items-end gap-0.5 pb-1 text-[10px] text-neutral-400 dark:text-neutral-500 transition-opacity duration-200 ${hoveredMessageId === msg.id ? 'opacity-0' : 'opacity-100'}`}>
+                                                {!msg.isRead && <span className="text-yellow-500 font-bold">1</span>}
+                                                <span>{msg.time}</span>
+                                            </div>
                                         </div>
 
                                         {/* Message Bubble */}
