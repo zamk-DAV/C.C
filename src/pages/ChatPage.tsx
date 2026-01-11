@@ -172,10 +172,11 @@ export const ChatPage: React.FC = () => {
             }
 
             // DO NOT send push if partner is already in the ChatPage
-            if (data.isChatActive === true) {
-                console.log("[Push] Partner is active in chat, skipping push");
-                return;
-            }
+            // Check removed to force push delivery (handling stuck active states)
+            // if (data.isChatActive === true) {
+            //     console.log("[Push] Partner is active in chat, skipping push");
+            //     return;
+            // }
 
             const tokens = data.fcmTokens || [];
             const badgeCount = data.unreadCount || 0;
