@@ -91,7 +91,7 @@ export const ChatPage: React.FC = () => {
 
         // Set typing true
         updateDoc(doc(db, 'couples', coupleData.id), {
-            [`typing.${user.uid} `]: true
+            [`typing.${user.uid}`]: true
         });
 
         // Clear existing timeout
@@ -102,7 +102,7 @@ export const ChatPage: React.FC = () => {
         // Set timeout to clear typing status
         typingTimeoutRef.current = setTimeout(() => {
             updateDoc(doc(db, 'couples', coupleData.id), {
-                [`typing.${user.uid} `]: false
+                [`typing.${user.uid}`]: false
             });
         }, 2000);
     };
