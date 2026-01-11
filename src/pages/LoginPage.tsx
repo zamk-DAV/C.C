@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../lib/firebase';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
 
 export const LoginPage: React.FC = () => {
     const [email, setEmail] = React.useState('');
@@ -15,6 +15,10 @@ export const LoginPage: React.FC = () => {
         try {
             // ID as Email logic
             const loginEmail = email.includes('@') ? email : `${email}@dear23.app`;
+
+            // Explicitly set persistence to LOCAL
+            await setPersistence(auth, browserLocalPersistence);
+
             await signInWithEmailAndPassword(auth, loginEmail, password);
             navigate('/');
         } catch (error) {

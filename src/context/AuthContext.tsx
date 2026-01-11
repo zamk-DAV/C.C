@@ -145,7 +145,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 console.warn("Loading timed out. Forcing stop.");
                 setLoading(false);
             }
-        }, 3000);
+        }, 15000);
         return () => clearTimeout(timer);
     }, [loading]);
 
