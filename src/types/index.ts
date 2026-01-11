@@ -14,6 +14,8 @@ export interface UserData {
     unreadCount?: number;
     isChatActive?: boolean; // Whether user is currently in ChatPage
     lastActive?: any; // Last timestamp user was seen
+    lastCheckedDiary?: any; // Timestamp
+    lastCheckedFeed?: any;  // Timestamp
 }
 
 export interface CoupleData {

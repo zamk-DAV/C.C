@@ -5,9 +5,11 @@ import type { NotionItem } from '../types';
 // Mock Data matches user snippet
 import { fetchNotionData } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export const DiaryPage: React.FC = () => {
-    const { userData } = useAuth();
+    const { user, userData } = useAuth(); // destructured user
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [diaryItems, setDiaryItems] = useState<NotionItem[]>([]);
     const [loading, setLoading] = useState(true);
@@ -19,6 +21,14 @@ export const DiaryPage: React.FC = () => {
             setLoading(false);
         }
     }, [userData?.notionConfig]);
+
+    // Update lastCheckedDiary on mount
+    useEffect(() => {
+        if (user && userData) {
+            const userRef = doc(db, 'users', user.uid);
+            updateDoc(userRef, { lastCheckedDiary: serverTimestamp() }).catch(console.error);
+        }
+    }, [user?.uid]);
 
     const loadDiary = async () => {
         try {

@@ -28,7 +28,7 @@ export const RecentMessage: React.FC<RecentMessageProps> = ({
                             <p className="text-[13px] font-bold tracking-tight text-primary uppercase">
                                 {senderName}
                             </p>
-                            {isNew && <span className="size-1.5 rounded-full bg-primary" />}
+                            {isNew && <span className="size-2 rounded-full bg-red-500 animate-pulse" />}
                         </div>
                         <p className="text-[10px] font-medium text-text-secondary tracking-tight">{timestamp}</p>
                     </div>
