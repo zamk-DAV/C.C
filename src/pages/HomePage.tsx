@@ -1,5 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
-import { differenceInCalendarDays, parseISO } from 'date-fns';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
@@ -8,7 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { fetchNotionData } from '../lib/notion';
 
 export const HomePage: React.FC = () => {
-    const { user, userData, partnerData, coupleData, loading } = useAuth();
+    const { user, userData, partnerData, loading } = useAuth();
     const navigate = useNavigate();
 
     // Memory Feed State
