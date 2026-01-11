@@ -1,16 +1,15 @@
-import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { MessageBubble } from '../components/chat/MessageBubble';
-import { ChatMessage } from '../types';
+import type { ChatMessage } from '../types';
 import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
+// import { ko } from 'date-fns/locale';
 
 export const ChatPage: React.FC = () => {
     const navigate = useNavigate();
-    const { user, userData, partnerData, coupleData } = useAuth();
+    const { user, partnerData, coupleData } = useAuth();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
