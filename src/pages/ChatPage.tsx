@@ -142,22 +142,32 @@ export const ChatPage: React.FC = () => {
     const sendPushNotification = async (text: string) => {
         if (!partnerData?.uid) return;
 
+        console.log("[Push] Accessing sendPushNotification...");
+
         // Fetch partner's tokens
         const partnerDoc = await getDoc(doc(db, 'users', partnerData.uid));
         if (partnerDoc.exists()) {
             const data = partnerDoc.data();
+            console.log("[Push] Partner data loaded", { isPushEnabled: data.isPushEnabled, isChatActive: data.isChatActive, tokensCount: data.fcmTokens?.length });
 
             // Check if push is enabled (default true)
-            if (data.isPushEnabled === false) return;
+            if (data.isPushEnabled === false) {
+                console.log("[Push] Partner disabled push");
+                return;
+            }
 
             // DO NOT send push if partner is already in the ChatPage
-            if (data.isChatActive === true) return;
+            if (data.isChatActive === true) {
+                console.log("[Push] Partner is active in chat, skipping push");
+                return;
+            }
 
             const tokens = data.fcmTokens || [];
             const badgeCount = data.unreadCount || 0;
 
             if (tokens.length > 0) {
                 try {
+                    console.log("[Push] Sending request to /api/send-push");
                     const response = await fetch('/api/send-push', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -172,12 +182,18 @@ export const ChatPage: React.FC = () => {
 
                     if (!response.ok) {
                         const errorData = await response.json();
-                        console.error("Push Notification Failed:", errorData);
+                        console.error("[Push] API Failed:", errorData);
+                    } else {
+                        console.log("[Push] API Success");
                     }
                 } catch (err) {
-                    console.error("Push Network Error:", err);
+                    console.error("[Push] Network Error:", err);
                 }
+            } else {
+                console.log("[Push] No tokens found for partner");
             }
+        } else {
+            console.log("[Push] Partner document not found");
         }
     };
 
