@@ -102,21 +102,11 @@ export const HomePage: React.FC = () => {
             <Header
                 partnerName={partnerName}
                 isOnline={true}
+                isPushEnabled={userData.isPushEnabled ?? true}
+                onTogglePush={togglePush}
             />
 
             <main className="space-y-2">
-                {/* Notification Toggle (Temporary UI placement, can be moved to Header if Header supports it) */}
-                <div className="flex justify-end px-6 pt-2">
-                    <button
-                        onClick={togglePush}
-                        className="flex items-center gap-2 text-[12px] text-text-secondary bg-secondary/30 px-3 py-1.5 rounded-full hover:bg-secondary/50 transition-colors"
-                    >
-                        <span className="material-symbols-outlined text-[16px]">
-                            {(userData.isPushEnabled ?? true) ? 'notifications_active' : 'notifications_off'}
-                        </span>
-                        {(userData.isPushEnabled ?? true) ? '알림 ON' : '알림 OFF'}
-                    </button>
-                </div>
 
                 <RecentMessage
                     senderName={partnerName}
