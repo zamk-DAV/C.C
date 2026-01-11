@@ -12,6 +12,7 @@ export const HomePage: React.FC = () => {
     const navigate = useNavigate();
 
     // Memory Feed State
+    const [memories, setMemories] = useState<any[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
 
