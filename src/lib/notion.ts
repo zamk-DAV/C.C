@@ -50,7 +50,19 @@ export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' 
     });
 
     if (!response.ok) {
-        throw new Error(`Failed to fetch Notion data: ${response.statusText}`);
+        let errorMessage = `Failed to fetch Notion data: ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error) {
+                errorMessage += ` - ${errorData.error}`;
+            }
+            if (errorData.details) {
+                errorMessage += `\nDetails: ${JSON.stringify(errorData.details, null, 2)}`;
+            }
+        } catch (e) {
+            // Ignore JSON parse error if response is not JSON
+        }
+        throw new Error(errorMessage);
     }
 
     const json = await response.json();
