@@ -110,30 +110,45 @@ export const ChatPage: React.FC = () => {
     // Hooks
     // Track chat activity status & Clear unread count
     useEffect(() => {
-        if (user?.uid) {
-            const userRef = doc(db, 'users', user.uid);
+        if (!user?.uid) return;
 
-            // Set active on mount
+        const userRef = doc(db, 'users', user.uid);
+
+        const updateActivityStatus = (isActive: boolean) => {
             updateDoc(userRef, {
-                isChatActive: true,
-                unreadCount: 0,
+                isChatActive: isActive,
+                unreadCount: isActive ? 0 : undefined, // Reset unread only when active
                 lastActive: serverTimestamp()
-            });
+            }).catch(console.error);
 
-            // App Badging API (Native icon badge)
-            if ('setAppBadge' in navigator) {
+            if (isActive && 'setAppBadge' in navigator) {
                 (navigator as any).setAppBadge(0).catch(console.error);
             }
+        };
 
-            // Set inactive on unmount
-            return () => {
-                updateDoc(userRef, {
-                    isChatActive: false,
-                    lastActive: serverTimestamp()
-                });
-            };
+        // Initial set (if visible)
+        if (document.visibilityState === 'visible') {
+            updateActivityStatus(true);
         }
-    }, [user?.uid]); // Fixed: Removed messages.length to prevent unnecessary writes
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible') {
+                console.log("[Chat] App foregrounded -> Setting active");
+                updateActivityStatus(true);
+            } else {
+                console.log("[Chat] App backgrounded -> Setting inactive");
+                updateActivityStatus(false);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        // Set inactive on unmount
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            updateActivityStatus(false);
+        };
+    }, [user?.uid]);
 
     useFcmToken();
 
@@ -157,11 +172,10 @@ export const ChatPage: React.FC = () => {
             }
 
             // DO NOT send push if partner is already in the ChatPage
-            // Commented out to allow push even if active (for testing/safety)
-            // if (data.isChatActive === true) {
-            //     console.log("[Push] Partner is active in chat, skipping push");
-            //     return;
-            // }
+            if (data.isChatActive === true) {
+                console.log("[Push] Partner is active in chat, skipping push");
+                return;
+            }
 
             const tokens = data.fcmTokens || [];
             const badgeCount = data.unreadCount || 0;
