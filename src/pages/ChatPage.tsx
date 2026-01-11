@@ -170,10 +170,11 @@ export const ChatPage: React.FC = () => {
             const data = partnerDoc.data();
             console.log("[Push] Partner data loaded", { isPushEnabled: data.isPushEnabled, isChatActive: data.isChatActive, tokensCount: data.fcmTokens?.length });
 
-            // Check if push is enabled (default true)
-            if (data.isPushEnabled === false) {
-                console.log("[Push] Partner disabled push");
-                return;
+            // Do NOT block push if disabled. Instead, mark as silent.
+            const isSilent = data.isPushEnabled === false;
+
+            if (isSilent) {
+                console.log("[Push] Partner disabled push - sending silent badge update");
             }
 
             // DO NOT send push if partner is already in the ChatPage
@@ -197,7 +198,8 @@ export const ChatPage: React.FC = () => {
                             title: user?.displayName || '새로운 메시지',
                             body: text,
                             icon: '/icon2.png',
-                            badge: badgeCount
+                            badge: badgeCount,
+                            isSilent // Pass silent flag
                         })
                     });
 

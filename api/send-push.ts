@@ -52,27 +52,24 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         app = getApps()[0];
     }
 
-    const { tokens, title, body, icon, badge } = req.body;
+    const { tokens, title, body, icon, badge, isSilent } = req.body;
 
     if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
         return res.status(400).json({ error: 'Missing tokens' });
     }
 
     try {
-        const message = {
-            notification: {
-                title: title || 'New Message',
-                body: body || 'You have a new message!',
-            },
+        const message: any = {
             data: {
                 badge: badge ? String(badge) : '0'
             },
             tokens: tokens,
             webpush: {
-                notification: {
-                    badge: icon || '/icon-192x192.png', // This is for the notification bar icon on Android
-                    icon: icon || '/icon-192x192.png',
-                },
+                // Keep webpush config but notification block inside might trigger display
+                // If silent, we might want to suppress it.
+                // However, user asked for "Home Screen Number" which implies Mobile Launcher or PWA Badge.
+                // For PWA Badge, setAppBadge is client side.
+                // For Android/iOS native/wrapper:
                 fcmOptions: {
                     link: 'https://c-c-mauve.vercel.app/chat'
                 }
@@ -81,6 +78,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             android: {
                 notification: {
                     notificationCount: badge ? Number(badge) : undefined,
+                    // If isSilent is true, we should NOT set title/body here either if they existed
                 }
             },
             // APNs specific for iOS badge
@@ -88,10 +86,26 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
                 payload: {
                     aps: {
                         badge: badge ? Number(badge) : undefined,
+                        'content-available': isSilent ? 1 : undefined, // Wake up for background update if silent
                     }
                 }
             }
         };
+
+        // Only add 'notification' block if NOT silent
+        // This block triggers the visual alert on most platforms
+        if (!isSilent) {
+            message.notification = {
+                title: title || 'New Message',
+                body: body || 'You have a new message!',
+            };
+
+            // Add icon to webpush notification only if visible
+            message.webpush.notification = {
+                badge: icon || '/icon-192x192.png',
+                icon: icon || '/icon-192x192.png',
+            };
+        }
 
         // Use modern sendEachForMulticast
         const messaging = getMessaging(app);
