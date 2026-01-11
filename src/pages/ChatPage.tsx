@@ -115,11 +115,16 @@ export const ChatPage: React.FC = () => {
         const userRef = doc(db, 'users', user.uid);
 
         const updateActivityStatus = (isActive: boolean) => {
-            updateDoc(userRef, {
+            const updateData: any = {
                 isChatActive: isActive,
-                unreadCount: isActive ? 0 : undefined, // Reset unread only when active
                 lastActive: serverTimestamp()
-            }).catch(console.error);
+            };
+
+            if (isActive) {
+                updateData.unreadCount = 0;
+            }
+
+            updateDoc(userRef, updateData).catch(console.error);
 
             if (isActive && 'setAppBadge' in navigator) {
                 (navigator as any).setAppBadge(0).catch(console.error);
