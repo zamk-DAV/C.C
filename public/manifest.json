@@ -1,0 +1,16 @@
+{
+    "name": "Dear23",
+    "short_name": "Dear23",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#ffffff",
+    "theme_color": "#ffffff",
+    "orientation": "portrait",
+    "icons": [
+        {
+            "src": "/vite.svg",
+            "type": "image/svg+xml",
+            "sizes": "512x512"
+        }
+    ]
+}
