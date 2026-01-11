@@ -125,16 +125,25 @@ export const ChatPage: React.FC = () => {
 
             const tokens = data.fcmTokens || [];
             if (tokens.length > 0) {
-                await fetch('/api/send-push', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        tokens,
-                        title: user?.displayName || 'C.C',
-                        body: text,
-                        icon: '/icon-192x192.png'
-                    })
-                });
+                try {
+                    const response = await fetch('/api/send-push', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            tokens,
+                            title: user?.displayName || 'C.C',
+                            body: text,
+                            icon: '/icon-192x192.png'
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        console.error("Push Notification Failed:", errorData);
+                    }
+                } catch (err) {
+                    console.error("Push Network Error:", err);
+                }
             }
         }
     };
