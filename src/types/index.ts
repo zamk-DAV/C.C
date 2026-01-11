@@ -12,6 +12,8 @@ export interface UserData {
     isPushEnabled?: boolean; // Notification Setting
     fcmTokens?: string[];
     unreadCount?: number;
+    isChatActive?: boolean; // Whether user is currently in ChatPage
+    lastActive?: any; // Last timestamp user was seen
 }
 
 export interface CoupleData {

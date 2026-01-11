@@ -108,16 +108,30 @@ export const ChatPage: React.FC = () => {
     };
 
     // Hooks
-    // Clear unread count when entering or receiving messages while active
+    // Track chat activity status & Clear unread count
     useEffect(() => {
         if (user?.uid) {
             const userRef = doc(db, 'users', user.uid);
-            updateDoc(userRef, { unreadCount: 0 });
+
+            // Set active on mount
+            updateDoc(userRef, {
+                isChatActive: true,
+                unreadCount: 0,
+                lastActive: serverTimestamp()
+            });
 
             // App Badging API (Native icon badge)
             if ('setAppBadge' in navigator) {
                 (navigator as any).setAppBadge(0).catch(console.error);
             }
+
+            // Set inactive on unmount
+            return () => {
+                updateDoc(userRef, {
+                    isChatActive: false,
+                    lastActive: serverTimestamp()
+                });
+            };
         }
     }, [user?.uid, messages.length]);
 
@@ -135,6 +149,9 @@ export const ChatPage: React.FC = () => {
 
             // Check if push is enabled (default true)
             if (data.isPushEnabled === false) return;
+
+            // DO NOT send push if partner is already in the ChatPage
+            if (data.isChatActive === true) return;
 
             const tokens = data.fcmTokens || [];
             const badgeCount = data.unreadCount || 0;
