@@ -5,6 +5,8 @@ import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import { useAuth } from '../context/AuthContext';
 import { fetchNotionData } from '../lib/notion';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 export const HomePage: React.FC = () => {
     const { user, userData, partnerData, loading } = useAuth();
@@ -62,6 +64,18 @@ export const HomePage: React.FC = () => {
         }
     };
 
+    const togglePush = async () => {
+        if (!user || !userData) return;
+        const currentSetting = userData.isPushEnabled ?? true; // Default to true
+        try {
+            await updateDoc(doc(db, 'users', user.uid), {
+                isPushEnabled: !currentSetting
+            });
+        } catch (error) {
+            console.error("Failed to toggle push:", error);
+        }
+    };
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
     if (!user) return null;
 
@@ -91,6 +105,19 @@ export const HomePage: React.FC = () => {
             />
 
             <main className="space-y-2">
+                {/* Notification Toggle (Temporary UI placement, can be moved to Header if Header supports it) */}
+                <div className="flex justify-end px-6 pt-2">
+                    <button
+                        onClick={togglePush}
+                        className="flex items-center gap-2 text-[12px] text-text-secondary bg-secondary/30 px-3 py-1.5 rounded-full hover:bg-secondary/50 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[16px]">
+                            {(userData.isPushEnabled ?? true) ? 'notifications_active' : 'notifications_off'}
+                        </span>
+                        {(userData.isPushEnabled ?? true) ? '알림 ON' : '알림 OFF'}
+                    </button>
+                </div>
+
                 <RecentMessage
                     senderName={partnerName}
                     message="오늘 저녁 같이 먹는 거 기대된다. 나 이제 퇴근해!"

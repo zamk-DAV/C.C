@@ -9,6 +9,7 @@ export interface UserData {
     bgImage?: string | null;
     passcode?: string | null;
     theme?: string;
+    isPushEnabled?: boolean; // Notification Setting
 }
 
 export interface CoupleData {

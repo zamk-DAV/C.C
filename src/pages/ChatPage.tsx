@@ -119,6 +119,10 @@ export const ChatPage: React.FC = () => {
         const partnerDoc = await getDoc(doc(db, 'users', partnerData.uid));
         if (partnerDoc.exists()) {
             const data = partnerDoc.data();
+
+            // Check if push is enabled (default true)
+            if (data.isPushEnabled === false) return;
+
             const tokens = data.fcmTokens || [];
             if (tokens.length > 0) {
                 await fetch('/api/send-push', {
