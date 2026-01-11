@@ -23,6 +23,63 @@ const ReactionIcons: Record<string, any> = {
     wow: { icon: Sparkles, color: 'text-purple-400 fill-purple-400' },
 };
 
+/**
+ * Time/Heart + Hover Actions 영역
+ * Desktop hover 시 시간/하트가 사라지고 액션 버튼이 표시됨
+ * CSS Grid로 같은 공간에 두 요소를 겹쳐서 opacity로 전환
+ */
+const MessageMeta: React.FC<{
+    isMine: boolean;
+    isRead: boolean;
+    showTime: boolean;
+    timestamp: string;
+    onReply: () => void;
+    onReaction: () => void;
+}> = ({ isMine, isRead, showTime, timestamp, onReply, onReaction }) => {
+    return (
+        <div className={cn(
+            "grid self-end mb-[2px]",
+            // 같은 grid cell에 두 요소를 겹침
+            "[&>*]:col-start-1 [&>*]:row-start-1"
+        )}>
+            {/* 시간 + 안읽음 하트 (기본 상태) */}
+            <div className={cn(
+                "flex flex-col gap-0.5 transition-opacity duration-150",
+                isMine ? "items-end" : "items-start",
+                // Desktop hover 시 숨김 (hover:hover 지원 기기에서만)
+                "[@media(hover:hover)]:group-hover:opacity-0"
+            )}>
+                {!isRead && <Heart className="w-3 h-3 text-red-400 fill-red-400" />}
+                {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
+            </div>
+
+            {/* 액션 버튼 (hover 상태 - Desktop only) */}
+            <div className={cn(
+                "flex items-center gap-1 transition-opacity duration-150",
+                // 기본적으로 숨김
+                "opacity-0 pointer-events-none",
+                // Desktop hover 시에만 표시
+                "[@media(hover:hover)]:group-hover:opacity-100 [@media(hover:hover)]:group-hover:pointer-events-auto"
+            )}>
+                <button
+                    onClick={(e) => { e.stopPropagation(); onReply(); }}
+                    className="text-text-secondary hover:text-primary transition-colors p-0.5"
+                    title="답장"
+                >
+                    <Reply size={14} />
+                </button>
+                <button
+                    onClick={(e) => { e.stopPropagation(); onReaction(); }}
+                    className="text-text-secondary hover:text-red-400 transition-colors p-0.5"
+                    title="좋아요"
+                >
+                    <Heart size={14} />
+                </button>
+            </div>
+        </div>
+    );
+};
+
 export const MessageBubble: React.FC<MessageBubbleProps> = ({
     message: msg,
     isMine,
@@ -43,8 +100,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         e.preventDefault();
         onContextMenu(e, msg);
     };
-
-
 
     // Deleted Message View
     if (msg.isDeleted) {
@@ -90,12 +145,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 )}
 
                 <div className="flex items-end gap-1">
-                    {/* Time (Mine) */}
+                    {/* Time/Actions (Mine - Left side) */}
                     {isMine && (
-                        <div className="flex flex-col items-end gap-0.5 mb-[2px]">
-                            {!msg.isRead && <Heart className="w-3 h-3 text-red-400 fill-red-400" />}
-                            {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
-                        </div>
+                        <MessageMeta
+                            isMine={true}
+                            isRead={msg.isRead ?? true}
+                            showTime={showTime}
+                            timestamp={timestamp}
+                            onReply={() => onReply?.(msg)}
+                            onReaction={() => onReaction?.(msg, 'heart')}
+                        />
                     )}
 
                     {/* Content */}
@@ -132,34 +191,16 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         )}
                     </div>
 
-
-
-                    {/* Hover Actions (Desktop) - Only for Partner Messages */}
+                    {/* Time/Actions (Partner - Right side) */}
                     {!isMine && (
-                        <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5 self-center ml-1 bg-secondary/80 backdrop-blur-sm border border-border p-1.5 rounded-xl shadow-sm">
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onReply?.(msg); }}
-                                className="text-text-secondary hover:text-primary transition-colors p-0.5"
-                                title="답장"
-                            >
-                                <Reply size={14} />
-                            </button>
-                            <button
-                                onClick={(e) => { e.stopPropagation(); onReaction?.(msg, 'heart'); }}
-                                className="text-text-secondary hover:text-red-400 transition-colors p-0.5"
-                                title="좋아요"
-                            >
-                                <Heart size={14} />
-                            </button>
-                        </div>
-                    )}
-
-                    {/* Time (Partner) */}
-                    {!isMine && (
-                        <div className="flex flex-col items-start gap-0.5 mb-[2px]">
-                            {!msg.isRead && <Heart className="w-3 h-3 text-red-400 fill-red-400" />}
-                            {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
-                        </div>
+                        <MessageMeta
+                            isMine={false}
+                            isRead={msg.isRead ?? true}
+                            showTime={showTime}
+                            timestamp={timestamp}
+                            onReply={() => onReply?.(msg)}
+                            onReaction={() => onReaction?.(msg, 'heart')}
+                        />
                     )}
                 </div>
 

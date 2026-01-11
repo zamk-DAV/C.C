@@ -1,0 +1,66 @@
+### Page state
+- Page URL: http://localhost:5173/chat
+- Page Title: Dear23
+- Page Snapshot:
+```yaml
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - button "arrow_back" [ref=e7] [cursor=pointer]
+      - img "민수" [ref=e8]
+      - heading "민수" [level=1] [ref=e10]
+    - button "search" [ref=e11] [cursor=pointer]
+  - main [ref=e12]:
+    - generic [ref=e15]: 2023년 12월 24일
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - img "민수" [ref=e20]
+        - generic [ref=e21]:
+          - generic [ref=e22]: 민수
+          - generic [ref=e23]:
+            - paragraph [ref=e25]: 오늘 저녁 같이 먹는 거 기대된다. 나 이제 퇴근해!
+            - generic [ref=e26]:
+              - generic:
+                - button "favorite_border":
+                  - generic: favorite_border
+                - button "reply":
+                  - generic: reply
+              - generic [ref=e28]: 오후 6:12
+      - generic [ref=e30]:
+        - generic [ref=e31]:
+          - generic:
+            - button "reply":
+              - generic: reply
+          - generic [ref=e33]: 오후 6:15
+        - paragraph [ref=e35]: 나도! 회사 앞 카페에서 기다릴게. 조심히 와 :)
+      - generic [ref=e37]:
+        - img "민수" [ref=e38]
+        - generic [ref=e39]:
+          - generic [ref=e40]: 민수
+          - generic [ref=e41]:
+            - generic [ref=e42]:
+              - img "shared" [ref=e43]
+              - paragraph [ref=e44]: 이건 아까 점심에 찍은 거!
+            - generic [ref=e45]:
+              - generic:
+                - button "favorite_border":
+                  - generic: favorite_border
+                - button "reply":
+                  - generic: reply
+              - generic [ref=e47]: 오후 6:18
+      - generic [ref=e49]:
+        - generic [ref=e50]:
+          - generic:
+            - button "reply":
+              - generic: reply
+          - generic [ref=e51]:
+            - generic [ref=e52]: favorite
+            - generic [ref=e53]: 오후 6:20
+        - paragraph [ref=e55]: 와, 날씨 진짜 좋았나보다.
+  - contentinfo [ref=e56]:
+    - generic [ref=e57]:
+      - button "add" [ref=e58] [cursor=pointer]
+      - textbox "메시지를 입력하세요" [ref=e59]
+      - button "send" [ref=e60] [cursor=pointer]:
+        - generic [ref=e61]: send
+```
