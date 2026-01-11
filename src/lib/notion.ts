@@ -81,32 +81,32 @@ export const searchNotionDatabases = async (apiKey: string): Promise<NotionDatab
 
     const json = await response.json();
     return json.data;
-    // ... (previous code)
+};
 
-    const VALIDATE_SCHEMA_URL = "https://us-central1-ccdear23.cloudfunctions.net/validateNotionSchema";
+const VALIDATE_SCHEMA_URL = "https://us-central1-ccdear23.cloudfunctions.net/validateNotionSchema";
 
-    export const validateNotionSchema = async (apiKey: string, databaseId: string): Promise<{ status: string; created?: string[] }> => {
-        const user = auth.currentUser;
-        if (!user) throw new Error("User not authenticated");
+export const validateNotionSchema = async (apiKey: string, databaseId: string): Promise<{ status: string; created?: string[] }> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
 
-        const token = await user.getIdToken();
+    const token = await user.getIdToken();
 
-        const response = await fetch(VALIDATE_SCHEMA_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            body: JSON.stringify({
-                apiKey,
-                databaseId
-            })
-        });
+    const response = await fetch(VALIDATE_SCHEMA_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            apiKey,
+            databaseId
+        })
+    });
 
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || "Failed to validate Notion schema");
-        }
+    if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to validate Notion schema");
+    }
 
-        return await response.json();
-    };
+    return await response.json();
+};
