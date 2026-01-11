@@ -74,7 +74,8 @@ export const HomePage: React.FC = () => {
         if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
             loadMemories();
         }
-    }, [userData?.notionConfig]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
 
     // Update lastCheckedFeed on unmount
     useEffect(() => {
