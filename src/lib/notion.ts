@@ -116,8 +116,19 @@ export const validateNotionSchema = async (apiKey: string, databaseId: string): 
     });
 
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to validate Notion schema");
+        let errorMessage = `Failed to validate Notion schema: ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error) {
+                errorMessage += ` - ${errorData.error}`;
+            }
+            if (errorData.details) {
+                errorMessage += `\nDetails: ${JSON.stringify(errorData.details, null, 2)}`;
+            }
+        } catch (e) {
+            // Ignore JSON parse error
+        }
+        throw new Error(errorMessage);
     }
 
     return await response.json();
