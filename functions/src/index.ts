@@ -60,7 +60,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
                     sorts: [
                         {
-                            property: "date", // Assuming 'date' property exists
+                            property: "날짜",
                             direction: "descending"
                         }
                     ]
@@ -217,6 +217,7 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
             // 2. Define Required Schema
             const requiredProperties: any = {
                 // Common
+                "날짜": { date: {} },
                 "구분": { select: { options: [{ name: "일기", color: "blue" }, { name: "일정", color: "green" }, { name: "편지", color: "pink" }, { name: "추억", color: "yellow" }] } },
                 "작성자": { select: {} },
                 "내용미리보기": { rich_text: {} },
