@@ -9,7 +9,7 @@ admin.initializeApp();
 const corsHandler = cors({ origin: true });
 exports.getNotionDatabase = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
-        var _a;
+        var _a, _b;
         // 1. Verify Authentication
         const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
         if (!tokenId) {
@@ -102,7 +102,10 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
         }
         catch (error) {
             console.error("Error fetching Notion data:", error);
-            res.status(500).send({ error: error.message });
+            res.status(500).send({
+                error: error.message,
+                details: ((_b = error.response) === null || _b === void 0 ? void 0 : _b.data) || "No additional details"
+            });
         }
     });
 });
