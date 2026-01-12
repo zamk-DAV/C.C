@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, isValid, getWeek, getYear } from 'date-fns';
-import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { fetchNotionData, deleteDiaryEntry, type NotionItem } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
@@ -30,23 +30,10 @@ export const DiaryPage: React.FC = () => {
     useEffect(() => {
         if (user && userData?.coupleId) {
             const userRef = doc(db, 'users', user.uid);
-            // Only update timestamp once on mount/coupleId change, not on every loading toggle
+            // Only update timestamp once on mount/coupleId change
             updateDoc(userRef, { lastCheckedDiary: serverTimestamp() }).catch(console.error);
-
-            const coupleRef = doc(db, 'couples', userData.coupleId);
-            const unsubscribe = onSnapshot(coupleRef, (docSnap) => {
-                // Use a ref or simple check to avoid loop? 
-                // Actually, duplicate loadDiary calls are protected by !loading check, 
-                // but we need to ensure this doesn't trigger the updateDoc loop.
-                if (docSnap.exists() && !loading && items.length > 0) {
-                    // Simplified reload logic
-                    loadDiary();
-                }
-            });
-            return () => unsubscribe();
+            // Removed: onSnapshot auto-reload to prevent feedback loop
         }
-        // Removed 'loading' from dependency array to prevent effect re-run when local loading state toggles
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData?.coupleId, user?.uid]);
 
     const loadDiary = async (isLoadMore = false) => {

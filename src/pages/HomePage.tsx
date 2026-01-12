@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
@@ -23,6 +23,9 @@ export const HomePage: React.FC = () => {
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+
+    // Ref to prevent multiple memory loads per session
+    const hasLoadedMemoriesRef = useRef(false);
 
     // Dynamic Time Formatter
     const formatTime = (dateString?: any) => {
@@ -71,23 +74,26 @@ export const HomePage: React.FC = () => {
         }
     }, [userData?.coupleId]);
 
-    // Fetch Memories (Initial)
+    // Fetch Memories (Initial) - runs ONCE per session
     useEffect(() => {
+        // Skip if already loaded this session
+        if (hasLoadedMemoriesRef.current) return;
+
         if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
+            hasLoadedMemoriesRef.current = true;
             loadMemories();
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
 
-    // Update lastCheckedFeed on unmount
+    // Update lastCheckedFeed on mount (once per session)
     useEffect(() => {
-        return () => {
-            if (user && userData) {
-                const userRef = doc(db, 'users', user.uid);
-                updateDoc(userRef, { lastCheckedFeed: serverTimestamp() }).catch(console.error);
-            }
-        };
-    }, [user?.uid]);
+        if (user && userData?.coupleId) {
+            const userRef = doc(db, 'users', user.uid);
+            updateDoc(userRef, { lastCheckedFeed: serverTimestamp() }).catch(console.error);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user?.uid, userData?.coupleId]);
 
     const loadMemories = async (cursor?: string) => {
         try {
