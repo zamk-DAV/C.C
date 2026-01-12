@@ -5,6 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc, increment } from 'firebase/firestore';
 import { MessageBubble } from '../components/chat/MessageBubble';
+import { MobileMessageItem } from '../components/chat/interactions/MobileMessageItem';
+import { DesktopMessageItem } from '../components/chat/interactions/DesktopMessageItem';
+import { useDeviceType } from '../hooks/useDeviceType';
 import type { ChatMessage } from '../types';
 import { format } from 'date-fns';
 import { ContextMenu } from '../components/chat/ContextMenu';
@@ -14,6 +17,7 @@ import useFcmToken from '../hooks/useFcmToken';
 export const ChatPage: React.FC = () => {
     const navigate = useNavigate();
     const { user, partnerData, coupleData } = useAuth();
+    const { isMobile } = useDeviceType();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState('');
     const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -434,7 +438,10 @@ export const ChatPage: React.FC = () => {
                 </header>
 
                 {/* Main Chat Area */}
-                <main className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar">
+                <main
+                    className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar scroll-smooth"
+                    style={{ overflowAnchor: 'auto' }}
+                >
                     {Object.keys(groupedMessages).map((dateKey) => (
                         <div key={dateKey}>
                             <div className="flex items-center gap-4 my-8">
@@ -459,18 +466,38 @@ export const ChatPage: React.FC = () => {
                                             Math.abs(msg.createdAt.toMillis() - prevMsg.createdAt.toMillis()) > 60000);
 
                                     return (
-                                        <MessageBubble
+                                    const bubble = (
+                                            <MessageBubble
+                                                key={msg.id}
+                                                message={msg}
+                                                isMine={isMine}
+                                                senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
+                                                avatarUrl={isMine ? undefined : partnerData?.photoURL}
+                                                showProfile={!isMine && isFirstInGroup}
+                                                showTime={isLastInGroup}
+                                            />
+                                        );
+
+                                    return isMobile ? (
+                                        <MobileMessageItem
                                             key={msg.id}
-                                            message={msg}
                                             isMine={isMine}
-                                            senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
-                                            avatarUrl={isMine ? undefined : partnerData?.photoURL}
-                                            showProfile={!isMine && isFirstInGroup}
-                                            showTime={isLastInGroup}
-                                            onContextMenu={handleContextMenu}
-                                            onReply={handleDirectReply}
-                                            onReaction={handleDirectReaction}
-                                        />
+                                            onReply={() => handleDirectReply(msg)}
+                                            onReaction={() => { /* Reaction menu triggered via hold or double tap */ }}
+                                            onLongPress={() => handleContextMenu({ preventDefault: () => { }, touches: [{ clientX: 0, clientY: 0 }] } as any, msg)}
+                                        >
+                                            {bubble}
+                                        </MobileMessageItem>
+                                    ) : (
+                                        <DesktopMessageItem
+                                            key={msg.id}
+                                            isMine={isMine}
+                                            onReply={() => handleDirectReply(msg)}
+                                            onReaction={() => { /* Desktop reaction trigger if specific */ }}
+                                            onContextMenu={(e) => handleContextMenu(e, msg)}
+                                        >
+                                            {bubble}
+                                        </DesktopMessageItem>
                                     );
                                 })}
                             </div>

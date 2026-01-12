@@ -1,52 +1,24 @@
 import { useState, useEffect } from 'react';
 
-export type DeviceType = 'desktop' | 'mobile';
-
 /**
- * Custom hook to detect device type based on hover capability, touch support, and screen size.
- * - Desktop: hover supported + no touch + large screen
- * - Mobile: touch device or small screen
+ * 화면 크기를 기준으로 모바일 여부를 판단하는 훅
+ * Tailwind의 'md' 브레이크포인트(768px)를 기준으로 함.
  */
-export const useDeviceType = (): DeviceType => {
-    const [deviceType, setDeviceType] = useState<DeviceType>('desktop');
+export function useDeviceType() {
+    const [isMobile, setIsMobile] = useState(false);
 
     useEffect(() => {
-        const checkDevice = () => {
-            // Check if device supports hover (true hover, not emulated)
-            const hasHover = window.matchMedia('(hover: hover)').matches;
-
-            // Check if device supports touch
-            const isTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
-            // Check screen size (< 1024px = tablet/mobile)
-            const isSmallScreen = window.innerWidth < 1024;
-
-            // Desktop: has hover + not primarily touch + large screen
-            // Mobile: touch device OR small screen
-            if (hasHover && !isTouch && !isSmallScreen) {
-                setDeviceType('desktop');
-            } else {
-                setDeviceType('mobile');
-            }
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
         };
 
-        // Initial check
-        checkDevice();
+        // 초기 실행
+        checkMobile();
 
-        // Listen for resize events
-        window.addEventListener('resize', checkDevice);
-
-        // Listen for media query changes
-        const hoverQuery = window.matchMedia('(hover: hover)');
-        hoverQuery.addEventListener('change', checkDevice);
-
-        return () => {
-            window.removeEventListener('resize', checkDevice);
-            hoverQuery.removeEventListener('change', checkDevice);
-        };
+        // 리사이즈 이벤트 감지
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
-    return deviceType;
-};
-
-export default useDeviceType;
+    return { isMobile, isDesktop: !isMobile };
+}

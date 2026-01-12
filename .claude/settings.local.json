@@ -4,7 +4,10 @@
       "Bash(dir /s /b C:Users작업용DesktopC.Cdear23src*.tsx C:Users작업용DesktopC.Cdear23src*.ts)",
       "Bash(findstr:*)",
       "WebFetch(domain:c-c-amber.vercel.app)",
-      "Bash(dir /s /b \"C:\\Users\\작업용\\Desktop\\C.C\")"
+      "Bash(dir /s /b \"C:\\Users\\작업용\\Desktop\\C.C\")",
+      "Bash(dir /s /b \"C:\\Users\\작업용\\Desktop\\C.C\\dear23\\src\\components\\chat\")",
+      "Bash(git ls-tree:*)",
+      "Bash(ls -la \"C:\\Users\\작업용\\Desktop\\C.C\\src\\components\\chat\"\" 2>/dev/null || echo \"Directory does not exist \")"
     ]
   }
 }
