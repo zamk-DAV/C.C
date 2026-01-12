@@ -43,7 +43,7 @@ interface NotionContextType {
 const NotionContext = createContext<NotionContextType | undefined>(undefined);
 
 export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { userData } = useAuth();
+    const { userData, coupleData } = useAuth();
 
     // Diary State
     const [diaryData, setDiaryData] = useState<NotionItem[]>([]);
@@ -63,9 +63,11 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const hasInitializedRef = useRef(false);
     const isLoadingRef = useRef(false);
 
+    // Priority: coupleData.notionConfig > userData.notionConfig (legacy fallback)
+    const notionConfig = coupleData?.notionConfig || userData?.notionConfig;
     const isNotionConfigured = Boolean(
-        userData?.notionConfig?.apiKey &&
-        userData?.notionConfig?.databaseId
+        notionConfig?.apiKey &&
+        notionConfig?.databaseId
     );
 
     useEffect(() => {
