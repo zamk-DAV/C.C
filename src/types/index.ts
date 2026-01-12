@@ -5,6 +5,7 @@ export interface UserData {
     inviteCode: string;
     coupleId: string | null;
     photoURL: string | null;
+    statusMessage?: string;
     notionConfig?: { apiKey: string | null; databaseId: string | null };
     bgImage?: string | null;
     passcode?: string | null;

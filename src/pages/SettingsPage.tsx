@@ -8,6 +8,7 @@ import { signOut } from 'firebase/auth';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { PinInput } from '../components/common/PinInput';
 import { useTheme } from '../context/ThemeContext';
+import { ProfileEditModal } from '../components/settings/ProfileEditModal';
 
 export const SettingsPage: React.FC = () => {
     const { user, userData, partnerData, coupleData } = useAuth();
@@ -18,6 +19,8 @@ export const SettingsPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [showKey, setShowKey] = useState(false);
     const [startDate, setStartDate] = useState('');
+    const [profileEditOpen, setProfileEditOpen] = useState(false);
+    const { isMobile } = useDeviceType();
 
     // Passcode State
     const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
@@ -266,12 +269,20 @@ export const SettingsPage: React.FC = () => {
                 <div className="flex px-6 py-8 justify-between items-center gap-4">
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border grayscale-img bg-secondary"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border grayscale-img bg-secondary relative cursor-pointer group"
                             style={userData?.photoURL ? { backgroundImage: `url(${userData.photoURL})` } : {}}
-                        ></div>
+                            onClick={() => setProfileEditOpen(true)}
+                        >
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <span className="material-symbols-outlined text-white">edit</span>
+                            </div>
+                        </div>
                         <div className="text-center">
                             <p className="text-text-secondary text-xs font-medium uppercase tracking-widest opacity-50 font-sans">내 프로필</p>
                             <p className="text-primary text-base font-bold font-sans">{userData?.name || '나'}</p>
+                            {userData?.statusMessage && (
+                                <p className="text-text-secondary text-xs font-medium mt-1">{userData.statusMessage}</p>
+                            )}
                         </div>
                     </div>
                     <div className="flex items-center">
@@ -455,6 +466,15 @@ export const SettingsPage: React.FC = () => {
                         />
                     </div>
                 </div>
+            )}
+
+            {/* Profile Edit Modal */}
+            {userData && (
+                <ProfileEditModal
+                    isOpen={profileEditOpen}
+                    onClose={() => setProfileEditOpen(false)}
+                    userData={userData}
+                />
             )}
         </div>
     );

@@ -9,10 +9,10 @@ import { MobileMessageItem } from '../components/chat/interactions/MobileMessage
 import { DesktopMessageItem } from '../components/chat/interactions/DesktopMessageItem';
 import { useDeviceType } from '../hooks/useDeviceType';
 import type { ChatMessage } from '../types';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ContextMenu } from '../components/chat/ContextMenu';
 import useFcmToken from '../hooks/useFcmToken';
-// import { ko } from 'date-fns/locale';
+import { ko } from 'date-fns/locale';
 
 export const ChatPage: React.FC = () => {
     const navigate = useNavigate();
@@ -410,8 +410,16 @@ export const ChatPage: React.FC = () => {
                             >
                                 arrow_back
                             </button>
-                            <div className="flex flex-col">
-                                <h1 className="text-[17px] font-bold tracking-tight text-primary">{partnerData?.name || 'Partner'}</h1>
+                            <div className="flex flex-col justify-center h-10">
+                                <h1 className="text-[16px] font-bold tracking-tight text-primary leading-tight">{partnerData?.name || 'Partner'}</h1>
+                                <span className={`text-[10px] font-medium leading-tight ${partnerData?.isChatActive ? 'text-green-500' : 'text-text-secondary/70'}`}>
+                                    {partnerData?.isChatActive
+                                        ? '접속 중'
+                                        : partnerData?.lastActive
+                                            ? `${formatDistanceToNow(partnerData.lastActive.toDate ? partnerData.lastActive.toDate() : new Date(partnerData.lastActive), { addSuffix: true, locale: ko })} 활동`
+                                            : '오프라인'
+                                    }
+                                </span>
                             </div>
                         </div>
                         <button className="material-symbols-outlined text-[22px] font-light text-primary">search</button>
