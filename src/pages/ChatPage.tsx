@@ -518,7 +518,7 @@ export const ChatPage: React.FC = () => {
                         <div className="flex flex-col items-start max-w-[85%] mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
                             <div className="flex items-start gap-2">
                                 <div
-                                    className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 grayscale-img self-start"
+                                    className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 self-start"
                                     style={{ backgroundImage: partnerData?.photoURL ? `url(${partnerData.photoURL})` : undefined }}
                                 />
                                 <div className="border border-border px-4 py-3 bg-background bubble-in rounded-2xl rounded-tl-sm">

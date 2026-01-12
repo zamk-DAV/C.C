@@ -94,7 +94,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                 {!isMine && (
                     showProfile ? (
                         <div
-                            className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 grayscale-img self-start"
+                            className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 self-start"
                             style={{ backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined }}
                         />
                     ) : <div className="w-8 shrink-0" />
@@ -124,7 +124,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 <div className={cn("flex flex-col rounded-2xl overflow-hidden border border-border", isMine ? "rounded-tr-sm" : "rounded-tl-sm")}>
                                     <div className="p-1 bg-background overflow-hidden rounded-t-[14px]">
                                         <div
-                                            className="w-full aspect-square bg-secondary bg-center bg-cover grayscale-img rounded-[12px]"
+                                            className="w-full aspect-square bg-secondary bg-center bg-cover rounded-[12px]"
                                             style={{ backgroundImage: `url("${msg.imageUrl}")` }}
                                         />
                                     </div>

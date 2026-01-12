@@ -268,7 +268,7 @@ export const SettingsPage: React.FC = () => {
                 <div className="flex px-6 py-8 justify-between items-center gap-4">
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border grayscale-img bg-secondary relative cursor-pointer group"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary relative cursor-pointer group"
                             style={userData?.photoURL ? { backgroundImage: `url(${userData.photoURL})` } : {}}
                             onClick={() => setProfileEditOpen(true)}
                         >
@@ -289,7 +289,7 @@ export const SettingsPage: React.FC = () => {
                     </div>
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border grayscale-img bg-secondary"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary"
                             style={partnerData?.photoURL ? { backgroundImage: `url(${partnerData.photoURL})` } : {}}
                         ></div>
                         <div className="text-center">
