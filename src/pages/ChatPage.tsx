@@ -465,18 +465,17 @@ export const ChatPage: React.FC = () => {
                                         (prevMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
                                             Math.abs(msg.createdAt.toMillis() - prevMsg.createdAt.toMillis()) > 60000);
 
-                                    return (
                                     const bubble = (
-                                            <MessageBubble
-                                                key={msg.id}
-                                                message={msg}
-                                                isMine={isMine}
-                                                senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
-                                                avatarUrl={isMine ? undefined : partnerData?.photoURL}
-                                                showProfile={!isMine && isFirstInGroup}
-                                                showTime={isLastInGroup}
-                                            />
-                                        );
+                                        <MessageBubble
+                                            key={msg.id}
+                                            message={msg}
+                                            isMine={isMine}
+                                            senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
+                                            avatarUrl={isMine ? undefined : partnerData?.photoURL}
+                                            showProfile={!isMine && isFirstInGroup}
+                                            showTime={isLastInGroup}
+                                        />
+                                    );
 
                                     return isMobile ? (
                                         <MobileMessageItem
