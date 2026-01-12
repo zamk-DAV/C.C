@@ -6,6 +6,51 @@ import { auth } from './firebase';
 const CLOUD_FUNCTION_URL = "https://us-central1-ccdear23.cloudfunctions.net/getNotionDatabase";
 const SEARCH_FUNCTION_URL = "https://us-central1-ccdear23.cloudfunctions.net/searchNotionDatabases";
 
+// ============================================
+// Caching & Throttle Configuration
+// ============================================
+const CACHE_TTL_MS = 60 * 1000; // 1분 캐시 유효
+const THROTTLE_MS = 3000; // 3초 간격 유지
+
+interface CacheEntry<T> {
+    data: T;
+    timestamp: number;
+}
+
+// In-memory cache storage
+const notionCache: Map<string, CacheEntry<PaginatedNotionResponse>> = new Map();
+let lastApiCallTime = 0;
+
+// Generate cache key from request parameters
+const getCacheKey = (filterType?: string, cursor?: string, pageSize?: number): string => {
+    return `${filterType || 'all'}-${cursor || 'initial'}-${pageSize || 20}`;
+};
+
+// Check if cache is still valid
+const isCacheValid = (entry: CacheEntry<any>): boolean => {
+    return Date.now() - entry.timestamp < CACHE_TTL_MS;
+};
+
+// Throttle: wait until minimum interval has passed
+const waitForThrottle = async (): Promise<void> => {
+    const now = Date.now();
+    const timeSinceLastCall = now - lastApiCallTime;
+    if (timeSinceLastCall < THROTTLE_MS) {
+        const waitTime = THROTTLE_MS - timeSinceLastCall;
+        console.log(`[Notion] Throttle: waiting ${waitTime}ms before API call`);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+    }
+};
+
+// Clear cache (call after creating/deleting entries)
+export const clearNotionCache = () => {
+    notionCache.clear();
+    console.log('[Notion] Cache cleared');
+};
+
+// ============================================
+// Interfaces
+// ============================================
 export interface NotionDatabase {
     id: string;
     title: string;
@@ -23,12 +68,20 @@ export interface NotionItem {
     sender?: string;
     isRead?: boolean;
     author?: string;
-    images?: string[]; // Added images array
+    images?: string[];
 }
 
+export interface PaginatedNotionResponse {
+    data: NotionItem[];
+    hasMore: boolean;
+    nextCursor: string | null;
+}
+
+// ============================================
+// API Functions
+// ============================================
 const CREATE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/createDiaryEntry";
 
-// Update signature to accept optional properties
 export const createDiaryEntry = async (
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
@@ -62,7 +115,7 @@ export const createDiaryEntry = async (
                 errorMessage += ` - ${errorData.error}`;
             }
             if (errorData.details) {
-                console.error("Notion Error Details:", errorData.details); // Explicit console log
+                console.error("Notion Error Details:", errorData.details);
                 errorMessage += `\nDetails: ${JSON.stringify(errorData.details, null, 2)}`;
             }
         } catch (e) {
@@ -71,6 +124,8 @@ export const createDiaryEntry = async (
         throw new Error(errorMessage);
     }
 
+    // Clear cache after creating entry
+    clearNotionCache();
     return await response.json();
 };
 
@@ -93,21 +148,37 @@ export const deleteDiaryEntry = async (pageId: string) => {
     if (!response.ok) {
         throw new Error(`Failed to delete entry: ${response.statusText}`);
     }
+
+    // Clear cache after deleting entry
+    clearNotionCache();
     return await response.json();
 };
 
-export interface PaginatedNotionResponse {
-    data: NotionItem[];
-    hasMore: boolean;
-    nextCursor: string | null;
-}
+// Main fetch function with caching and throttle
+export const fetchNotionData = async (
+    filterType?: 'Diary' | 'Event' | 'Letter' | 'Memory',
+    cursor?: string,
+    pageSize: number = 20
+): Promise<PaginatedNotionResponse> => {
+    const cacheKey = getCacheKey(filterType, cursor, pageSize);
 
-export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' | 'Memory', cursor?: string, pageSize: number = 20): Promise<PaginatedNotionResponse> => {
-    console.log(`[Notion] fetchNotionData called at ${new Date().toISOString()}, filterType: ${filterType}`);
+    // 1. Check cache first
+    const cached = notionCache.get(cacheKey);
+    if (cached && isCacheValid(cached)) {
+        console.log(`[Notion] Cache HIT for ${cacheKey}`);
+        return cached.data;
+    }
+    console.log(`[Notion] Cache MISS for ${cacheKey}, fetching from API...`);
+
+    // 2. Apply throttle
+    await waitForThrottle();
+
+    // 3. Make API call
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
 
     const token = await user.getIdToken();
+    lastApiCallTime = Date.now();
 
     const response = await fetch(CLOUD_FUNCTION_URL, {
         method: 'POST',
@@ -139,12 +210,24 @@ export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' 
     }
 
     const json = await response.json();
-    return json; // Returns { data, hasMore, nextCursor }
+
+    // 4. Store in cache
+    notionCache.set(cacheKey, {
+        data: json,
+        timestamp: Date.now()
+    });
+    console.log(`[Notion] Cached response for ${cacheKey}`);
+
+    return json;
 };
 
 export const searchNotionDatabases = async (apiKey: string): Promise<NotionDatabase[]> => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
+
+    // Apply throttle for search as well
+    await waitForThrottle();
+    lastApiCallTime = Date.now();
 
     const token = await user.getIdToken();
 
@@ -173,6 +256,10 @@ const VALIDATE_SCHEMA_URL = "https://us-central1-ccdear23.cloudfunctions.net/val
 export const validateNotionSchema = async (apiKey: string, databaseId: string): Promise<{ status: string; created?: string[] }> => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
+
+    // Apply throttle
+    await waitForThrottle();
+    lastApiCallTime = Date.now();
 
     const token = await user.getIdToken();
 
