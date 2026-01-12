@@ -149,11 +149,13 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                                 "Content-Type": "application/json"
                             }
                         });
-                        const { file_upload } = initRes.data;
-                        if (!file_upload || !file_upload.id) {
-                            throw new Error("Failed to get file_upload ID");
+                        // Fix: Response IS the file_upload object, not { file_upload: ... }
+                        const fileData = initRes.data;
+                        if (!fileData || !fileData.id) {
+                            console.error("Invalid response from v1/file_uploads:", fileData);
+                            throw new Error("Failed to get file_upload ID from Notion response");
                         }
-                        const fileId = file_upload.id;
+                        const fileId = fileData.id;
                         console.log(`Initialized file ID: ${fileId}`);
                         // 2. Send Content (POST .../send)
                         const form = new FormData();
