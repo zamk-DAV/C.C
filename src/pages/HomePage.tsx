@@ -150,7 +150,8 @@ export const HomePage: React.FC = () => {
         <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
             <Header
                 partnerName={partnerName}
-                isOnline={true}
+                isOnline={partnerData?.isChatActive ?? false}
+                lastActive={partnerData?.lastActive}
                 isPushEnabled={userData.isPushEnabled ?? true}
                 onTogglePush={togglePush}
             />

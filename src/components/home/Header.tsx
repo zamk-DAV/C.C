@@ -1,9 +1,11 @@
 import React from 'react';
-// import { cn } from '../../lib/utils';
+import { formatDistanceToNow } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface HeaderProps {
     partnerName: string;
     isOnline: boolean;
+    lastActive?: any;
     isPushEnabled: boolean;
     onTogglePush: () => void;
 }
@@ -11,9 +13,19 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({
     partnerName,
     isOnline,
+    lastActive,
     isPushEnabled,
     onTogglePush,
 }) => {
+
+    const getStatusText = () => {
+        if (isOnline) return '현재 접속 중';
+        if (lastActive) {
+            const date = lastActive.toDate ? lastActive.toDate() : new Date(lastActive);
+            return `${formatDistanceToNow(date, { addSuffix: true, locale: ko })} 활동`;
+        }
+        return '오프라인';
+    };
 
     return (
         <header className="flex items-start justify-between px-6 pt-16 pb-12">
@@ -25,8 +37,8 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
             <div className="flex flex-col items-end">
                 <p className="text-[14px] font-bold tracking-tight text-primary uppercase">{partnerName}</p>
-                <p className="text-[10px] font-normal tracking-tight text-primary/40">
-                    {isOnline ? '현재 접속 중' : '오프라인'}
+                <p className={`text-[10px] font-normal tracking-tight ${isOnline ? 'text-green-500' : 'text-primary/40'}`}>
+                    {getStatusText()}
                 </p>
             </div>
         </header>
