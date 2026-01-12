@@ -103,6 +103,7 @@ export interface PaginatedNotionResponse {
 }
 
 export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' | 'Memory', cursor?: string, pageSize: number = 20): Promise<PaginatedNotionResponse> => {
+    console.log(`[Notion] fetchNotionData called at ${new Date().toISOString()}, filterType: ${filterType}`);
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
 

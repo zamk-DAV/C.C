@@ -22,6 +22,7 @@ export const MainLayout = () => {
         if (hasCheckedDiaryRef.current) return;
 
         const checkNewDiary = async () => {
+            console.log(`[MainLayout] checkNewDiary called at ${new Date().toISOString()}`);
             if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId && userData?.lastCheckedDiary) {
                 hasCheckedDiaryRef.current = true; // Mark as checked BEFORE async call
                 try {
