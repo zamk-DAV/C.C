@@ -41,14 +41,16 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             const userData = userDoc.data();
 
             let apiKey, databaseId;
+            let configSource = 'none';
 
             // 1. Try Shared Couple Config First (Priority)
             if (userData?.coupleId) {
                 const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
                 const coupleData = coupleDoc.data();
-                if (coupleData?.notionConfig) {
+                if (coupleData?.notionConfig?.apiKey && coupleData?.notionConfig?.databaseId) {
                     apiKey = coupleData.notionConfig.apiKey;
                     databaseId = coupleData.notionConfig.databaseId;
+                    configSource = `couple:${userData.coupleId}`;
                 }
             }
 
@@ -56,7 +58,10 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             if ((!apiKey || !databaseId) && userData?.notionConfig) {
                 apiKey = userData.notionConfig.apiKey;
                 databaseId = userData.notionConfig.databaseId;
+                configSource = `user:${targetUserId}`;
             }
+
+            console.log(`[Config] User ${targetUserId} using config from: ${configSource}, DB: ${databaseId?.slice(0, 8)}...`);
 
             if (!apiKey || !databaseId) {
                 res.status(400).send({ error: "Incomplete Notion configuration." });
@@ -64,21 +69,43 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             }
 
             // 3. Query Notion API
-            const { startCursor, pageSize } = req.body;
+            const { startCursor, pageSize, filterType } = req.body;
             const limit = pageSize && typeof pageSize === 'number' ? pageSize : 20;
+
+            // Build filter based on filterType (Diary, Memory, Event, Letter)
+            // Maps to dear23_카테고리 select property
+            const categoryMap: { [key: string]: string } = {
+                'Diary': '일기',
+                'Memory': '추억',
+                'Event': '일정',
+                'Letter': '편지'
+            };
+
+            const queryBody: any = {
+                page_size: limit,
+                start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
+                sorts: [
+                    {
+                        property: "날짜",
+                        direction: "descending"
+                    }
+                ]
+            };
+
+            // Add filter if filterType is provided
+            if (filterType && categoryMap[filterType]) {
+                queryBody.filter = {
+                    property: "dear23_카테고리",
+                    select: {
+                        equals: categoryMap[filterType]
+                    }
+                };
+                console.log(`[Query] Filtering by category: ${categoryMap[filterType]}`);
+            }
 
             const notionResponse = await axios.post(
                 `https://api.notion.com/v1/databases/${databaseId}/query`,
-                {
-                    page_size: limit,
-                    start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
-                    sorts: [
-                        {
-                            property: "날짜",
-                            direction: "descending"
-                        }
-                    ]
-                },
+                queryBody,
                 {
                     headers: {
                         "Authorization": `Bearer ${apiKey}`,
@@ -87,6 +114,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     },
                 }
             );
+
 
             // 4. Transform Data
             const results = notionResponse.data.results;

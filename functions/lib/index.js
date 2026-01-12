@@ -10,7 +10,7 @@ admin.initializeApp();
 const corsHandler = cors({ origin: true });
 exports.getNotionDatabase = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
-        var _a, _b;
+        var _a, _b, _c, _d;
         // 1. Verify Authentication
         const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
         if (!tokenId) {
@@ -25,28 +25,40 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             const userDoc = await admin.firestore().collection("users").doc(targetUserId).get();
             const userData = userDoc.data();
             let apiKey, databaseId;
+            let configSource = 'none';
             // 1. Try Shared Couple Config First (Priority)
             if (userData === null || userData === void 0 ? void 0 : userData.coupleId) {
                 const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
                 const coupleData = coupleDoc.data();
-                if (coupleData === null || coupleData === void 0 ? void 0 : coupleData.notionConfig) {
+                if (((_b = coupleData === null || coupleData === void 0 ? void 0 : coupleData.notionConfig) === null || _b === void 0 ? void 0 : _b.apiKey) && ((_c = coupleData === null || coupleData === void 0 ? void 0 : coupleData.notionConfig) === null || _c === void 0 ? void 0 : _c.databaseId)) {
                     apiKey = coupleData.notionConfig.apiKey;
                     databaseId = coupleData.notionConfig.databaseId;
+                    configSource = `couple:${userData.coupleId}`;
                 }
             }
             // 2. Fallback to Personal Config
             if ((!apiKey || !databaseId) && (userData === null || userData === void 0 ? void 0 : userData.notionConfig)) {
                 apiKey = userData.notionConfig.apiKey;
                 databaseId = userData.notionConfig.databaseId;
+                configSource = `user:${targetUserId}`;
             }
+            console.log(`[Config] User ${targetUserId} using config from: ${configSource}, DB: ${databaseId === null || databaseId === void 0 ? void 0 : databaseId.slice(0, 8)}...`);
             if (!apiKey || !databaseId) {
                 res.status(400).send({ error: "Incomplete Notion configuration." });
                 return;
             }
             // 3. Query Notion API
-            const { startCursor, pageSize } = req.body;
+            const { startCursor, pageSize, filterType } = req.body;
             const limit = pageSize && typeof pageSize === 'number' ? pageSize : 20;
-            const notionResponse = await axios_1.default.post(`https://api.notion.com/v1/databases/${databaseId}/query`, {
+            // Build filter based on filterType (Diary, Memory, Event, Letter)
+            // Maps to dear23_카테고리 select property
+            const categoryMap = {
+                'Diary': '일기',
+                'Memory': '추억',
+                'Event': '일정',
+                'Letter': '편지'
+            };
+            const queryBody = {
                 page_size: limit,
                 start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
                 sorts: [
@@ -55,7 +67,18 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                         direction: "descending"
                     }
                 ]
-            }, {
+            };
+            // Add filter if filterType is provided
+            if (filterType && categoryMap[filterType]) {
+                queryBody.filter = {
+                    property: "dear23_카테고리",
+                    select: {
+                        equals: categoryMap[filterType]
+                    }
+                };
+                console.log(`[Query] Filtering by category: ${categoryMap[filterType]}`);
+            }
+            const notionResponse = await axios_1.default.post(`https://api.notion.com/v1/databases/${databaseId}/query`, queryBody, {
                 headers: {
                     "Authorization": `Bearer ${apiKey}`,
                     "Notion-Version": "2022-06-28",
@@ -116,7 +139,7 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             console.error("Error fetching Notion data:", error);
             res.status(500).send({
                 error: error.message,
-                details: ((_b = error.response) === null || _b === void 0 ? void 0 : _b.data) || "No additional details"
+                details: ((_d = error.response) === null || _d === void 0 ? void 0 : _d.data) || "No additional details"
             });
         }
     });
