@@ -13,6 +13,10 @@ interface ProfileEditModalProps {
 export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onClose, userData }) => {
     const [name, setName] = useState(userData.name || '');
     const [statusMessage, setStatusMessage] = useState(userData.statusMessage || '');
+    const [emailProp, setEmailProp] = useState(userData.emailProp || '');
+    const [hobbies, setHobbies] = useState(userData.hobbies || '');
+    const [mbti, setMbti] = useState(userData.mbti || '');
+    const [birthDate, setBirthDate] = useState(userData.birthDate || '');
     const [profileImage, setProfileImage] = useState<File | null>(null);
     const [previewUrl, setPreviewUrl] = useState<string | null>(userData.photoURL);
     const [isLoading, setIsLoading] = useState(false);
@@ -22,6 +26,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
         if (isOpen) {
             setName(userData.name || '');
             setStatusMessage(userData.statusMessage || '');
+            setEmailProp(userData.emailProp || '');
+            setHobbies(userData.hobbies || '');
+            setMbti(userData.mbti || '');
+            setBirthDate(userData.birthDate || '');
             setPreviewUrl(userData.photoURL);
             setProfileImage(null);
         }
@@ -51,6 +59,10 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
             await updateDoc(userRef, {
                 name,
                 statusMessage,
+                emailProp,
+                hobbies,
+                mbti,
+                birthDate,
                 photoURL
             });
 
@@ -112,6 +124,50 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ isOpen, onCl
                                 onChange={(e) => setStatusMessage(e.target.value)}
                                 className="w-full bg-secondary/30 rounded-xl px-4 py-3 text-primary outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-text-secondary/50"
                                 placeholder="상태 메시지를 입력하세요"
+                            />
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-text-secondary pl-1">연락처 (인스타그램/전화번호)</label>
+                            <input
+                                type="text"
+                                value={emailProp}
+                                onChange={(e) => setEmailProp(e.target.value)}
+                                className="w-full bg-secondary/30 rounded-xl px-4 py-3 text-primary outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-text-secondary/50"
+                                placeholder="연락처를 입력하세요"
+                            />
+                        </div>
+
+                        <div className="flex gap-3">
+                            <div className="space-y-1 flex-1">
+                                <label className="text-xs font-bold text-text-secondary pl-1">MBTI</label>
+                                <input
+                                    type="text"
+                                    value={mbti}
+                                    onChange={(e) => setMbti(e.target.value)}
+                                    className="w-full bg-secondary/30 rounded-xl px-4 py-3 text-primary outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-text-secondary/50 uppercase"
+                                    placeholder="MBTI"
+                                    maxLength={4}
+                                />
+                            </div>
+                            <div className="space-y-1 flex-1">
+                                <label className="text-xs font-bold text-text-secondary pl-1">생일</label>
+                                <input
+                                    type="date"
+                                    value={birthDate}
+                                    onChange={(e) => setBirthDate(e.target.value)}
+                                    className="w-full bg-secondary/30 rounded-xl px-4 py-3 text-primary outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-text-secondary/50"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <label className="text-xs font-bold text-text-secondary pl-1">취미 / 좋아하는 것</label>
+                            <textarea
+                                value={hobbies}
+                                onChange={(e) => setHobbies(e.target.value)}
+                                className="w-full bg-secondary/30 rounded-xl px-4 py-3 text-primary outline-none focus:ring-2 focus:ring-primary/20 transition-all font-medium placeholder:text-text-secondary/50 resize-none h-20"
+                                placeholder="취미나 좋아하는 것을 자유롭게 적어주세요"
                             />
                         </div>
                     </div>

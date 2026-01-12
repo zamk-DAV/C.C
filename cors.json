@@ -1,0 +1,25 @@
+[
+    {
+        "origin": [
+            "http://localhost:5173",
+            "https://c-c-amber.vercel.app",
+            "https://dear23.vercel.app"
+        ],
+        "method": [
+            "GET",
+            "PUT",
+            "POST",
+            "DELETE",
+            "HEAD",
+            "OPTIONS"
+        ],
+        "responseHeader": [
+            "Content-Type",
+            "Authorization",
+            "Content-Length",
+            "User-Agent",
+            "x-goog-resumable"
+        ],
+        "maxAgeSeconds": 3600
+    }
+]

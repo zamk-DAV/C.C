@@ -6,6 +6,10 @@ export interface UserData {
     coupleId: string | null;
     photoURL: string | null;
     statusMessage?: string;
+    emailProp?: string;
+    hobbies?: string;
+    mbti?: string;
+    birthDate?: string;
     notionConfig?: { apiKey: string | null; databaseId: string | null };
     bgImage?: string | null;
     passcode?: string | null;
