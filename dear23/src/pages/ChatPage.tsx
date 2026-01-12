@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageBubble } from '../components/chat/MessageBubble';
+import { MobileMessageItem } from '../components/chat/interactions/MobileMessageItem';
+import { DesktopMessageItem } from '../components/chat/interactions/DesktopMessageItem';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 // Message type definition
 interface Message {
@@ -25,6 +28,7 @@ const partnerName = '민수';
 
 export const ChatPage: React.FC = () => {
     const navigate = useNavigate();
+    const { isMobile } = useDeviceType();
     const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
 
     return (
@@ -57,29 +61,60 @@ export const ChatPage: React.FC = () => {
                     </div>
 
                     <div className="space-y-4 pb-10">
-                        {mockMessages.map((msg) => (
-                            <MessageBubble
-                                key={msg.id}
-                                message={{
-                                    id: msg.id,
-                                    text: msg.content,
-                                    senderId: msg.sender === 'me' ? 'me' : 'partner',
-                                    createdAt: { toDate: () => new Date() }, // Mock timestamp
-                                    type: msg.imageUrl ? 'image' : 'text',
-                                    imageUrl: msg.imageUrl,
-                                    isRead: msg.isRead,
-                                    reactions: { 'heart': ['partner'] } // Mock reaction for design check
-                                }}
-                                isMine={msg.sender === 'me'}
-                                senderName={msg.sender === 'partner' ? partnerName : undefined}
-                                avatarUrl={msg.sender === 'partner' ? partnerAvatar : undefined}
-                                showProfile={msg.sender === 'partner'}
-                                showTime={true}
-                                onContextMenu={(e) => console.log('context menu', e)}
-                                onReply={(m) => console.log('reply', m)}
-                                onReaction={(m, e) => console.log('react', m, e)}
-                            />
-                        ))}
+                        {mockMessages.map((msg) => {
+                            const isMine = msg.sender === 'me';
+
+                            // Handler Wrappers
+                            const handleReply = () => console.log('Reply to', msg.id);
+                            const handleReaction = () => console.log('Reaction to', msg.id);
+                            const handleLongPress = () => console.log('Long press on', msg.id);
+
+                            const bubble = (
+                                <MessageBubble
+                                    key={msg.id}
+                                    message={{
+                                        id: msg.id,
+                                        text: msg.content,
+                                        senderId: isMine ? 'me' : 'partner',
+                                        createdAt: { toDate: () => new Date() },
+                                        type: msg.imageUrl ? 'image' : 'text',
+                                        imageUrl: msg.imageUrl,
+                                        isRead: msg.isRead,
+                                        reactions: { 'heart': ['partner'] }
+                                    }}
+                                    isMine={isMine}
+                                    senderName={!isMine ? partnerName : undefined}
+                                    avatarUrl={!isMine ? partnerAvatar : undefined}
+                                    showProfile={!isMine}
+                                    showTime={true}
+                                />
+                            );
+
+                            return isMobile ? (
+                                <MobileMessageItem
+                                    key={msg.id}
+                                    isMine={isMine}
+                                    onReply={handleReply}
+                                    onReaction={handleReaction}
+                                    onLongPress={handleLongPress}
+                                >
+                                    {bubble}
+                                </MobileMessageItem>
+                            ) : (
+                                <DesktopMessageItem
+                                    key={msg.id}
+                                    isMine={isMine}
+                                    onReply={handleReply}
+                                    onReaction={handleReaction}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        console.log('Context menu for', msg.id);
+                                    }}
+                                >
+                                    {bubble}
+                                </DesktopMessageItem>
+                            );
+                        })}
                     </div>
                 </main>
 
