@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
+import FeedWriteModal from '../components/home/FeedWriteModal';
 import { useAuth } from '../context/AuthContext';
 import { fetchNotionData } from '../lib/notion';
 import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
@@ -21,6 +22,7 @@ export const HomePage: React.FC = () => {
     const [memories, setMemories] = useState<any[]>([]);
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
+    const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
     // Dynamic Time Formatter
     const formatTime = (dateString?: any) => {
@@ -99,7 +101,8 @@ export const HomePage: React.FC = () => {
                         quote: item.previewText || 'No content',
                         title: item.title,
                         subtitle: item.date,
-                        date: item.date // Keep original date for badge check
+                        date: item.date, // Keep original date for badge check
+                        images: item.images // Pass images
                     }));
 
                     if (cursor) {
@@ -238,11 +241,20 @@ export const HomePage: React.FC = () => {
                             <div className="fixed bottom-24 right-6 z-30">
                                 <button
                                     className="flex items-center justify-center size-14 rounded-full bg-text-main dark:bg-primary shadow-xl hover:scale-105 active:scale-95 transition-transform group"
-                                    onClick={() => alert('피드 작성 기능 준비 중입니다.')}
+                                    onClick={() => setIsWriteModalOpen(true)}
                                 >
                                     <span className="material-symbols-outlined text-white text-3xl font-light">add</span>
                                 </button>
                             </div>
+
+                            <FeedWriteModal
+                                isOpen={isWriteModalOpen}
+                                onClose={() => setIsWriteModalOpen(false)}
+                                onSuccess={() => {
+                                    setMemories([]); // Clear and reload
+                                    loadMemories();
+                                }}
+                            />
                         </div>
                     </main>
                 </div>

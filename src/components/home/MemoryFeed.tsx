@@ -8,6 +8,7 @@ interface MemoryItem {
     title: string;
     subtitle: string;
     date?: string;
+    images?: string[];
 }
 
 interface MemoryFeedProps {
@@ -36,18 +37,38 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
 
                     if (item.type === 'image' && item.imageUrl) {
                         // Visual Entry Card (Full Width)
+                        const displayImages = item.images && item.images.length > 0 ? item.images : [item.imageUrl];
+
                         return (
                             <div key={item.id} className="py-8 w-full cursor-pointer hover:opacity-95 transition-opacity">
                                 <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-sm group">
-                                    <div
-                                        className="absolute inset-0 bg-cover bg-center bw-filter transition-all duration-300 group-hover:grayscale-0"
-                                        style={{ backgroundImage: `url('${item.imageUrl}')` }}
-                                    />
+                                    {/* Image Carousel */}
+                                    <div className="absolute inset-0 flex overflow-x-auto snap-x snap-mandatory scrollbar-hide z-0">
+                                        {displayImages.map((img, idx) => (
+                                            <div key={idx} className="flex-shrink-0 w-full h-full snap-center relative">
+                                                <div
+                                                    className="w-full h-full bg-cover bg-center bw-filter transition-all duration-300 group-hover:grayscale-0"
+                                                    style={{ backgroundImage: `url('${img}')` }}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Multiple Image Indicator */}
+                                    {displayImages.length > 1 && (
+                                        <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-md px-2 py-1 rounded-full z-20">
+                                            <div className="flex items-center gap-1">
+                                                <span className="material-symbols-outlined text-white text-[10px]">filter_none</span>
+                                                <span className="text-xs font-medium text-white">{displayImages.length}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
                                     {/* Overlay Gradient */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none z-10"></div>
 
                                     {/* Content Overlay */}
-                                    <div className="absolute bottom-0 left-0 w-full p-6 text-white flex flex-col items-start pointer-events-none">
+                                    <div className="absolute bottom-0 left-0 w-full p-6 text-white flex flex-col items-start pointer-events-none z-20">
                                         <div className="text-xs font-bold tracking-widest mb-2 opacity-80">{formattedDate}</div>
                                         <h2 className="font-serif text-2xl font-normal leading-snug mb-4 line-clamp-2">{item.title}</h2>
 
@@ -56,10 +77,6 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                                                 <span className="material-symbols-outlined filled text-[18px]">favorite</span>
                                                 <span className="text-xs font-medium">--</span>
                                             </div>
-                                            {/* <div className="flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-[18px]">chat_bubble</span>
-                                                <span className="text-xs font-medium">--</span>
-                                            </div> */}
                                         </div>
                                     </div>
                                 </div>
