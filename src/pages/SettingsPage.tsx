@@ -19,7 +19,7 @@ export const SettingsPage: React.FC = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [showKey, setShowKey] = useState(false);
     const [startDate, setStartDate] = useState('');
-    const [profileEditOpen, setProfileEditOpen] = useState(false);
+    const [isProfileEditOpen, setProfileEditOpen] = useState(false);
 
     // Passcode State
     const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
