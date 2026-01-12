@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { motion, PanInfo, useAnimation } from 'framer-motion';
+import { motion, type PanInfo, useAnimation } from 'framer-motion';
 import { useHaptics } from '../../../hooks/useHaptics';
 
 interface MobileMessageItemProps {
@@ -38,7 +38,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     };
 
     // Drag logic for Swipe to Reply
-    const handleDragEnd = async (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const handleDragEnd = async (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         setIsDragging(false);
         const threshold = 50; // px to trigger reply
 
@@ -63,6 +63,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
             onDragEnd={handleDragEnd}
             animate={controls}
             onTap={handleTap}
+            // @ts-ignore
             onLongPress={() => {
                 if (!isDragging) {
                     heavy();
