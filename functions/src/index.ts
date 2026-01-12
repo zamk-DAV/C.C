@@ -224,11 +224,21 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const {
                 content,
                 images,
-                category = "일기",
+                type = "Diary", // English type from client
                 mood = "평온",
                 sender = "나",
                 date = new Date().toISOString().split('T')[0]
             } = req.body;
+
+            // Map English type to Korean category
+            const categoryMap: { [key: string]: string } = {
+                'Diary': '일기',
+                'Memory': '추억',
+                'Event': '일정',
+                'Letter': '편지'
+            };
+            const category = categoryMap[type] || '일기';
+            console.log(`[Create] Type: ${type} -> Category: ${category}`);
 
             // 1. Upload Images to Notion (Method: v1/file_uploads/{id}/send)
             const uploadedFiles = [];
