@@ -1,35 +1,18 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { format, parseISO, isValid, getWeek, getYear } from 'date-fns';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { fetchNotionData, deleteDiaryEntry, type NotionItem } from '../lib/notion';
+import { deleteDiaryEntry, type NotionItem } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
+import { useNotion } from '../context/NotionContext';
 import FeedWriteModal from '../components/home/FeedWriteModal';
 
 export const DiaryPage: React.FC = () => {
     const { user, userData } = useAuth();
+    const { diaryData, hasMore, loadMore, refreshData, isLoading } = useNotion();
+
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
-    const [items, setItems] = useState<NotionItem[]>([]);
-    const [loading, setLoading] = useState(true);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
-    const [hasMore, setHasMore] = useState(false);
-    const [nextCursor, setNextCursor] = useState<string | null>(null);
-
-    // Ref guard to prevent duplicate initial loads
-    const hasLoadedRef = useRef(false);
-
-    // Initial Load - with ref guard to prevent duplicate calls
-    useEffect(() => {
-        if (hasLoadedRef.current) return;
-        if (!userData?.notionConfig?.apiKey || !userData?.notionConfig?.databaseId) {
-            setLoading(false);
-            return;
-        }
-
-        hasLoadedRef.current = true;
-        loadDiary();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
 
     // Real-time Sync Trigger & Last Checked Update (separate from diary loading)
     useEffect(() => {
@@ -39,53 +22,28 @@ export const DiaryPage: React.FC = () => {
         }
     }, [userData?.coupleId, user]);
 
-    const loadDiary = async (isLoadMore = false) => {
-        try {
-            setLoading(true);
-            const cursor = isLoadMore ? (nextCursor || undefined) : undefined;
-            const result = await fetchNotionData('Diary', cursor);
-
-            if (isLoadMore) {
-                setItems(prev => [...prev, ...result.data]);
-            } else {
-                setItems(result.data);
-            }
-            setHasMore(result.hasMore);
-            setNextCursor(result.nextCursor);
-        } catch (error) {
-            console.error("Failed to load diary:", error);
-            // Don't retry on error - just log and continue
-        } finally {
-            setLoading(false);
-        }
-    };
-
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
         if (!window.confirm("정말 이 추억을 삭제하시겠습니까? (Notion에서 아카이브됩니다)")) return;
 
-        const oldItems = [...items];
-        setItems(prev => prev.filter(i => i.id !== id));
-
         try {
             await deleteDiaryEntry(id);
+            // Refresh context data after deletion
+            refreshData();
         } catch (error) {
             console.error("Delete failed:", error);
             alert("삭제에 실패했습니다.");
-            setItems(oldItems);
         }
     };
 
     const handleCreateSuccess = () => {
-        // Reset ref guard to allow reload after creating new entry
-        hasLoadedRef.current = false;
-        loadDiary();
+        refreshData();
         setIsWriteModalOpen(false);
     };
 
     // Group items by week
     const groupedItems = useMemo(() => {
-        const sorted = [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const sorted = [...diaryData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
         const groups: { [key: string]: NotionItem[] } = {};
 
         sorted.forEach(item => {
@@ -111,9 +69,9 @@ export const DiaryPage: React.FC = () => {
         });
 
         return groups;
-    }, [filter, items, userData]);
+    }, [filter, diaryData, userData]);
 
-    if (loading && items.length === 0) {
+    if (isLoading && diaryData.length === 0) {
         return <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark text-text-muted">Loading...</div>;
     }
 
@@ -215,11 +173,11 @@ export const DiaryPage: React.FC = () => {
                 {hasMore && (
                     <div className="flex justify-center py-6">
                         <button
-                            onClick={() => loadDiary(true)}
-                            disabled={loading}
+                            onClick={() => loadMore()}
+                            disabled={isLoading}
                             className="text-xs font-medium text-gray-400 hover:text-black dark:hover:text-white transition-colors"
                         >
-                            {loading ? '불러오는 중...' : '더 보기'}
+                            {isLoading ? '불러오는 중...' : '더 보기'}
                         </button>
                     </div>
                 )}

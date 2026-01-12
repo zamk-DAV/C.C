@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
+import { useNotion } from '../../context/NotionContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -9,64 +10,33 @@ export const MainLayout = () => {
     const location = useLocation();
     const isActive = (path: string) => location.pathname === path;
 
-    const [hasNewDiary, setHasNewDiary] = React.useState(false);
     const [unreadMailCount, setUnreadMailCount] = React.useState(0);
     const { user, userData, coupleData } = useAuth();
+    const { diaryData } = useNotion();
 
-    // Ref to prevent multiple diary checks per session
-    const hasCheckedDiaryRef = React.useRef(false);
+    // Check for New Diary - using Context data instead of API call
+    const hasNewDiary = useMemo(() => {
+        if (!diaryData.length) return false;
+        if (!userData?.lastCheckedDiary) return false;
 
-    // Check for New Diary - runs ONCE per session when config is available
-    React.useEffect(() => {
-        // Skip if already checked this session
-        if (hasCheckedDiaryRef.current) return;
+        const lastChecked = userData.lastCheckedDiary.toDate
+            ? userData.lastCheckedDiary.toDate()
+            : new Date(userData.lastCheckedDiary);
 
-        const checkNewDiary = async () => {
-            console.log(`[MainLayout] checkNewDiary called at ${new Date().toISOString()}`);
-            if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId && userData?.lastCheckedDiary) {
-                hasCheckedDiaryRef.current = true; // Mark as checked BEFORE async call
-                try {
-                    const result = await import('../../lib/notion').then(m => m.fetchNotionData('Diary'));
-                    if (result.data.length > 0) {
-                        const latestDate = new Date(result.data[0].date);
-                        const lastChecked = userData.lastCheckedDiary.toDate ? userData.lastCheckedDiary.toDate() : new Date(userData.lastCheckedDiary);
-
-                        if (latestDate > lastChecked) {
-                            setHasNewDiary(true);
-                        }
-                    }
-                } catch (e) {
-                    console.error("Check new diary failed", e);
-                    // Don't reset ref on error - we don't want to spam retries
-                }
-            }
-        };
-
-        if (userData) {
-            // Delay to avoid concurrent calls with HomePage's loadMemories
-            const timer = setTimeout(() => {
-                checkNewDiary();
-            }, 2000);
-            return () => clearTimeout(timer);
-        }
-        // Remove lastCheckedDiary from deps to prevent re-triggering on timestamp updates
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
+        const latestDate = new Date(diaryData[0].date);
+        return latestDate > lastChecked;
+    }, [diaryData, userData?.lastCheckedDiary]);
 
     // Check for Unread Mail
     React.useEffect(() => {
         if (!coupleData?.id || !user?.uid) return;
 
-        // Query for postcards where I am NOT the sender (received) AND isRead is false
-        // Note: '!=' queries can be tricky in Firestore rules/indexes. 
-        // If this fails, consider fetching all unread and filtering in JS.
         const q = query(
             collection(db, 'couples', coupleData.id, 'postcards'),
             where('isRead', '==', false)
         );
 
         const unsubscribe = onSnapshot(q, (snapshot) => {
-            // Client-side filter to ensure we count only mail received BY me
             const myUnreadCount = snapshot.docs.filter(doc => {
                 const data = doc.data();
                 return data.senderId !== user.uid;

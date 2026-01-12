@@ -73,3 +73,14 @@ export interface CalendarEvent {
     note?: string;
     author?: string; // 'Me' | 'Partner' for filtering
 }
+
+export interface MemoryItem {
+    id: string;
+    type: 'image' | 'quote';
+    imageUrl?: string;
+    quote?: string;
+    title: string;
+    subtitle: string;
+    date?: string;
+    images?: string[];
+}

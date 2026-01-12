@@ -1,31 +1,38 @@
-import React, { useEffect, useState, useMemo, useRef } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import FeedWriteModal from '../components/home/FeedWriteModal';
 import { useAuth } from '../context/AuthContext';
-import { fetchNotionData } from '../lib/notion';
+import { useNotion } from '../context/NotionContext';
 import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import type { ChatMessage } from '../types';
+import type { ChatMessage, MemoryItem } from '../types';
 import { format, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
 
 export const HomePage: React.FC = () => {
     const { user, userData, partnerData, loading } = useAuth();
+    const { diaryData, hasMore, loadMore, refreshData, isLoading: notionLoading } = useNotion();
     const navigate = useNavigate();
 
     // Latest Message State
     const [latestMessage, setLatestMessage] = useState<ChatMessage | null>(null);
-
-    // Memory Feed State
-    const [memories, setMemories] = useState<any[]>([]);
-    const [hasMore, setHasMore] = useState(false);
-    const [nextCursor, setNextCursor] = useState<string | null>(null);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
-    // Ref to prevent multiple memory loads per session
-    const hasLoadedMemoriesRef = useRef(false);
+    // Transform diaryData for MemoryFeed
+    const memories = useMemo<MemoryItem[]>(() => {
+        return diaryData.map(item => ({
+            id: item.id,
+            type: ((item.images && item.images.length > 0) || item.coverImage ? 'image' : 'quote') as 'image' | 'quote',
+            imageUrl: item.coverImage || undefined,
+            quote: item.previewText || 'No content',
+            title: item.title,
+            subtitle: item.previewText || '',
+            date: item.date,
+            images: item.images
+        }));
+    }, [diaryData]);
 
     // Dynamic Time Formatter
     const formatTime = (dateString?: any) => {
@@ -54,7 +61,7 @@ export const HomePage: React.FC = () => {
         }
     }, [user, loading, navigate]);
 
-    // Fetch Latest Message
+    // Fetch Latest Message (Firestore only - no Notion call here)
     useEffect(() => {
         if (userData?.coupleId) {
             const q = query(
@@ -74,18 +81,6 @@ export const HomePage: React.FC = () => {
         }
     }, [userData?.coupleId]);
 
-    // Fetch Memories (Initial) - runs ONCE per session
-    useEffect(() => {
-        // Skip if already loaded this session
-        if (hasLoadedMemoriesRef.current) return;
-
-        if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
-            hasLoadedMemoriesRef.current = true;
-            loadMemories();
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
-
     // Update lastCheckedFeed on mount (once per session)
     useEffect(() => {
         if (user && userData?.coupleId) {
@@ -95,38 +90,9 @@ export const HomePage: React.FC = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user?.uid, userData?.coupleId]);
 
-    const loadMemories = async (cursor?: string) => {
-        console.log(`[HomePage] loadMemories called at ${new Date().toISOString()}, cursor:`, cursor);
-        try {
-            // Changed filter from 'Memory' to 'Diary' to match the "Archive / Diary" title and user's intent
-            const result = await fetchNotionData('Diary', cursor, 5);
-            const newItems = result.data.map(item => ({
-                id: item.id,
-                type: (item.images && item.images.length > 0) || item.coverImage ? 'image' : 'quote',
-                imageUrl: item.coverImage || undefined,
-                quote: item.previewText || 'No content',
-                title: item.title,
-                subtitle: item.previewText || '',
-                date: item.date,
-                images: item.images // Pass the images array
-            }));
-
-            if (cursor) {
-                setMemories(prev => [...prev, ...newItems]);
-            } else {
-                setMemories(newItems);
-            }
-
-            setHasMore(result.hasMore);
-            setNextCursor(result.nextCursor);
-        } catch (error) {
-            console.error("Failed to load memories:", error);
-        }
-    };
-
     const handleLoadMore = () => {
-        if (hasMore && nextCursor) {
-            loadMemories(nextCursor);
+        if (hasMore && !notionLoading) {
+            loadMore();
         }
     };
 
@@ -146,8 +112,8 @@ export const HomePage: React.FC = () => {
 
     // Check for NEW Feed items
     const hasNewMemories = useMemo(() => {
-        if (!memories.length) return false;
-        if (!userData?.lastCheckedFeed) return true; // Never checked before
+        if (!memories.length || !memories[0].date) return false;
+        if (!userData?.lastCheckedFeed) return true;
 
         const lastChecked = userData.lastCheckedFeed.toDate ? userData.lastCheckedFeed.toDate() : new Date(userData.lastCheckedFeed);
         const latestItemDate = new Date(memories[0].date);
@@ -225,8 +191,7 @@ export const HomePage: React.FC = () => {
                         isOpen={isWriteModalOpen}
                         onClose={() => setIsWriteModalOpen(false)}
                         onSuccess={() => {
-                            setMemories([]); // Clear and reload
-                            loadMemories();
+                            refreshData(); // Use context's refresh instead of local reload
                         }}
                     />
                 </div>

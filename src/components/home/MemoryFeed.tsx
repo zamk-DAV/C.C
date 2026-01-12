@@ -1,18 +1,8 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
+import type { MemoryItem } from '../../types';
 
-interface MemoryItem {
-    id: string;
-    type: 'image' | 'quote';
-    imageUrl?: string;
-    quote?: string;
-    title: string;
-    subtitle: string;
-    date?: string;
-    images?: string[];
-}
-
-interface MemoryFeedProps {
+export interface MemoryFeedProps {
     items: MemoryItem[];
     onLoadMore?: () => void;
     hasMore?: boolean;
