@@ -53,16 +53,22 @@ export const SettingsPage: React.FC = () => {
     const [databases, setDatabases] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
 
+    // Sync Notion config from Firestore - use primitive dependencies to avoid loops
+    const coupleApiKey = coupleData?.notionConfig?.apiKey;
+    const coupleDbId = coupleData?.notionConfig?.databaseId;
+    const userApiKey = userData?.notionConfig?.apiKey;
+    const userDbId = userData?.notionConfig?.databaseId;
+
     useEffect(() => {
-        if (coupleData?.notionConfig) {
-            setNotionKey(coupleData.notionConfig.apiKey || '');
-            setNotionDbId(coupleData.notionConfig.databaseId || '');
-        } else if (userData?.notionConfig) {
+        if (coupleApiKey) {
+            setNotionKey(coupleApiKey);
+            setNotionDbId(coupleDbId || '');
+        } else if (userApiKey) {
             // Fallback for legacy data
-            setNotionKey(userData.notionConfig.apiKey || '');
-            setNotionDbId(userData.notionConfig.databaseId || '');
+            setNotionKey(userApiKey);
+            setNotionDbId(userDbId || '');
         }
-    }, [userData, coupleData]);
+    }, [coupleApiKey, coupleDbId, userApiKey, userDbId]);
 
     const handleSearchDatabases = async () => {
         if (!notionKey) return;
