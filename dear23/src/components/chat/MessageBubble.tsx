@@ -187,8 +187,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                     {/* Fixed: Removed ml-10, used slight margin for spacing */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className={cn(
-                            "flex flex-wrap gap-1 mt-1 z-10",
-                            isMine ? "justify-end mr-1" : "justify-start ml-1"
+                            "flex flex-wrap gap-1 mt-0.5 z-10",
+                            isMine ? "justify-end mr-0.5" : "justify-start ml-0.5"
                         )}>
                             {Object.entries(msg.reactions).map(([emoji, userIds]) => {
                                 if (!userIds || userIds.length === 0) return null;
@@ -199,7 +199,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                     <button
                                         key={emoji}
                                         onClick={(e) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
-                                        className="bg-background border border-border rounded-full p-1.5 flex items-center justify-center shadow-sm hover:bg-secondary/50 transition-colors"
+                                        className="bg-background border border-border rounded-full p-1 flex items-center justify-center shadow-sm hover:bg-secondary/50 transition-colors"
                                     >
                                         <IconConfig.icon className={cn("w-3 h-3", IconConfig.color)} />
                                     </button>

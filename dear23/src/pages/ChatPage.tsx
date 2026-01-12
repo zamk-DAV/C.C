@@ -52,7 +52,10 @@ export const ChatPage: React.FC = () => {
                 </header>
 
                 {/* Main Chat Area */}
-                <main className="flex-1 mt-[100px] mb-[90px] px-4 overflow-y-auto no-scrollbar">
+                <main
+                    className="flex-1 mt-[100px] mb-[90px] px-4 overflow-y-auto no-scrollbar scroll-smooth"
+                    style={{ overflowAnchor: 'auto' }}
+                >
                     {/* Date Separator */}
                     <div className="flex items-center gap-4 my-8">
                         <div className="h-[1px] flex-1 bg-neutral-100 dark:bg-zinc-800"></div>
