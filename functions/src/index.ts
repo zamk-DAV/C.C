@@ -97,8 +97,8 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const titleList = props["Name"]?.title || props["이름"]?.title || props["title"]?.title || [];
                 const title = titleList.length > 0 ? titleList[0].plain_text : "Untitled";
 
-                // Extract Date
-                const dateProp = props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
+                // Extract Date (check dear23_날짜 first, then legacy fallbacks)
+                const dateProp = props["dear23_날짜"]?.date || props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
                 const date = dateProp ? dateProp.start : "";
 
                 // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
@@ -316,6 +316,12 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             // 3. Create Page (With Required Properties)
             console.log("Creating page with properties...");
 
+            // Build file references for dear23_대표이미지 property
+            const fileReferences = uploadedFiles.map(f => ({
+                type: "file_upload" as const,
+                file_upload: { id: f.id }
+            }));
+
             const pageProperties: any = {
                 [titlePropertyName]: { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                 "dear23_날짜": { date: { start: date } },
@@ -323,7 +329,8 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                 "dear23_기분": { select: { name: mood } },
                 "dear23_작성자": { select: { name: sender } },
                 "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
-                "dear23_이미지유무": { checkbox: images && images.length > 0 }
+                "dear23_이미지유무": { checkbox: images && images.length > 0 },
+                ...(fileReferences.length > 0 && { "dear23_대표이미지": { files: fileReferences } })
             };
 
             const createPageRes = await axios.post(

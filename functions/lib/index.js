@@ -65,16 +65,16 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             // 4. Transform Data
             const results = notionResponse.data.results;
             const memories = results.map((page) => {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
                 const props = page.properties;
                 // Extract Title
                 const titleList = ((_a = props["Name"]) === null || _a === void 0 ? void 0 : _a.title) || ((_b = props["이름"]) === null || _b === void 0 ? void 0 : _b.title) || ((_c = props["title"]) === null || _c === void 0 ? void 0 : _c.title) || [];
                 const title = titleList.length > 0 ? titleList[0].plain_text : "Untitled";
-                // Extract Date
-                const dateProp = ((_d = props["Date"]) === null || _d === void 0 ? void 0 : _d.date) || ((_e = props["날짜"]) === null || _e === void 0 ? void 0 : _e.date) || ((_f = props["date"]) === null || _f === void 0 ? void 0 : _f.date);
+                // Extract Date (check dear23_날짜 first, then legacy fallbacks)
+                const dateProp = ((_d = props["dear23_날짜"]) === null || _d === void 0 ? void 0 : _d.date) || ((_e = props["Date"]) === null || _e === void 0 ? void 0 : _e.date) || ((_f = props["날짜"]) === null || _f === void 0 ? void 0 : _f.date) || ((_g = props["date"]) === null || _g === void 0 ? void 0 : _g.date);
                 const date = dateProp ? dateProp.start : "";
                 // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
-                const fileProp = ((_g = props["dear23_대표이미지"]) === null || _g === void 0 ? void 0 : _g.files) || [];
+                const fileProp = ((_h = props["dear23_대표이미지"]) === null || _h === void 0 ? void 0 : _h.files) || [];
                 let images = [];
                 if (fileProp.length > 0) {
                     fileProp.forEach((file) => {
@@ -88,10 +88,10 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                 }
                 const coverImage = images.length > 0 ? images[0] : null;
                 // Extract Preview Text (Text property: 'dear23_내용미리보기')
-                const previewList = ((_h = props["dear23_내용미리보기"]) === null || _h === void 0 ? void 0 : _h.rich_text) || [];
+                const previewList = ((_j = props["dear23_내용미리보기"]) === null || _j === void 0 ? void 0 : _j.rich_text) || [];
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
                 // Extract Author
-                const authorSelect = (_j = props["작성자"]) === null || _j === void 0 ? void 0 : _j.select;
+                const authorSelect = (_k = props["작성자"]) === null || _k === void 0 ? void 0 : _k.select;
                 let author = "Partner";
                 if (authorSelect) {
                     author = authorSelect.name;
@@ -241,15 +241,12 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             console.log(`Detected Title property name: "${titlePropertyName}"`);
             // 3. Create Page (With Required Properties)
             console.log("Creating page with properties...");
-            const pageProperties = {
-                [titlePropertyName]: { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
-                "dear23_날짜": { date: { start: date } },
-                "dear23_카테고리": { select: { name: category } },
-                "dear23_기분": { select: { name: mood } },
-                "dear23_작성자": { select: { name: sender } },
-                "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
-                "dear23_이미지유무": { checkbox: images && images.length > 0 }
-            };
+            // Build file references for dear23_대표이미지 property
+            const fileReferences = uploadedFiles.map(f => ({
+                type: "file_upload",
+                file_upload: { id: f.id }
+            }));
+            const pageProperties = Object.assign({ [titlePropertyName]: { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] }, "dear23_날짜": { date: { start: date } }, "dear23_카테고리": { select: { name: category } }, "dear23_기분": { select: { name: mood } }, "dear23_작성자": { select: { name: sender } }, "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] }, "dear23_이미지유무": { checkbox: images && images.length > 0 } }, (fileReferences.length > 0 && { "dear23_대표이미지": { files: fileReferences } }));
             const createPageRes = await axios_1.default.post("https://api.notion.com/v1/pages", {
                 parent: { database_id: databaseId },
                 properties: pageProperties
