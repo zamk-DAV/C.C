@@ -58,8 +58,16 @@ export const createDiaryEntry = async (
         let errorMessage = `Failed to create diary: ${response.statusText}`;
         try {
             const errorData = await response.json();
-            if (errorData.error) errorMessage += ` - ${errorData.error}`;
-        } catch (e) { }
+            if (errorData.error) {
+                errorMessage += ` - ${errorData.error}`;
+            }
+            if (errorData.details) {
+                console.error("Notion Error Details:", errorData.details); // Explicit console log
+                errorMessage += `\nDetails: ${JSON.stringify(errorData.details, null, 2)}`;
+            }
+        } catch (e) {
+            // Ignore JSON parse error
+        }
         throw new Error(errorMessage);
     }
 
