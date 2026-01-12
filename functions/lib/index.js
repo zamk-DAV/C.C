@@ -132,86 +132,54 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             // 1. Upload Images to Notion
             const uploadedFiles = [];
             if (images && images.length > 0) {
+                console.log(`Processing ${images.length} images...`);
                 for (const img of images) {
-                    // Get Upload URL
-                    const initRes = await axios_1.default.post("https://api.notion.com/v1/file_uploads", {
-                        content_type: img.type,
-                        content_length: img.size
-                    }, {
-                        headers: {
-                            "Authorization": `Bearer ${apiKey}`,
-                            "Notion-Version": "2022-06-28",
-                            "Content-Type": "application/json"
+                    try {
+                        const initRes = await axios_1.default.post("https://api.notion.com/v1/file_uploads", {
+                            content_type: img.type,
+                            content_length: img.size
+                        }, {
+                            headers: {
+                                "Authorization": `Bearer ${apiKey}`,
+                                "Notion-Version": "2022-06-28",
+                                "Content-Type": "application/json"
+                            }
+                        });
+                        const { signed_put_url, url, file_upload } = initRes.data;
+                        if (!signed_put_url || !file_upload || !file_upload.id) {
+                            console.error("Failed to get upload URL or ID. Response:", initRes.data);
+                            throw new Error("Invalid response from Notion file_uploads");
                         }
-                    });
-                    const { signed_put_url, url, file_upload } = initRes.data;
-                    // Upload File
-                    const buffer = Buffer.from(img.base64.split(",")[1], 'base64');
-                    await axios_1.default.put(signed_put_url, buffer, {
-                        headers: { "Content-Type": img.type }
-                    });
-                    uploadedFiles.push({
-                        url: url,
-                        id: file_upload.id,
-                        name: img.name
-                    });
-                }
-            }
-            // 2. Create Page (Construct Internal File Objects for Property)
-            // Note: Public API doesn't officially support setting internal files in properties,
-            // but we try using the undocumented structure or fallback to External if 'url' works.
-            // The user's screenshot used "file_upload": { "id": ... } for BLOCKS.
-            // For PROPERTIES, we might just try regular external URL if internal structure fails,
-            // but let's try to pass the internal structure if possible.
-            // However, sticking to the user's specific block screenshot for content.
-            // For the Feed Property (Files & Media), we often need standard external objects unless we reverse engineer the property update.
-            // SAFE BET: Use the 'url' returned by Notion (which is an AWS S3 link) as an 'external' file type for the property.
-            // It expires, but Notion API might be smart enough? No, Notion Authenticated URLs expire.
-            // The best way for persistent access in Feed is creating the entry with BLOCKS, 
-            // and letting the Notion 'Files' property be manually populated? No, we need it auto.
-            // Let's rely on the strategy: Add to 'Files & Media' property as 'External' (using the link) 
-            // AND Add to 'Content' as 'file_upload' block (using the ID).
-            // const filePropertyItems = uploadedFiles.map(f => ({
-            //     name: f.name || "image.png",
-            //     external: { url: f.url } // This URL is valid for signed duration.
-            // }));
-            // Wait, if it expires, the feed will break after 1 hour.
-            // The user wants a robust solution.
-            // Internal file uploads in blocks don't expire securely? They do, but Notion refreshes them.
-            // If we add it as a BLOCK, we can fetch page blocks. But we only fetch Database Props.
-            // Correct approach: If we use `v1/file_uploads`, we get an ID.
-            // Can we populate the property with THAT ID?
-            // "type": "file", "file": { "id": "..." } ??
-            // Using logic from user screenshot for BLOCKS clearly.
-            const childrenBlocks = uploadedFiles.map(f => ({
-                type: "image",
-                image: {
-                    type: "file_upload",
-                    file_upload: { id: f.id }
-                }
-            }));
-            // Also add content text
-            if (content) {
-                childrenBlocks.unshift({
-                    object: "block",
-                    type: "paragraph",
-                    paragraph: {
-                        rich_text: [{ type: "text", text: { content: content } }]
+                        // Upload File
+                        const buffer = Buffer.from(img.base64.split(",")[1], 'base64');
+                        await axios_1.default.put(signed_put_url, buffer, {
+                            headers: { "Content-Type": img.type }
+                        });
+                        uploadedFiles.push({
+                            url: url,
+                            id: file_upload.id,
+                            name: img.name
+                        });
+                        console.log(`Uploaded image ID: ${file_upload.id}`);
                     }
-                });
+                    catch (e) {
+                        console.error("Image upload step failed:", e);
+                        throw e;
+                    }
+                }
             }
-            await axios_1.default.post("https://api.notion.com/v1/pages", {
+            // 2. Create Page (Header & Props ONLY)
+            // We do separate steps to avoid 'Invalid URL' errors during page creation
+            // if Notion validates block children strictly.
+            console.log("Creating page...");
+            const createPageRes = await axios_1.default.post("https://api.notion.com/v1/pages", {
                 parent: { database_id: databaseId },
                 properties: {
                     "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                     "Date": { date: { start: new Date().toISOString().split('T')[0] } },
                     "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
-                    // "dear23_대표이미지": { files: filePropertyItems }
-                    // Ideally we leave this empty and let user drag? No.
-                    // Let's try to add the same 'file_upload' structure to the property?
-                    // If it fails, we catch.
-                },
-                children: childrenBlocks
+                    // Intentionally omitting dear23_대표이미지 to avoid 400 error
+                }
             }, {
                 headers: {
                     "Authorization": `Bearer ${apiKey}`,
@@ -219,6 +187,42 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                     "Content-Type": "application/json"
                 }
             });
+            const pageId = createPageRes.data.id;
+            console.log(`Page created: ${pageId}`);
+            // 3. Append Blocks (Text + Images)
+            const childrenBlocks = [];
+            // Text Block
+            if (content) {
+                childrenBlocks.push({
+                    object: "block",
+                    type: "paragraph",
+                    paragraph: {
+                        rich_text: [{ type: "text", text: { content: content } }]
+                    }
+                });
+            }
+            // Image Blocks (Using INTERNAL ID)
+            uploadedFiles.forEach(f => {
+                childrenBlocks.push({
+                    object: "block",
+                    type: "image",
+                    image: {
+                        type: "file_upload",
+                        file_upload: { id: f.id }
+                    }
+                });
+            });
+            if (childrenBlocks.length > 0) {
+                console.log(`Appending ${childrenBlocks.length} blocks...`);
+                await axios_1.default.patch(`https://api.notion.com/v1/blocks/${pageId}/children`, { children: childrenBlocks }, {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json"
+                    }
+                });
+                console.log("Blocks appended successfully.");
+            }
             res.status(200).send({ success: true });
         }
         catch (error) {
