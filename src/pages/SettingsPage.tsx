@@ -20,7 +20,6 @@ export const SettingsPage: React.FC = () => {
     const [showKey, setShowKey] = useState(false);
     const [startDate, setStartDate] = useState('');
     const [profileEditOpen, setProfileEditOpen] = useState(false);
-    const { isMobile } = useDeviceType();
 
     // Passcode State
     const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
