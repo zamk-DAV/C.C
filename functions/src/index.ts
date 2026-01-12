@@ -162,7 +162,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             }
 
             const { apiKey, databaseId } = userData.notionConfig;
-            const { content, mood, images } = req.body; // images: { base64: string, type: string }[]
+            const { content, images } = req.body; // images: { base64: string, type: string }[]
 
             // 1. Upload Images to Notion
             const uploadedFiles = [];
@@ -216,10 +216,10 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             // Let's rely on the strategy: Add to 'Files & Media' property as 'External' (using the link) 
             // AND Add to 'Content' as 'file_upload' block (using the ID).
 
-            const filePropertyItems = uploadedFiles.map(f => ({
-                name: f.name || "image.png",
-                external: { url: f.url } // This URL is valid for signed duration.
-            }));
+            // const filePropertyItems = uploadedFiles.map(f => ({
+            //     name: f.name || "image.png",
+            //     external: { url: f.url } // This URL is valid for signed duration.
+            // }));
 
             // Wait, if it expires, the feed will break after 1 hour.
             // The user wants a robust solution.
@@ -257,7 +257,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                         "Date": { date: { start: new Date().toISOString().split('T')[0] } },
                         "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
-                        // "dear23_대표이미지": { files: filePropertyItems } // Using external links might expire.
+                        // "dear23_대표이미지": { files: filePropertyItems }
                         // Ideally we leave this empty and let user drag? No.
                         // Let's try to add the same 'file_upload' structure to the property?
                         // If it fails, we catch.
