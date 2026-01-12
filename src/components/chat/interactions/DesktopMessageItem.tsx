@@ -33,14 +33,14 @@ export const DesktopMessageItem: React.FC<DesktopMessageItemProps> = ({
                         <div className={`transition-opacity duration-200 flex items-center gap-1 z-20 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                             <button
                                 onClick={onReply}
-                                className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-zinc-800 text-neutral-400 hover:text-primary transition-colors cursor-pointer"
+                                className="p-1 rounded-full text-text-secondary hover:bg-secondary hover:text-primary transition-colors cursor-pointer"
                                 title="답장"
                             >
                                 <span className="material-symbols-outlined text-[18px]">reply</span>
                             </button>
                             <button
                                 onClick={onReaction}
-                                className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-zinc-800 text-neutral-400 hover:text-red-500 transition-colors cursor-pointer"
+                                className="p-1 rounded-full text-text-secondary hover:bg-secondary hover:text-red-400 transition-colors cursor-pointer"
                                 title="좋아요"
                             >
                                 <span className="material-symbols-outlined text-[18px]">favorite</span>
@@ -55,14 +55,14 @@ export const DesktopMessageItem: React.FC<DesktopMessageItemProps> = ({
                         <div className={`transition-opacity duration-200 flex items-center gap-1 z-20 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                             <button
                                 onClick={onReply}
-                                className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-zinc-800 text-neutral-400 hover:text-primary transition-colors cursor-pointer"
+                                className="p-1 rounded-full text-text-secondary hover:bg-secondary hover:text-primary transition-colors cursor-pointer"
                                 title="답장"
                             >
                                 <span className="material-symbols-outlined text-[18px]">reply</span>
                             </button>
                             <button
                                 onClick={onReaction}
-                                className="p-1 rounded-full hover:bg-neutral-100 dark:hover:bg-zinc-800 text-neutral-400 hover:text-red-500 transition-colors cursor-pointer"
+                                className="p-1 rounded-full text-text-secondary hover:bg-secondary hover:text-red-400 transition-colors cursor-pointer"
                                 title="좋아요"
                             >
                                 <span className="material-symbols-outlined text-[18px]">favorite</span>
