@@ -496,6 +496,7 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
 
                 // Diary
                 "dear23_대표이미지": { files: {} },
+                "dear23_이미지유무": { checkbox: {} }, // Added missing property
                 "dear23_기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }, { name: "평온", color: "default" }] } },
                 "dear23_날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
                 "dear23_상대방한마디": { rich_text: {} },
