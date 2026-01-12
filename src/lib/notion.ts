@@ -85,7 +85,8 @@ const CREATE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/create
 export const createDiaryEntry = async (
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
-    options: { category?: string, mood?: string, sender?: string } = {}
+    type: 'Diary' | 'Memory' | 'Event' | 'Letter' = 'Diary',
+    options: { mood?: string, sender?: string } = {}
 ) => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
@@ -100,7 +101,7 @@ export const createDiaryEntry = async (
         body: JSON.stringify({
             content,
             images,
-            category: options.category,
+            type, // Send type to backend
             mood: options.mood,
             sender: options.sender,
             date: new Date().toISOString().split('T')[0]

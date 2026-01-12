@@ -91,6 +91,9 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 fetchNotionData('Memory', undefined, 20)
             ]);
 
+            console.log('[DEBUG] Diary Result Full:', diaryResult);
+            console.log('[DEBUG] Memory Result Full:', memoryResult);
+
             // Set Diary
             setDiaryData(diaryResult.data);
             setHasMoreDiary(diaryResult.hasMore);

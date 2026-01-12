@@ -7,9 +7,10 @@ interface FeedWriteModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    type?: 'Diary' | 'Memory'; // New prop
 }
 
-const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary' }) => {
     const { user, userData } = useAuth();
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
@@ -25,7 +26,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                 reader.onloadend = () => {
                     setImages(prev => [...prev, {
                         base64: reader.result as string,
-                        type: file.type,
+                        type: file.type, // MIME type
                         size: file.size,
                         name: file.name
                     }]);
@@ -44,8 +45,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
 
         setIsLoading(true);
         try {
-            await createDiaryEntry(content, images, {
-                category: "일기",
+            // Updated call signature
+            await createDiaryEntry(content, images, type, {
                 mood: "평온",
                 sender: userData?.name || user?.displayName || "나"
             });

@@ -190,8 +190,9 @@ export const HomePage: React.FC = () => {
                     <FeedWriteModal
                         isOpen={isWriteModalOpen}
                         onClose={() => setIsWriteModalOpen(false)}
+                        type="Memory" // Explicitly Memory
                         onSuccess={() => {
-                            refreshData(); // Use context's refresh instead of local reload
+                            refreshData();
                         }}
                     />
                 </div>

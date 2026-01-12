@@ -187,6 +187,7 @@ export const DiaryPage: React.FC = () => {
                 <FeedWriteModal
                     isOpen={isWriteModalOpen}
                     onClose={() => setIsWriteModalOpen(false)}
+                    type="Diary" // Explicitly Diary
                     onSuccess={handleCreateSuccess}
                 />
             )}

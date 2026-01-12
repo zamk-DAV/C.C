@@ -22,6 +22,9 @@ interface MemoryItem {
 
 export const getNotionDatabase = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
+        // [DEBUG] Log incoming request
+        console.log("[DEBUG] Request Body:", JSON.stringify(req.body));
+
         // 1. Verify Authentication
         const tokenId = req.headers.authorization?.split("Bearer ")[1];
         if (!tokenId) {
@@ -61,12 +64,14 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 {
                     page_size: 20, // Default to 20
                     start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
-                    sorts: [
-                        {
-                            property: "date", // Assuming 'date' property exists
-                            direction: "descending"
-                        }
-                    ]
+                    /*
+                                        sorts: [
+                                            {
+                                                property: "date", // Assuming 'date' property exists
+                                                direction: "descending"
+                                            }
+                                        ]
+                    */
                 },
                 {
                     headers: {
@@ -79,6 +84,9 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
 
             // 4. Transform Data
             const results = notionResponse.data.results;
+            if (results.length > 0) {
+                console.log("[DEBUG_KEYS] Notion Properties:", JSON.stringify(Object.keys(results[0].properties)));
+            }
             const memories: MemoryItem[] = results.map((page: any) => {
                 const props = page.properties;
 
@@ -134,11 +142,16 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             res.status(200).send({
                 data: memories,
                 hasMore: notionResponse.data.has_more,
-                nextCursor: notionResponse.data.next_cursor
+                nextCursor: notionResponse.data.next_cursor,
+                // [DEBUG] Show available property keys from the first item
+                debug_properties: results.length > 0 ? Object.keys(results[0].properties) : []
             });
 
         } catch (error: any) {
             console.error("Error fetching Notion data:", error);
+            if (error.response) {
+                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
+            }
             res.status(500).send({ error: error.message });
         }
     });
@@ -194,6 +207,164 @@ export const searchNotionDatabases = functions.https.onRequest((req, res) => {
 
         } catch (error: any) {
             console.error("Error searching Notion databases:", error);
+            res.status(500).send({ error: error.message });
+        }
+    });
+});
+
+export const createDiaryEntry = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        // 1. Verify Authentication
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            // 2. Fetch Notion Config
+            const userDoc = await admin.firestore().collection("users").doc(uid).get();
+            const userData = userDoc.data();
+
+            if (!userData || !userData.notionConfig) {
+                res.status(404).send({ error: "Notion configuration not found." });
+                return;
+            }
+
+            const { apiKey, databaseId } = userData.notionConfig;
+
+            // 3. Prepare Notion Page Properties
+            const { title, content, type } = req.body; // type: 'Diary' | 'Memory' | ...
+
+            let categoryValue = "일기"; // Default
+            switch (type) {
+                case 'Diary': categoryValue = '일기'; break;
+                case 'Memory': categoryValue = '추억'; break;
+                case 'Event': categoryValue = '일정'; break;
+                case 'Letter': categoryValue = '편지'; break;
+            }
+
+            // Current Date in ISO format (YYYY-MM-DD)
+            const today = new Date().toISOString().split('T')[0];
+
+            // 4. Create Page in Notion
+            const response = await axios.post(
+                "https://api.notion.com/v1/pages",
+                {
+                    parent: { database_id: databaseId },
+                    properties: {
+                        "Name": {
+                            title: [
+                                {
+                                    text: {
+                                        content: title || "Untitled"
+                                    }
+                                }
+                            ]
+                        },
+                        "dear23_카테고리": {
+                            select: {
+                                name: categoryValue
+                            }
+                        },
+                        "dear23_날짜": {
+                            date: {
+                                start: today
+                            }
+                        },
+                        "dear23_내용미리보기": {
+                            rich_text: [
+                                {
+                                    text: {
+                                        content: content ? content.substring(0, 100) : ""
+                                    }
+                                }
+                            ]
+                        },
+                        // "작성자": { ... } // Optional: Add author logic later
+                    },
+                    // Optional: Add content blocks if needed
+                },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            res.status(200).send({ data: response.data });
+
+        } catch (error: any) {
+            console.error("Error creating Notion page:", error);
+            if (error.response) {
+                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
+            }
+            res.status(500).send({ error: error.message });
+        }
+    });
+});
+
+export const validateNotionSchema = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        res.status(200).send({ status: "valid", created: [] });
+    });
+});
+
+export const deleteDiaryEntry = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        // 1. Verify Authentication
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            // 2. Fetch Notion Config
+            const userDoc = await admin.firestore().collection("users").doc(uid).get();
+            const userData = userDoc.data();
+
+            if (!userData || !userData.notionConfig) {
+                res.status(404).send({ error: "Notion configuration not found." });
+                return;
+            }
+
+            const { apiKey } = userData.notionConfig;
+
+            // 3. Archive Page
+            const { pageId } = req.body;
+            if (!pageId) {
+                res.status(400).send({ error: "Page ID is required." });
+                return;
+            }
+
+            const response = await axios.patch(
+                `https://api.notion.com/v1/pages/${pageId}`,
+                { archived: true },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            res.status(200).send({ data: response.data });
+
+        } catch (error: any) {
+            console.error("Error deleting Notion page:", error);
+            if (error.response) {
+                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
+            }
             res.status(500).send({ error: error.message });
         }
     });
