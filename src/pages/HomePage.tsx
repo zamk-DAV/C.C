@@ -97,9 +97,6 @@ export const HomePage: React.FC = () => {
 
     const loadMemories = async (cursor?: string) => {
         console.log(`[HomePage] loadMemories called at ${new Date().toISOString()}, cursor:`, cursor);
-        if (loadingMemories) return; // Prevent multiple loads
-
-        setLoadingMemories(true);
         try {
             // Changed filter from 'Memory' to 'Diary' to match the "Archive / Diary" title and user's intent
             const result = await fetchNotionData('Diary', cursor, 5);
