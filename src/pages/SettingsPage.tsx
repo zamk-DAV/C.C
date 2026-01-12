@@ -355,20 +355,31 @@ export const SettingsPage: React.FC = () => {
                             {userData?.notionConfig?.apiKey && <span className="text-[10px] text-primary font-bold font-sans">연동됨</span>}
                         </div>
 
-                        <div className="relative">
+                        <div className="relative flex gap-2">
                             <input
-                                className="w-full p-4 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent mb-2 font-sans text-primary"
+                                className="flex-1 p-4 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans text-primary"
                                 placeholder="노션 API 키 (secret_...)"
                                 type={showKey ? "text" : "password"}
                                 value={notionKey}
                                 onChange={(e) => setNotionKey(e.target.value)}
-                                onBlur={() => { if (notionKey.length > 10) handleSearchDatabases(); }}
                             />
-                            <div className="absolute right-4 top-4 flex gap-2 cursor-pointer" onClick={() => setShowKey(!showKey)}>
-                                <span className="material-symbols-outlined text-text-secondary text-lg">
+                            <button
+                                onClick={() => setShowKey(!showKey)}
+                                className="absolute right-20 top-4 text-text-secondary hover:text-primary transition-colors"
+                                type="button"
+                            >
+                                <span className="material-symbols-outlined text-lg">
                                     {showKey ? 'visibility' : 'visibility_off'}
                                 </span>
-                            </div>
+                            </button>
+                            <button
+                                onClick={handleSearchDatabases}
+                                disabled={isSearching || notionKey.length < 10}
+                                className="px-4 py-2 border border-primary text-primary rounded-xl text-sm font-bold hover:bg-primary hover:text-background transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                                type="button"
+                            >
+                                {isSearching ? '검색 중...' : '검색'}
+                            </button>
                         </div>
 
                         {/* Database Selection */}
