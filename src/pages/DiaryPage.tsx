@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { format, parseISO, isValid, getWeek, getYear } from 'date-fns';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
@@ -12,29 +12,32 @@ export const DiaryPage: React.FC = () => {
     const [items, setItems] = useState<NotionItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
-    // Pagination state
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-    // Initial Load - Depend on primitives to avoid object reference loops
+    // Ref guard to prevent duplicate initial loads
+    const hasLoadedRef = useRef(false);
+
+    // Initial Load - with ref guard to prevent duplicate calls
     useEffect(() => {
-        if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
-            loadDiary();
-        } else {
+        if (hasLoadedRef.current) return;
+        if (!userData?.notionConfig?.apiKey || !userData?.notionConfig?.databaseId) {
             setLoading(false);
+            return;
         }
+
+        hasLoadedRef.current = true;
+        loadDiary();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
 
-    // Real-time Sync Trigger & Last Checked Update
+    // Real-time Sync Trigger & Last Checked Update (separate from diary loading)
     useEffect(() => {
         if (user && userData?.coupleId) {
             const userRef = doc(db, 'users', user.uid);
-            // Only update timestamp once on mount/coupleId change
             updateDoc(userRef, { lastCheckedDiary: serverTimestamp() }).catch(console.error);
-            // Removed: onSnapshot auto-reload to prevent feedback loop
         }
-    }, [userData?.coupleId, user?.uid]);
+    }, [userData?.coupleId, user]);
 
     const loadDiary = async (isLoadMore = false) => {
         try {
@@ -51,6 +54,7 @@ export const DiaryPage: React.FC = () => {
             setNextCursor(result.nextCursor);
         } catch (error) {
             console.error("Failed to load diary:", error);
+            // Don't retry on error - just log and continue
         } finally {
             setLoading(false);
         }
@@ -73,6 +77,8 @@ export const DiaryPage: React.FC = () => {
     };
 
     const handleCreateSuccess = () => {
+        // Reset ref guard to allow reload after creating new entry
+        hasLoadedRef.current = false;
         loadDiary();
         setIsWriteModalOpen(false);
     };
@@ -93,16 +99,13 @@ export const DiaryPage: React.FC = () => {
 
             if (!groups[key]) groups[key] = [];
 
-            // Filter Logic (Client-side for now)
-            // Assuming we determine 'me' vs 'partner' via author field
-            const isMe = item.author === '나' || item.author === userData?.name; // Improve check
+            const isMe = item.author === '나' || item.author === userData?.name;
 
             if (filter === 'all') groups[key].push(item);
             else if (filter === 'me' && isMe) groups[key].push(item);
             else if (filter === 'partner' && !isMe) groups[key].push(item);
         });
 
-        // Remove empty groups
         Object.keys(groups).forEach(key => {
             if (groups[key].length === 0) delete groups[key];
         });
@@ -183,7 +186,6 @@ export const DiaryPage: React.FC = () => {
                                                 </div>
                                             )}
 
-                                            {/* Trash Icon for Deletion (Hover only) */}
                                             <button
                                                 onClick={(e) => handleDelete(item.id, e)}
                                                 className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
@@ -197,7 +199,6 @@ export const DiaryPage: React.FC = () => {
                                                 <time className="text-[11px] font-bold text-black dark:text-white uppercase tracking-wide">
                                                     {isValid(date) ? format(date, 'yyyy년 M월 d일') : item.date}
                                                 </time>
-                                                {/* Dot indicator, maybe for author? */}
                                                 <span className={`w-1.5 h-1.5 rounded-full opacity-50 ${item.author === 'Me' ? 'bg-blue-500' : 'bg-red-500'}`}></span>
                                             </div>
                                             <p className="text-[13px] text-gray-600 dark:text-gray-400 font-serif leading-snug line-clamp-2">
