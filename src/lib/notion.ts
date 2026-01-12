@@ -31,7 +31,7 @@ export interface PaginatedNotionResponse {
     nextCursor: string | null;
 }
 
-export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' | 'Memory', cursor?: string): Promise<PaginatedNotionResponse> => {
+export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' | 'Memory', cursor?: string, pageSize: number = 20): Promise<PaginatedNotionResponse> => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
 
@@ -45,7 +45,8 @@ export const fetchNotionData = async (filterType?: 'Diary' | 'Event' | 'Letter' 
         },
         body: JSON.stringify({
             filterType: filterType,
-            startCursor: cursor
+            startCursor: cursor,
+            pageSize: pageSize
         })
     });
 

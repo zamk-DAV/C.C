@@ -52,11 +52,13 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             }
 
             // 3. Query Notion API
-            const { startCursor } = req.body;
+            const { startCursor, pageSize } = req.body;
+            const limit = pageSize && typeof pageSize === 'number' ? pageSize : 20;
+
             const notionResponse = await axios.post(
                 `https://api.notion.com/v1/databases/${databaseId}/query`,
                 {
-                    page_size: 20, // Default to 20
+                    page_size: limit,
                     start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
                     sorts: [
                         {
