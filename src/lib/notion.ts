@@ -23,7 +23,39 @@ export interface NotionItem {
     sender?: string;
     isRead?: boolean;
     author?: string;
+    images?: string[]; // Added images array
 }
+
+const CREATE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/createDiaryEntry";
+
+export const createDiaryEntry = async (content: string, images: { base64: string, type: string, size: number, name: string }[]) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+    const token = await user.getIdToken();
+
+    const response = await fetch(CREATE_DIARY_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            content,
+            images
+        })
+    });
+
+    if (!response.ok) {
+        let errorMessage = `Failed to create diary: ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData.error) errorMessage += ` - ${errorData.error}`;
+        } catch (e) { }
+        throw new Error(errorMessage);
+    }
+
+    return await response.json();
+};
 
 export interface PaginatedNotionResponse {
     data: NotionItem[];

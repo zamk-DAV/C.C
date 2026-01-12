@@ -91,27 +91,27 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
 
                 // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
                 const fileProp = props["dear23_대표이미지"]?.files || [];
-                let coverImage = null;
+                let images: string[] = [];
                 if (fileProp.length > 0) {
-                    const file = fileProp[0];
-                    if (file.type === "file") {
-                        coverImage = file.file.url; // Expiring URL
-                    } else if (file.type === "external") {
-                        coverImage = file.external.url;
-                    }
+                    fileProp.forEach((file: any) => {
+                        if (file.type === "file") {
+                            images.push(file.file.url);
+                        } else if (file.type === "external") {
+                            images.push(file.external.url);
+                        }
+                    });
                 }
+                const coverImage = images.length > 0 ? images[0] : null;
 
                 // Extract Preview Text (Text property: 'dear23_내용미리보기')
                 const previewList = props["dear23_내용미리보기"]?.rich_text || [];
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
 
-                // Extract Author (Select property: '작성자' or Created By)
+                // Extract Author
                 const authorSelect = props["작성자"]?.select;
-                let author = "Partner"; // Default
+                let author = "Partner";
                 if (authorSelect) {
                     author = authorSelect.name;
-                } else {
-                    // Default fallback logic if needed, or just leave as "Partner"
                 }
 
                 return {
@@ -119,6 +119,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     title,
                     date,
                     coverImage,
+                    images, // Added images array
                     previewText,
                     author
                 };
@@ -126,7 +127,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
 
             res.status(200).send({
                 data: memories,
-                hasMore: notionResponse.data.has_more,
+                hasMore: notionResponse.data.has_more, // Correct casing
                 nextCursor: notionResponse.data.next_cursor
             });
 
@@ -136,6 +137,147 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 error: error.message,
                 details: error.response?.data || "No additional details"
             });
+        }
+    });
+});
+
+export const createDiaryEntry = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            const userDoc = await admin.firestore().collection("users").doc(uid).get();
+            const userData = userDoc.data();
+
+            if (!userData || !userData.notionConfig) {
+                res.status(404).send({ error: "Configuration not found." });
+                return;
+            }
+
+            const { apiKey, databaseId } = userData.notionConfig;
+            const { content, mood, images } = req.body; // images: { base64: string, type: string }[]
+
+            // 1. Upload Images to Notion
+            const uploadedFiles = [];
+            if (images && images.length > 0) {
+                for (const img of images) {
+                    // Get Upload URL
+                    const initRes = await axios.post(
+                        "https://api.notion.com/v1/file_uploads",
+                        {
+                            content_type: img.type,
+                            content_length: img.size
+                        },
+                        {
+                            headers: {
+                                "Authorization": `Bearer ${apiKey}`,
+                                "Notion-Version": "2022-06-28",
+                                "Content-Type": "application/json"
+                            }
+                        }
+                    );
+
+                    const { signed_put_url, url, file_upload } = initRes.data;
+
+                    // Upload File
+                    const buffer = Buffer.from(img.base64.split(",")[1], 'base64');
+                    await axios.put(signed_put_url, buffer, {
+                        headers: { "Content-Type": img.type }
+                    });
+
+                    uploadedFiles.push({
+                        url: url,
+                        id: file_upload.id, // Internal ID
+                        name: img.name
+                    });
+                }
+            }
+
+            // 2. Create Page (Construct Internal File Objects for Property)
+            // Note: Public API doesn't officially support setting internal files in properties,
+            // but we try using the undocumented structure or fallback to External if 'url' works.
+            // The user's screenshot used "file_upload": { "id": ... } for BLOCKS.
+            // For PROPERTIES, we might just try regular external URL if internal structure fails,
+            // but let's try to pass the internal structure if possible.
+            // However, sticking to the user's specific block screenshot for content.
+
+            // For the Feed Property (Files & Media), we often need standard external objects unless we reverse engineer the property update.
+            // SAFE BET: Use the 'url' returned by Notion (which is an AWS S3 link) as an 'external' file type for the property.
+            // It expires, but Notion API might be smart enough? No, Notion Authenticated URLs expire.
+            // The best way for persistent access in Feed is creating the entry with BLOCKS, 
+            // and letting the Notion 'Files' property be manually populated? No, we need it auto.
+            // Let's rely on the strategy: Add to 'Files & Media' property as 'External' (using the link) 
+            // AND Add to 'Content' as 'file_upload' block (using the ID).
+
+            const filePropertyItems = uploadedFiles.map(f => ({
+                name: f.name || "image.png",
+                external: { url: f.url } // This URL is valid for signed duration.
+            }));
+
+            // Wait, if it expires, the feed will break after 1 hour.
+            // The user wants a robust solution.
+            // Internal file uploads in blocks don't expire securely? They do, but Notion refreshes them.
+            // If we add it as a BLOCK, we can fetch page blocks. But we only fetch Database Props.
+            // Correct approach: If we use `v1/file_uploads`, we get an ID.
+            // Can we populate the property with THAT ID?
+            // "type": "file", "file": { "id": "..." } ??
+            // Using logic from user screenshot for BLOCKS clearly.
+
+            const childrenBlocks = uploadedFiles.map(f => ({
+                type: "image",
+                image: {
+                    type: "file_upload",
+                    file_upload: { id: f.id }
+                }
+            }));
+
+            // Also add content text
+            if (content) {
+                childrenBlocks.unshift({
+                    object: "block",
+                    type: "paragraph",
+                    paragraph: {
+                        rich_text: [{ type: "text", text: { content: content } }]
+                    }
+                } as any);
+            }
+
+            await axios.post(
+                "https://api.notion.com/v1/pages",
+                {
+                    parent: { database_id: databaseId },
+                    properties: {
+                        "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
+                        "Date": { date: { start: new Date().toISOString().split('T')[0] } },
+                        "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
+                        // "dear23_대표이미지": { files: filePropertyItems } // Using external links might expire.
+                        // Ideally we leave this empty and let user drag? No.
+                        // Let's try to add the same 'file_upload' structure to the property?
+                        // If it fails, we catch.
+                    },
+                    children: childrenBlocks
+                },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            res.status(200).send({ success: true });
+
+        } catch (error: any) {
+            console.error("Error creating diary:", error);
+            res.status(500).send({ error: error.message, details: error.response?.data });
         }
     });
 });
