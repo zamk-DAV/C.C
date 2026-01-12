@@ -47,7 +47,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
             await createDiaryEntry(content, images, {
                 category: "일기",
                 mood: "평온",
-                sender: userData?.nickname || user?.displayName || "나"
+                sender: userData?.name || user?.displayName || "나"
             });
             setContent('');
             setImages([]);

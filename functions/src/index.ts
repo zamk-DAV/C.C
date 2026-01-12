@@ -422,32 +422,35 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
             }
 
             // 2. Define Required Schema
+            // 2. Define Required Schema (Aligning with Dear23 Standard)
             const requiredProperties: any = {
                 // Common
-                "날짜": { date: {} },
-                "구분": { select: { options: [{ name: "일기", color: "blue" }, { name: "일정", color: "green" }, { name: "편지", color: "pink" }, { name: "추억", color: "yellow" }] } },
-                "작성자": { select: {} },
-                "내용미리보기": { rich_text: {} },
-                "나만보기": { checkbox: {} },
-                "좋아요": { checkbox: {} },
-                "작성일시": { created_time: {} },
-                "수정일시": { last_edited_time: {} },
+                "dear23_날짜": { date: {} },
+                "dear23_카테고리": { select: { options: [{ name: "일기", color: "blue" }, { name: "일정", color: "green" }, { name: "편지", color: "pink" }, { name: "추억", color: "yellow" }] } },
+                "dear23_작성자": { select: {} },
+                "dear23_내용미리보기": { rich_text: {} },
+                "dear23_나만보기": { checkbox: {} },
+                "dear23_좋아요": { checkbox: {} },
+                "dear23_작성일시": { created_time: {} },
+                "dear23_수정일시": { last_edited_time: {} },
 
                 // Diary
-                "dear23_대표이미지": { files: {} }, // '대표이미지' might conflict if user names it differently, sticking to safe key or user friendly name? user friendly name '대표이미지' is better but collision risk. Let's use '대표이미지' as per plan.
-                "대표이미지": { files: {} },
-                "기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }] } },
-                "날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
-                "상대방한마디": { rich_text: {} },
+                "dear23_대표이미지": { files: {} },
+                "dear23_기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }, { name: "평온", color: "default" }] } },
+                "dear23_날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
+                "dear23_상대방한마디": { rich_text: {} },
 
                 // Calendar
-                "함께하기": { checkbox: {} },
-                "중요": { checkbox: {} },
-                "장소": { rich_text: {} },
+                "dear23_함께하기": { checkbox: {} },
+                "dear23_중요": { checkbox: {} },
+                "dear23_장소": { rich_text: {} },
 
                 // Letter
-                "읽음": { checkbox: {} },
-                "개봉일": { date: {} }
+                "dear23_읽음": { checkbox: {} },
+                "dear23_개봉일": { date: {} },
+
+                // Legacy Fallback (Optional: keep Korean keys if we suspect existing users have them, but new standard is dear23_)
+                // Ideally we should migrate, but for now we enforce creation of dear23_ keys.
             };
 
             // 3. Fetch Current Schema
