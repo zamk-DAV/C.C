@@ -6,18 +6,26 @@ test('Verify Profile Edit and Online Status UI', async ({ page }) => {
     await page.fill('input[type="email"]', 'godqka');
     await page.fill('input[type="password"]', 'ehgus852');
     await page.click('button[type="submit"]');
-    await page.waitForURL('http://localhost:5173/');
+    await page.waitForURL('http://localhost:5173/', { timeout: 15000 });
 
     // 2. Settings Page & Profile Modal
     await page.goto('http://localhost:5173/settings');
     await expect(page.locator('text=내 프로필')).toBeVisible();
 
-    // Open Modal
-    // Force click since opacity is 0
-    await page.locator('.material-symbols-outlined:has-text("edit")').click({ force: true });
+    // Open Modal - Use a more robust selector or force click
+    // Assuming the edit icon is a button or clickable element inside the profile section
+    // If the previous selector failed, try finding by aria-label or just the icon text more broadly
+    await page.locator('span.material-symbols-outlined', { hasText: 'edit' }).first().click({ force: true });
+
     await expect(page.locator('text=프로필 편집')).toBeVisible();
     await expect(page.locator('input[placeholder="이름을 입력하세요"]')).toBeVisible();
     await expect(page.locator('input[placeholder="상태 메시지를 입력하세요"]')).toBeVisible();
+
+    // New Fields Verification
+    await expect(page.locator('input[placeholder="연락처를 입력하세요"]')).toBeVisible();
+    await expect(page.locator('input[placeholder="MBTI"]')).toBeVisible();
+    await expect(page.locator('input[type="date"]')).toBeVisible();
+    await expect(page.locator('textarea[placeholder="취미나 좋아하는 것을 자유롭게 적어주세요"]')).toBeVisible();
 
     // Close Modal
     await page.click('text=취소');
@@ -26,13 +34,10 @@ test('Verify Profile Edit and Online Status UI', async ({ page }) => {
     // 3. Chat Page Online Status
     await page.goto('http://localhost:5173/chat');
     // Check Header
-    // Note: partnerData might be null or mock. Just checking if the container exists.
-    // We look for the font-size classes or structure we added.
     const headerName = page.locator('h1.text-\\[16px\\]');
     await expect(headerName).toBeVisible();
 
-    // Check if status span exists (either "접속 중", "오프라인", or time)
-    // Since verifying exact text is hard without partner logic, we verify the element presence.
+    // Check if status span exists
     const statusSpan = page.locator('span.text-\\[10px\\]');
     await expect(statusSpan).toBeVisible();
 });
