@@ -16,24 +16,28 @@ export const DiaryPage: React.FC = () => {
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
 
-    // Initial Load
+    // Initial Load - Depend on primitives to avoid object reference loops
     useEffect(() => {
         if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
             loadDiary();
         } else {
             setLoading(false);
         }
-    }, [userData?.notionConfig]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
 
     // Real-time Sync Trigger & Last Checked Update
     useEffect(() => {
         if (user && userData?.coupleId) {
-            // Update lastCheckedDiary on mount
             const userRef = doc(db, 'users', user.uid);
+            // Only update timestamp once on mount/coupleId change, not on every loading toggle
             updateDoc(userRef, { lastCheckedDiary: serverTimestamp() }).catch(console.error);
 
             const coupleRef = doc(db, 'couples', userData.coupleId);
             const unsubscribe = onSnapshot(coupleRef, (docSnap) => {
+                // Use a ref or simple check to avoid loop? 
+                // Actually, duplicate loadDiary calls are protected by !loading check, 
+                // but we need to ensure this doesn't trigger the updateDoc loop.
                 if (docSnap.exists() && !loading && items.length > 0) {
                     // Simplified reload logic
                     loadDiary();
@@ -41,7 +45,9 @@ export const DiaryPage: React.FC = () => {
             });
             return () => unsubscribe();
         }
-    }, [userData?.coupleId, loading]); // Simplified deps
+        // Removed 'loading' from dependency array to prevent effect re-run when local loading state toggles
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userData?.coupleId, user?.uid]);
 
     const loadDiary = async (isLoadMore = false) => {
         try {

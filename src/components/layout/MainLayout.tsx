@@ -36,7 +36,7 @@ export const MainLayout = () => {
         if (userData) {
             checkNewDiary();
         }
-    }, [userData?.notionConfig, userData?.lastCheckedDiary]);
+    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId, userData?.lastCheckedDiary]);
 
     // Check for Unread Mail
     React.useEffect(() => {
