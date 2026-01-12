@@ -113,7 +113,7 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
 });
 exports.createDiaryEntry = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
-        var _a, _b;
+        var _a;
         const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
         if (!tokenId) {
             res.status(401).send({ error: "Unauthorized" });
@@ -198,10 +198,10 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             // 2. Create Page (With Required Properties)
             console.log("Creating page with properties...");
             // Construct Properties matching Dear23 Schema
-            // Note: We are using "Name" for Title as default. 
-            // If DB uses Korean "제목", this might fail, but we'll try standard keys first or rely on user to update mapping if needed.
+            // Speculative Fix: Using "제목" instead of "Name" based on Dear23 naming conventions.
+            // If this fails, the IMPROVED error handling below will tell us the real property name.
             const pageProperties = {
-                "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
+                "제목": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                 "dear23_날짜": { date: { start: date } },
                 "dear23_카테고리": { select: { name: category } },
                 "dear23_기분": { select: { name: mood } },
@@ -253,13 +253,21 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                         "Content-Type": "application/json"
                     }
                 });
-                console.log("Blocks appended successfully.");
             }
-            res.status(200).send({ success: true });
+            res.status(200).send({ success: true, pageId });
         }
-        catch (error) {
-            console.error("Error creating diary:", error);
-            res.status(500).send({ error: error.message, details: (_b = error.response) === null || _b === void 0 ? void 0 : _b.data });
+        catch (e) {
+            console.error("Error creating diary entry:", e);
+            // IMPROVED ERROR HANDLING: Return detailed Notion error
+            if (e.response && e.response.data) {
+                console.error("Notion API Error Details:", JSON.stringify(e.response.data));
+                res.status(e.response.status).send({
+                    error: `Notion Error: ${e.response.data.message || e.message}`,
+                    details: e.response.data
+                });
+                return;
+            }
+            res.status(500).send({ error: e.message || e });
         }
     });
 });
@@ -332,29 +340,31 @@ exports.validateNotionSchema = functions.https.onRequest((req, res) => {
                 return;
             }
             // 2. Define Required Schema
+            // 2. Define Required Schema (Aligning with Dear23 Standard)
             const requiredProperties = {
                 // Common
-                "날짜": { date: {} },
-                "구분": { select: { options: [{ name: "일기", color: "blue" }, { name: "일정", color: "green" }, { name: "편지", color: "pink" }, { name: "추억", color: "yellow" }] } },
-                "작성자": { select: {} },
-                "내용미리보기": { rich_text: {} },
-                "나만보기": { checkbox: {} },
-                "좋아요": { checkbox: {} },
-                "작성일시": { created_time: {} },
-                "수정일시": { last_edited_time: {} },
+                "dear23_날짜": { date: {} },
+                "dear23_카테고리": { select: { options: [{ name: "일기", color: "blue" }, { name: "일정", color: "green" }, { name: "편지", color: "pink" }, { name: "추억", color: "yellow" }] } },
+                "dear23_작성자": { select: {} },
+                "dear23_내용미리보기": { rich_text: {} },
+                "dear23_나만보기": { checkbox: {} },
+                "dear23_좋아요": { checkbox: {} },
+                "dear23_작성일시": { created_time: {} },
+                "dear23_수정일시": { last_edited_time: {} },
                 // Diary
                 "dear23_대표이미지": { files: {} },
-                "대표이미지": { files: {} },
-                "기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }] } },
-                "날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
-                "상대방한마디": { rich_text: {} },
+                "dear23_기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }, { name: "평온", color: "default" }] } },
+                "dear23_날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
+                "dear23_상대방한마디": { rich_text: {} },
                 // Calendar
-                "함께하기": { checkbox: {} },
-                "중요": { checkbox: {} },
-                "장소": { rich_text: {} },
+                "dear23_함께하기": { checkbox: {} },
+                "dear23_중요": { checkbox: {} },
+                "dear23_장소": { rich_text: {} },
                 // Letter
-                "읽음": { checkbox: {} },
-                "개봉일": { date: {} }
+                "dear23_읽음": { checkbox: {} },
+                "dear23_개봉일": { date: {} },
+                // Legacy Fallback (Optional: keep Korean keys if we suspect existing users have them, but new standard is dear23_)
+                // Ideally we should migrate, but for now we enforce creation of dear23_ keys.
             };
             // 3. Fetch Current Schema
             const dbResponse = await axios_1.default.get(`https://api.notion.com/v1/databases/${databaseId}`, {

@@ -264,10 +264,10 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             console.log("Creating page with properties...");
 
             // Construct Properties matching Dear23 Schema
-            // Note: We are using "Name" for Title as default. 
-            // If DB uses Korean "제목", this might fail, but we'll try standard keys first or rely on user to update mapping if needed.
+            // Speculative Fix: Using "제목" instead of "Name" based on Dear23 naming conventions.
+            // If this fails, the IMPROVED error handling below will tell us the real property name.
             const pageProperties: any = {
-                "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
+                "제목": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                 "dear23_날짜": { date: { start: date } },
                 "dear23_카테고리": { select: { name: category } },
                 "dear23_기분": { select: { name: mood } },
@@ -333,14 +333,24 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         }
                     }
                 );
-                console.log("Blocks appended successfully.");
             }
 
-            res.status(200).send({ success: true });
+            res.status(200).send({ success: true, pageId });
 
-        } catch (error: any) {
-            console.error("Error creating diary:", error);
-            res.status(500).send({ error: error.message, details: error.response?.data });
+        } catch (e: any) {
+            console.error("Error creating diary entry:", e);
+
+            // IMPROVED ERROR HANDLING: Return detailed Notion error
+            if (e.response && e.response.data) {
+                console.error("Notion API Error Details:", JSON.stringify(e.response.data));
+                res.status(e.response.status).send({
+                    error: `Notion Error: ${e.response.data.message || e.message}`,
+                    details: e.response.data
+                });
+                return;
+            }
+
+            res.status(500).send({ error: e.message || e });
         }
     });
 });
