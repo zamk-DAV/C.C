@@ -13,10 +13,17 @@ export const MainLayout = () => {
     const [unreadMailCount, setUnreadMailCount] = React.useState(0);
     const { user, userData, coupleData } = useAuth();
 
-    // Check for New Diary
+    // Ref to prevent multiple diary checks per session
+    const hasCheckedDiaryRef = React.useRef(false);
+
+    // Check for New Diary - runs ONCE per session when config is available
     React.useEffect(() => {
+        // Skip if already checked this session
+        if (hasCheckedDiaryRef.current) return;
+
         const checkNewDiary = async () => {
             if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId && userData?.lastCheckedDiary) {
+                hasCheckedDiaryRef.current = true; // Mark as checked BEFORE async call
                 try {
                     const result = await import('../../lib/notion').then(m => m.fetchNotionData('Diary'));
                     if (result.data.length > 0) {
@@ -29,6 +36,7 @@ export const MainLayout = () => {
                     }
                 } catch (e) {
                     console.error("Check new diary failed", e);
+                    // Don't reset ref on error - we don't want to spam retries
                 }
             }
         };
@@ -36,7 +44,9 @@ export const MainLayout = () => {
         if (userData) {
             checkNewDiary();
         }
-    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId, userData?.lastCheckedDiary]);
+        // Remove lastCheckedDiary from deps to prevent re-triggering on timestamp updates
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId]);
 
     // Check for Unread Mail
     React.useEffect(() => {
