@@ -36,16 +36,27 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
 
             const targetUserId = req.body.targetUserId || uid;
 
-            // 2. Fetch Notion Config from Firestore
+            // 2. Fetch Notion Config from Firestore (Couple > User Priority)
             const userDoc = await admin.firestore().collection("users").doc(targetUserId).get();
             const userData = userDoc.data();
 
-            if (!userData || !userData.notionConfig) {
-                res.status(404).send({ error: "Notion configuration not found for this user." });
-                return;
+            let apiKey, databaseId;
+
+            // 1. Try Shared Couple Config First (Priority)
+            if (userData?.coupleId) {
+                const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+                const coupleData = coupleDoc.data();
+                if (coupleData?.notionConfig) {
+                    apiKey = coupleData.notionConfig.apiKey;
+                    databaseId = coupleData.notionConfig.databaseId;
+                }
             }
 
-            const { apiKey, databaseId } = userData.notionConfig;
+            // 2. Fallback to Personal Config
+            if ((!apiKey || !databaseId) && userData?.notionConfig) {
+                apiKey = userData.notionConfig.apiKey;
+                databaseId = userData.notionConfig.databaseId;
+            }
 
             if (!apiKey || !databaseId) {
                 res.status(400).send({ error: "Incomplete Notion configuration." });
@@ -157,12 +168,30 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const userDoc = await admin.firestore().collection("users").doc(uid).get();
             const userData = userDoc.data();
 
-            if (!userData || !userData.notionConfig) {
-                res.status(404).send({ error: "Configuration not found." });
-                return;
+            let apiKey, databaseId;
+
+            // 1. Try Shared Couple Config First (Priority)
+            if (userData?.coupleId) {
+                const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+                const coupleData = coupleDoc.data();
+                if (coupleData?.notionConfig) {
+                    apiKey = coupleData.notionConfig.apiKey;
+                    databaseId = coupleData.notionConfig.databaseId;
+                    console.log(`[Config] Using Shared Couple Config for ${userData.coupleId}`);
+                }
             }
 
-            const { apiKey, databaseId } = userData.notionConfig;
+            // 2. Fallback to Personal Config
+            if ((!apiKey || !databaseId) && userData?.notionConfig) {
+                apiKey = userData.notionConfig.apiKey;
+                databaseId = userData.notionConfig.databaseId;
+                console.log("[Config] Using Personal User Config (Legacy)");
+            }
+
+            if (!apiKey || !databaseId) {
+                res.status(404).send({ error: "Configuration not found. Please check Settings." });
+                return;
+            }
             // Destructure new properties with defaults
             const {
                 content,
