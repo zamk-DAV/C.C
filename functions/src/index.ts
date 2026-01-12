@@ -260,14 +260,35 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             // 2. Create Page (Header & Props ONLY)
             // We do separate steps to avoid 'Invalid URL' errors during page creation
             // if Notion validates block children strictly.
-            // 2. Create Page (With Required Properties)
+            // 2. Dynamic Title Property Lookup
+            // Fetch database schema to find the actual Title property name (it might not be "Name" or "제목")
+            console.log("Fetching database schema to find Title property...");
+            const dbSchemaRes = await axios.get(
+                `https://api.notion.com/v1/databases/${databaseId}`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                    },
+                }
+            );
+
+            const dbProperties = dbSchemaRes.data.properties;
+            let titlePropertyName = "Name"; // Default fallback
+
+            for (const key in dbProperties) {
+                if (dbProperties[key].type === "title") {
+                    titlePropertyName = key;
+                    break;
+                }
+            }
+            console.log(`Detected Title property name: "${titlePropertyName}"`);
+
+            // 3. Create Page (With Required Properties)
             console.log("Creating page with properties...");
 
-            // Construct Properties matching Dear23 Schema
-            // Speculative Fix: Using "제목" instead of "Name" based on Dear23 naming conventions.
-            // If this fails, the IMPROVED error handling below will tell us the real property name.
             const pageProperties: any = {
-                "제목": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
+                [titlePropertyName]: { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                 "dear23_날짜": { date: { start: date } },
                 "dear23_카테고리": { select: { name: category } },
                 "dear23_기분": { select: { name: mood } },
