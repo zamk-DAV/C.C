@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
@@ -8,74 +8,87 @@ import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths,
 import { ko } from 'date-fns/locale';
 
 export const CalendarPage: React.FC = () => {
-    // const navigate = useNavigate();
-    const [currentDate, setCurrentDate] = useState(new Date()); // Calendar view date
-    const [selectedDate, setSelectedDate] = useState(new Date()); // Selected specific date
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(new Date());
 
     const { coupleData, userData } = useAuth();
-    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
+    const [diaryEvents, setDiaryEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
 
+    // Ref guard to prevent duplicate Notion API calls
+    const hasLoadedNotionRef = useRef(false);
+
+    // 1. Firestore Events - separate useEffect (real-time)
     useEffect(() => {
         if (!coupleData?.id) return;
 
-        setLoading(true);
+        const eventsQuery = query(
+            collection(db, 'couples', coupleData.id, 'events'),
+            orderBy('date', 'asc')
+        );
 
-        // 1. Fetch Firestore Events
-        const eventsQuery = query(collection(db, 'couples', coupleData.id, 'events'), orderBy('date', 'asc'));
-
-        const unsubscribeEvents = onSnapshot(eventsQuery, async (snapshot) => {
-            const firestoreEvents = snapshot.docs.map(doc => {
+        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+            const events = snapshot.docs.map(doc => {
                 const data = doc.data();
                 return {
                     id: doc.id,
                     ...data,
-                    date: data.date?.toDate ? data.date.toDate() : new Date(data.date), // Handle Timestamp
+                    date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
                     type: 'Event'
                 } as CalendarEvent;
             });
-
-            // 2. Fetch Notion Diary (if configured)
-            let diaryEvents: CalendarEvent[] = [];
-            if (userData?.notionConfig?.apiKey && userData?.notionConfig?.databaseId) {
-                try {
-                    const notionResult = await fetchNotionData('Diary');
-                    diaryEvents = notionResult.data.map(item => ({
-                        id: item.id,
-                        title: item.title, // "Title"
-                        date: new Date(item.date),
-                        time: '00:00', // Default for diary
-                        type: 'Diary',
-                        note: item.previewText || '',
-                        author: item.author === userData.name || item.author === 'Me' ? 'Me' : 'Partner'
-                    }));
-                } catch (e) {
-                    console.error("Failed to fetch Notion diary for Calendar:", e);
-                }
-            }
-
-            // 3. Merge & Deduplicate
-            // (Simple merge for now, assuming IDs are unique across systems or distinct enough)
-            setEvents([...firestoreEvents, ...diaryEvents]);
+            setFirestoreEvents(events);
             setLoading(false);
         });
 
-        return () => unsubscribeEvents();
-    }, [coupleData?.id, userData?.notionConfig]);
+        return () => unsubscribe();
+    }, [coupleData?.id]);
+
+    // 2. Notion Diary - separate useEffect (one-time fetch with guard)
+    useEffect(() => {
+        const loadNotionDiary = async () => {
+            // Guard: only fetch once per component mount
+            if (hasLoadedNotionRef.current) return;
+            if (!userData?.notionConfig?.apiKey || !userData?.notionConfig?.databaseId) return;
+
+            hasLoadedNotionRef.current = true;
+
+            try {
+                const notionResult = await fetchNotionData('Diary');
+                const events = notionResult.data.map(item => ({
+                    id: item.id,
+                    title: item.title,
+                    date: new Date(item.date),
+                    time: '00:00',
+                    type: 'Diary',
+                    note: item.previewText || '',
+                    author: item.author === userData.name || item.author === 'Me' ? 'Me' : 'Partner'
+                })) as CalendarEvent[];
+                setDiaryEvents(events);
+            } catch (e) {
+                console.error("Failed to fetch Notion diary for Calendar:", e);
+                // Don't retry on error - just log and continue
+            }
+        };
+
+        loadNotionDiary();
+    }, [userData?.notionConfig?.apiKey, userData?.notionConfig?.databaseId, userData?.name]);
+
+    // Merge events
+    const events = [...firestoreEvents, ...diaryEvents];
 
     // Calendar Grid Logic
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-    // Fill empty slots for start of week
     const startDay = getDay(monthStart);
     const emptyDays = Array.from({ length: startDay });
 
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
-    // Filter events for selected date
     const selectedDateEvents = events.filter(event =>
         isSameDay(event.date, selectedDate)
     );
@@ -177,8 +190,6 @@ export const CalendarPage: React.FC = () => {
                     )}
                 </div>
             </div>
-
-            {/* Bottom Nav is managed by MainLayout */}
         </div>
     );
 };
