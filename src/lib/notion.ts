@@ -28,7 +28,12 @@ export interface NotionItem {
 
 const CREATE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/createDiaryEntry";
 
-export const createDiaryEntry = async (content: string, images: { base64: string, type: string, size: number, name: string }[]) => {
+// Update signature to accept optional properties
+export const createDiaryEntry = async (
+    content: string,
+    images: { base64: string, type: string, size: number, name: string }[],
+    options: { category?: string, mood?: string, sender?: string } = {}
+) => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
     const token = await user.getIdToken();
@@ -41,7 +46,11 @@ export const createDiaryEntry = async (content: string, images: { base64: string
         },
         body: JSON.stringify({
             content,
-            images
+            images,
+            category: options.category,
+            mood: options.mood,
+            sender: options.sender,
+            date: new Date().toISOString().split('T')[0]
         })
     });
 

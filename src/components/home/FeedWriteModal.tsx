@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDiaryEntry } from '../../lib/notion';
+import { useAuth } from '../../context/AuthContext';
 
 interface FeedWriteModalProps {
     isOpen: boolean;
@@ -9,6 +10,7 @@ interface FeedWriteModalProps {
 }
 
 const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess }) => {
+    const { user, userData } = useAuth();
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +44,11 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
 
         setIsLoading(true);
         try {
-            await createDiaryEntry(content, images);
+            await createDiaryEntry(content, images, {
+                category: "일기",
+                mood: "평온",
+                sender: userData?.nickname || user?.displayName || "나"
+            });
             setContent('');
             setImages([]);
             onSuccess();
@@ -128,8 +134,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                     onClick={handleSubmit}
                                     disabled={isLoading || (!content && images.length === 0)}
                                     className={`px-5 py-2 rounded-full font-bold text-sm transition-all ${isLoading
-                                            ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                                            : 'bg-text-main dark:bg-white text-white dark:text-black hover:scale-105 active:scale-95 shadow-md'
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                                        : 'bg-text-main dark:bg-white text-white dark:text-black hover:scale-105 active:scale-95 shadow-md'
                                         }`}
                                 >
                                     {isLoading ? 'Posting...' : 'Post'}

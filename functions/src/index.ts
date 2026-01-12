@@ -163,7 +163,15 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             }
 
             const { apiKey, databaseId } = userData.notionConfig;
-            const { content, images } = req.body; // images: { base64: string, type: string }[]
+            // Destructure new properties with defaults
+            const {
+                content,
+                images,
+                category = "일기",
+                mood = "평온",
+                sender = "나",
+                date = new Date().toISOString().split('T')[0]
+            } = req.body;
 
             // 1. Upload Images to Notion (Method: v1/file_uploads/{id}/send)
             const uploadedFiles = [];
@@ -171,14 +179,23 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                 console.log(`Processing ${images.length} images via /send endpoint...`);
                 for (const img of images) {
                     try {
-                        const buffer = Buffer.from(img.base64.split(",")[1], 'base64');
-                        console.log(`Preparing upload: ${img.name}, Size: ${buffer.length} bytes`);
+                        // Robust Base64 Parsing (Fixing Content-Type Mismatch)
+                        const matches = img.base64.match(/^data:(.+);base64,(.+)$/);
+                        if (!matches) {
+                            throw new Error(`Invalid base64 format for image: ${img.name}`);
+                        }
+
+                        const realMimeType = matches[1];
+                        const realBase64Data = matches[2];
+                        const buffer = Buffer.from(realBase64Data, 'base64');
+
+                        console.log(`Preparing upload: ${img.name}, Type: ${realMimeType}, Size: ${buffer.length} bytes`);
 
                         // 1. Init Upload
                         const initRes = await axios.post(
                             "https://api.notion.com/v1/file_uploads",
                             {
-                                content_type: img.type,
+                                content_type: realMimeType,
                                 content_length: buffer.length
                             },
                             {
@@ -205,7 +222,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         const form = new FormData();
                         form.append("file", buffer, {
                             filename: img.name || "image.png",
-                            contentType: img.type
+                            contentType: realMimeType
                         });
 
                         const formHeaders = form.getHeaders();
@@ -243,17 +260,27 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             // 2. Create Page (Header & Props ONLY)
             // We do separate steps to avoid 'Invalid URL' errors during page creation
             // if Notion validates block children strictly.
-            console.log("Creating page...");
+            // 2. Create Page (With Required Properties)
+            console.log("Creating page with properties...");
+
+            // Construct Properties matching Dear23 Schema
+            // Note: We are using "Name" for Title as default. 
+            // If DB uses Korean "제목", this might fail, but we'll try standard keys first or rely on user to update mapping if needed.
+            const pageProperties: any = {
+                "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
+                "dear23_날짜": { date: { start: date } },
+                "dear23_카테고리": { select: { name: category } },
+                "dear23_기분": { select: { name: mood } },
+                "dear23_작성자": { select: { name: sender } },
+                "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
+                "dear23_이미지유무": { checkbox: images && images.length > 0 }
+            };
+
             const createPageRes = await axios.post(
                 "https://api.notion.com/v1/pages",
                 {
                     parent: { database_id: databaseId },
-                    properties: {
-                        "Name": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
-                        "Date": { date: { start: new Date().toISOString().split('T')[0] } },
-                        "dear23_내용미리보기": { rich_text: [{ text: { content: content || "" } }] },
-                        // Intentionally omitting dear23_대표이미지 to avoid 400 error
-                    }
+                    properties: pageProperties
                 },
                 {
                     headers: {
