@@ -108,7 +108,7 @@ export const HomePage: React.FC = () => {
         }
     };
 
-    const partnerName = partnerData?.name || "Partner";
+    const partnerName = userData?.partnerNickname || partnerData?.name || "Partner";
 
     // Check for NEW Feed items
     const hasNewMemories = useMemo(() => {

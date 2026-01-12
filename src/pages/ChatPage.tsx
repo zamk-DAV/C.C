@@ -16,7 +16,7 @@ import { ko } from 'date-fns/locale';
 
 export const ChatPage: React.FC = () => {
     const navigate = useNavigate();
-    const { user, partnerData, coupleData } = useAuth();
+    const { user, userData, partnerData, coupleData } = useAuth();
     const { isMobile } = useDeviceType();
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [inputText, setInputText] = useState('');
@@ -245,7 +245,7 @@ export const ChatPage: React.FC = () => {
                 messageData.replyTo = {
                     id: replyTarget.id,
                     text: replyTarget.text,
-                    senderName: replyTarget.senderId === user.uid ? '나' : (partnerData?.name || 'Partner')
+                    senderName: replyTarget.senderId === user.uid ? '나' : (userData?.partnerNickname || partnerData?.name || 'Partner')
                 };
             }
 
@@ -411,7 +411,7 @@ export const ChatPage: React.FC = () => {
                                 arrow_back
                             </button>
                             <div className="flex flex-col justify-center h-10">
-                                <h1 className="text-[16px] font-bold tracking-tight text-primary leading-tight">{partnerData?.name || 'Partner'}</h1>
+                                <h1 className="text-[16px] font-bold tracking-tight text-primary leading-tight">{userData?.partnerNickname || partnerData?.name || 'Partner'}</h1>
                                 <span className={`text-[10px] font-medium leading-tight ${partnerData?.isChatActive ? 'text-green-500' : 'text-text-secondary/70'}`}>
                                     {partnerData?.isChatActive
                                         ? '접속 중'
@@ -444,111 +444,118 @@ export const ChatPage: React.FC = () => {
                                 close
                             </button>
                         </div>
-                    )}
-                </header>
+                    )
+                    }
+                </header >
 
                 {/* Main Chat Area */}
-                <main
+                < main
                     className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar scroll-smooth"
                     style={{ overflowAnchor: 'auto' }}
                 >
-                    {Object.keys(groupedMessages).map((dateKey) => (
-                        <div key={dateKey}>
-                            <div className="flex items-center gap-4 my-8">
-                                <div className="h-[1px] flex-1 bg-border"></div>
-                                <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary">{dateKey}</span>
-                                <div className="h-[1px] flex-1 bg-border"></div>
+                    {
+                        Object.keys(groupedMessages).map((dateKey) => (
+                            <div key={dateKey}>
+                                <div className="flex items-center gap-4 my-8">
+                                    <div className="h-[1px] flex-1 bg-border"></div>
+                                    <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary">{dateKey}</span>
+                                    <div className="h-[1px] flex-1 bg-border"></div>
+                                </div>
+                                <div className="mb-6">
+                                    {groupedMessages[dateKey].map((msg: ChatMessage, index: number) => {
+                                        const isMine = msg.senderId === user?.uid;
+
+                                        // Grouping Logic
+                                        const nextMsg = groupedMessages[dateKey][index + 1];
+                                        const prevMsg = groupedMessages[dateKey][index - 1];
+
+                                        const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId ||
+                                            (nextMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
+                                                Math.abs(nextMsg.createdAt.toMillis() - msg.createdAt.toMillis()) > 60000); // 1 minute diff
+
+                                        const isFirstInGroup = !prevMsg || prevMsg.senderId !== msg.senderId ||
+                                            (prevMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
+                                                Math.abs(msg.createdAt.toMillis() - prevMsg.createdAt.toMillis()) > 60000);
+
+                                        const bubble = (
+                                            <MessageBubble
+                                                key={msg.id}
+                                                message={msg}
+                                                isMine={isMine}
+                                                senderName={isMine ? undefined : (userData?.partnerNickname || partnerData?.name || 'Partner')}
+                                                avatarUrl={isMine ? undefined : partnerData?.photoURL}
+                                                showProfile={!isMine && isFirstInGroup}
+                                                showTime={isLastInGroup}
+                                            />
+                                        );
+
+                                        return isMobile ? (
+                                            <MobileMessageItem
+                                                key={msg.id}
+                                                isMine={isMine}
+                                                onReply={() => handleDirectReply(msg)}
+                                                onReaction={() => { /* Reaction menu triggered via hold or double tap */ }}
+                                                onLongPress={() => handleContextMenu({ preventDefault: () => { }, touches: [{ clientX: 0, clientY: 0 }] } as any, msg)}
+                                            >
+                                                {bubble}
+                                            </MobileMessageItem>
+                                        ) : (
+                                            <DesktopMessageItem
+                                                key={msg.id}
+                                                isMine={isMine}
+                                                onReply={() => handleDirectReply(msg)}
+                                                onReaction={() => handleDirectReaction(msg, 'heart')}
+                                                onContextMenu={(e) => handleContextMenu(e, msg)}
+                                            >
+                                                {bubble}
+                                            </DesktopMessageItem>
+                                        );
+                                    })}
+                                </div>
                             </div>
-                            <div className="mb-6">
-                                {groupedMessages[dateKey].map((msg: ChatMessage, index: number) => {
-                                    const isMine = msg.senderId === user?.uid;
-
-                                    // Grouping Logic
-                                    const nextMsg = groupedMessages[dateKey][index + 1];
-                                    const prevMsg = groupedMessages[dateKey][index - 1];
-
-                                    const isLastInGroup = !nextMsg || nextMsg.senderId !== msg.senderId ||
-                                        (nextMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
-                                            Math.abs(nextMsg.createdAt.toMillis() - msg.createdAt.toMillis()) > 60000); // 1 minute diff
-
-                                    const isFirstInGroup = !prevMsg || prevMsg.senderId !== msg.senderId ||
-                                        (prevMsg.createdAt instanceof Timestamp && msg.createdAt instanceof Timestamp &&
-                                            Math.abs(msg.createdAt.toMillis() - prevMsg.createdAt.toMillis()) > 60000);
-
-                                    const bubble = (
-                                        <MessageBubble
-                                            key={msg.id}
-                                            message={msg}
-                                            isMine={isMine}
-                                            senderName={isMine ? undefined : (partnerData?.name || 'Partner')}
-                                            avatarUrl={isMine ? undefined : partnerData?.photoURL}
-                                            showProfile={!isMine && isFirstInGroup}
-                                            showTime={isLastInGroup}
-                                        />
-                                    );
-
-                                    return isMobile ? (
-                                        <MobileMessageItem
-                                            key={msg.id}
-                                            isMine={isMine}
-                                            onReply={() => handleDirectReply(msg)}
-                                            onReaction={() => { /* Reaction menu triggered via hold or double tap */ }}
-                                            onLongPress={() => handleContextMenu({ preventDefault: () => { }, touches: [{ clientX: 0, clientY: 0 }] } as any, msg)}
-                                        >
-                                            {bubble}
-                                        </MobileMessageItem>
-                                    ) : (
-                                        <DesktopMessageItem
-                                            key={msg.id}
-                                            isMine={isMine}
-                                            onReply={() => handleDirectReply(msg)}
-                                            onReaction={() => handleDirectReaction(msg, 'heart')}
-                                            onContextMenu={(e) => handleContextMenu(e, msg)}
-                                        >
-                                            {bubble}
-                                        </DesktopMessageItem>
-                                    );
-                                })}
-                            </div>
-                        </div>
-                    ))}
+                        ))
+                    }
 
                     {/* Typing Indicator Bubble */}
-                    {typingStatus && (
-                        <div className="flex flex-col items-start max-w-[85%] mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                            <div className="flex items-start gap-2">
-                                <div
-                                    className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 self-start"
-                                    style={{ backgroundImage: partnerData?.photoURL ? `url(${partnerData.photoURL})` : undefined }}
-                                />
-                                <div className="border border-border px-4 py-3 bg-background bubble-in rounded-2xl rounded-tl-sm">
-                                    <div className="flex gap-1">
-                                        <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                        <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                        <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce"></div>
+                    {
+                        typingStatus && (
+                            <div className="flex flex-col items-start max-w-[85%] mb-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                                <div className="flex items-start gap-2">
+                                    <div
+                                        className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 self-start"
+                                        style={{ backgroundImage: partnerData?.photoURL ? `url(${partnerData.photoURL})` : undefined }}
+                                    />
+                                    <div className="border border-border px-4 py-3 bg-background bubble-in rounded-2xl rounded-tl-sm">
+                                        <div className="flex gap-1">
+                                            <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                            <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                            <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce"></div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )
+                    }
 
                     <div ref={messagesEndRef} />
-                </main>
+                </main >
 
                 {/* Context Menu */}
-                {menuLocation && selectedMsg && (
-                    <ContextMenu
-                        x={menuLocation.x}
-                        y={menuLocation.y}
-                        onClose={() => setMenuLocation(null)}
-                        onReply={() => handleAction('reply')}
-                        onCopy={() => handleAction('copy')}
-                        onNotice={() => handleAction('notice')}
-                        onDelete={() => handleAction('delete')}
-                        onReaction={handleReaction}
-                        isMine={selectedMsg.senderId === user?.uid}
-                    />
-                )}
+                {
+                    menuLocation && selectedMsg && (
+                        <ContextMenu
+                            x={menuLocation.x}
+                            y={menuLocation.y}
+                            onClose={() => setMenuLocation(null)}
+                            onReply={() => handleAction('reply')}
+                            onCopy={() => handleAction('copy')}
+                            onNotice={() => handleAction('notice')}
+                            onDelete={() => handleAction('delete')}
+                            onReaction={handleReaction}
+                            isMine={selectedMsg.senderId === user?.uid}
+                        />
+                    )
+                }
 
                 {/* Footer Input */}
                 <footer className="fixed bottom-0 max-w-md w-full bg-background px-6 pb-10 pt-4 z-50 transition-colors duration-300">
@@ -556,7 +563,7 @@ export const ChatPage: React.FC = () => {
                     {replyTarget && (
                         <div className="flex items-center justify-between bg-secondary/50 p-2 rounded-t-lg border-b border-primary/20 mb-2">
                             <div className="flex flex-col text-[12px] border-l-2 border-primary pl-2">
-                                <span className="font-bold text-primary">{replyTarget.senderId === user?.uid ? '나' : (partnerData?.name || 'Partner')}에게 답장</span>
+                                <span className="font-bold text-primary">{replyTarget.senderId === user?.uid ? '나' : (userData?.partnerNickname || partnerData?.name || 'Partner')}에게 답장</span>
                                 <span className="text-text-secondary truncate max-w-[200px]">{replyTarget.text}</span>
                             </div>
                             <button onClick={() => setReplyTarget(null)}>
@@ -590,7 +597,7 @@ export const ChatPage: React.FC = () => {
                         </button>
                     </form>
                 </footer>
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };

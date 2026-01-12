@@ -8,6 +8,7 @@ export interface UserData {
     statusMessage?: string;
     emailProp?: string;
     hobbies?: string;
+    partnerNickname?: string; // My nickname for the partner
     mbti?: string;
     birthDate?: string;
     notionConfig?: { apiKey: string | null; databaseId: string | null };

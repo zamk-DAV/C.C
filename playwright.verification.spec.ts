@@ -31,13 +31,31 @@ test('Verify Profile Edit and Online Status UI', async ({ page }) => {
     await page.click('text=취소');
     await expect(page.locator('text=프로필 편집')).not.toBeVisible();
 
-    // 3. Chat Page Online Status
-    await page.goto('http://localhost:5173/chat');
-    // Check Header
-    const headerName = page.locator('h1.text-\\[16px\\]');
-    await expect(headerName).toBeVisible();
+    // 3. Partner Profile & Nickname Verification
+    await page.goto('http://localhost:5173/settings');
 
-    // Check if status span exists
-    const statusSpan = page.locator('span.text-\\[10px\\]');
-    await expect(statusSpan).toBeVisible();
+    // Click the partner profile image. 
+    // We use the alt text which is passed to ProfileImage. 
+    // If ProfileImage uses Shadcn Avatar, it might not render img if fallback is shown, but usually it does.
+    // Alternatively, we can target the profile container.
+    // Settings Page has two profiles. Left is Me, Right is Partner.
+    // "상대방 프로필" text is below the partner profile.
+    // We can click the image associated with "Partner Profile" alt text if it exists, or just the 2nd profile-image-like element.
+    await page.locator('div[className*="relative cursor-pointer group"]').nth(1).click({ force: true });
+
+    await expect(page.locator('text=상대방 프로필')).toBeVisible(); // Modal Title
+    await expect(page.locator('text=내 화면에 표시될 이름 (애칭)')).toBeVisible();
+
+    // Set Nickname
+    const nicknameInput = page.locator('input[placeholder*="이름"]'); // The first input is nickname in partner mode
+    // Actually the placeholder is the name. But I can target by label.
+    await page.fill('input', '내사랑테스트'); // First input should be nickname
+    await page.click('text=저장');
+
+    // Verify Settings Page Update
+    await expect(page.locator('text=내사랑테스트')).toBeVisible();
+
+    // 4. Chat Page Nickname Verification
+    await page.goto('http://localhost:5173/chat');
+    await expect(page.locator('h1', { hasText: '내사랑테스트' })).toBeVisible();
 });

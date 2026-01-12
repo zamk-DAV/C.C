@@ -28,6 +28,9 @@ export const SettingsPage: React.FC = () => {
     const [passcodeInput, setPasscodeInput] = useState('');
     const [passcodeError, setPasscodeError] = useState(false);
 
+    // 'ME' or 'PARTNER'
+    const [editTarget, setEditTarget] = useState<'ME' | 'PARTNER'>('ME');
+
     useEffect(() => {
         if (coupleData?.startDate) {
             setStartDate(coupleData.startDate);
@@ -270,7 +273,10 @@ export const SettingsPage: React.FC = () => {
                         <div
                             className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary relative cursor-pointer group"
                             style={userData?.photoURL ? { backgroundImage: `url(${userData.photoURL})` } : {}}
-                            onClick={() => setProfileEditOpen(true)}
+                            onClick={() => {
+                                setEditTarget('ME');
+                                setProfileEditOpen(true);
+                            }}
                         >
                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                                 <span className="material-symbols-outlined text-white">edit</span>
@@ -289,12 +295,23 @@ export const SettingsPage: React.FC = () => {
                     </div>
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary relative cursor-pointer group"
                             style={partnerData?.photoURL ? { backgroundImage: `url(${partnerData.photoURL})` } : {}}
-                        ></div>
+                            onClick={() => {
+                                if (!partnerData) return;
+                                setEditTarget('PARTNER');
+                                setProfileEditOpen(true);
+                            }}
+                        >
+                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <span className="material-symbols-outlined text-white">visibility</span>
+                            </div>
+                        </div>
                         <div className="text-center">
                             <p className="text-text-secondary text-xs font-medium uppercase tracking-widest opacity-50 font-sans">상대방 프로필</p>
-                            <p className="text-primary text-base font-bold font-sans">{partnerData?.name || '기다리는 중'}</p>
+                            <p className="text-primary text-base font-bold font-sans">
+                                {userData?.partnerNickname || partnerData?.name || '기다리는 중'}
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -468,11 +485,14 @@ export const SettingsPage: React.FC = () => {
             )}
 
             {/* Profile Edit Modal */}
-            {userData && (
+            {isProfileEditOpen && userData && (
                 <ProfileEditModal
-                    isOpen={profileEditOpen}
+                    isOpen={isProfileEditOpen}
                     onClose={() => setProfileEditOpen(false)}
-                    userData={userData}
+                    userData={editTarget === 'ME' ? userData : (partnerData as any)}
+                    isPartner={editTarget === 'PARTNER'}
+                    myUid={userData.uid}
+                    initialNickname={userData.partnerNickname}
                 />
             )}
         </div>
