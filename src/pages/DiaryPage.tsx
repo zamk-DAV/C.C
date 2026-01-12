@@ -9,7 +9,7 @@ import FeedWriteModal from '../components/home/FeedWriteModal';
 
 export const DiaryPage: React.FC = () => {
     const { user, userData } = useAuth();
-    const { diaryData, hasMore, loadMore, refreshData, isLoading } = useNotion();
+    const { diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
 
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
@@ -170,10 +170,10 @@ export const DiaryPage: React.FC = () => {
                     </section>
                 ))}
 
-                {hasMore && (
+                {hasMoreDiary && (
                     <div className="flex justify-center py-6">
                         <button
-                            onClick={() => loadMore()}
+                            onClick={() => loadMoreDiary()}
                             disabled={isLoading}
                             className="text-xs font-medium text-gray-400 hover:text-black dark:hover:text-white transition-colors"
                         >

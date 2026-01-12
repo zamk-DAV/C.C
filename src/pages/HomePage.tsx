@@ -13,16 +13,16 @@ import { format, differenceInMinutes, differenceInHours, differenceInDays } from
 
 export const HomePage: React.FC = () => {
     const { user, userData, partnerData, loading } = useAuth();
-    const { diaryData, hasMore, loadMore, refreshData, isLoading: notionLoading } = useNotion();
+    const { memoryData, hasMoreMemory, loadMoreMemory, refreshData, isLoading: notionLoading } = useNotion();
     const navigate = useNavigate();
 
     // Latest Message State
     const [latestMessage, setLatestMessage] = useState<ChatMessage | null>(null);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
-    // Transform diaryData for MemoryFeed
+    // Transform memoryData for MemoryFeed
     const memories = useMemo<MemoryItem[]>(() => {
-        return diaryData.map(item => ({
+        return memoryData.map(item => ({
             id: item.id,
             type: ((item.images && item.images.length > 0) || item.coverImage ? 'image' : 'quote') as 'image' | 'quote',
             imageUrl: item.coverImage || undefined,
@@ -32,7 +32,7 @@ export const HomePage: React.FC = () => {
             date: item.date,
             images: item.images
         }));
-    }, [diaryData]);
+    }, [memoryData]);
 
     // Dynamic Time Formatter
     const formatTime = (dateString?: any) => {
@@ -91,8 +91,8 @@ export const HomePage: React.FC = () => {
     }, [user?.uid, userData?.coupleId]);
 
     const handleLoadMore = () => {
-        if (hasMore && !notionLoading) {
-            loadMore();
+        if (hasMoreMemory && !notionLoading) {
+            loadMoreMemory();
         }
     };
 
@@ -173,7 +173,7 @@ export const HomePage: React.FC = () => {
 
                     <MemoryFeed
                         items={memories}
-                        hasMore={hasMore}
+                        hasMore={hasMoreMemory}
                         onLoadMore={handleLoadMore}
                     />
 
