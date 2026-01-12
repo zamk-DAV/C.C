@@ -48,11 +48,13 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }, []);
 
     // 2. Sync with Firestore (User Data) - Priority over LocalStorage if changed elsewhere
+    const firestoreTheme = userData?.theme;
     useEffect(() => {
-        if (userData?.theme && userData.theme !== theme) {
-            applyTheme(userData.theme as ThemeName);
+        if (firestoreTheme && firestoreTheme !== theme) {
+            applyTheme(firestoreTheme as ThemeName);
         }
-    }, [userData]);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [firestoreTheme]);
 
     const applyTheme = (newTheme: ThemeName) => {
         const root = document.documentElement;
