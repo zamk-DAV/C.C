@@ -352,6 +352,32 @@ export const ChatPage: React.FC = () => {
         setReplyTarget(msg);
     };
 
+    const handleDirectReaction = async (msg: ChatMessage, emoji: string) => {
+        if (!coupleData?.id || !user) return;
+
+        const msgRef = doc(db, 'couples', coupleData.id, 'messages', msg.id);
+        const currentReactions = msg.reactions || {};
+        const userIds = currentReactions[emoji] || [];
+
+        let newIds;
+        if (userIds.includes(user.uid)) {
+            newIds = userIds.filter(id => id !== user.uid);
+        } else {
+            newIds = [...userIds, user.uid];
+        }
+
+        const newReactions = {
+            ...currentReactions,
+            [emoji]: newIds
+        };
+
+        if (newIds.length === 0) {
+            delete newReactions[emoji];
+        }
+
+        await updateDoc(msgRef, { reactions: newReactions });
+    };
+
 
 
     // Group messages by date
@@ -468,7 +494,7 @@ export const ChatPage: React.FC = () => {
                                             key={msg.id}
                                             isMine={isMine}
                                             onReply={() => handleDirectReply(msg)}
-                                            onReaction={() => { /* Desktop reaction trigger if specific */ }}
+                                            onReaction={() => handleDirectReaction(msg, 'heart')}
                                             onContextMenu={(e) => handleContextMenu(e, msg)}
                                         >
                                             {bubble}

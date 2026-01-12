@@ -136,7 +136,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 </div>
                             ) : (
                                 <div className={cn(
-                                    "px-3.5 py-2.5 rounded-2xl break-all whitespace-pre-wrap text-[14px] leading-normal",
+                                    "px-3.5 py-2.5 rounded-2xl break-words whitespace-pre-wrap text-[14px] leading-normal",
                                     isMine ? "bg-primary text-background rounded-tr-sm" : "border border-border bg-background text-primary rounded-tl-sm"
                                 )}>
                                     {msg.text}
