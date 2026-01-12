@@ -1,18 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { format, parseISO, isValid } from 'date-fns';
-import { doc, onSnapshot } from 'firebase/firestore';
+import React, { useState, useEffect, useMemo } from 'react';
+import { format, parseISO, isValid, getWeek, getYear } from 'date-fns';
+import { doc, onSnapshot, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { fetchNotionData, deleteDiaryEntry, type NotionItem } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
-import FeedWriteModal from '../components/home/FeedWriteModal'; // Assuming we can reuse this or import it
+import FeedWriteModal from '../components/home/FeedWriteModal';
 
 export const DiaryPage: React.FC = () => {
-    const { userData } = useAuth();
+    const { user, userData } = useAuth();
+    const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [items, setItems] = useState<NotionItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+    // Pagination state
     const [hasMore, setHasMore] = useState(false);
     const [nextCursor, setNextCursor] = useState<string | null>(null);
-    const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
     // Initial Load
     useEffect(() => {
@@ -23,21 +25,23 @@ export const DiaryPage: React.FC = () => {
         }
     }, [userData?.notionConfig]);
 
-    // Real-time Sync Trigger
+    // Real-time Sync Trigger & Last Checked Update
     useEffect(() => {
-        if (userData?.coupleId) {
+        if (user && userData?.coupleId) {
+            // Update lastCheckedDiary on mount
+            const userRef = doc(db, 'users', user.uid);
+            updateDoc(userRef, { lastCheckedDiary: serverTimestamp() }).catch(console.error);
+
             const coupleRef = doc(db, 'couples', userData.coupleId);
             const unsubscribe = onSnapshot(coupleRef, (docSnap) => {
-                // If timestamp changes, reload
-                // For now, just reload on any change or specifically if 'lastUpdate' field exists
-                // We'll simplisticly reload if we already have data to avoid double fetch on mount
                 if (docSnap.exists() && !loading && items.length > 0) {
+                    // Simplified reload logic
                     loadDiary();
                 }
             });
             return () => unsubscribe();
         }
-    }, [userData?.coupleId, loading]);
+    }, [userData?.coupleId, loading]); // Simplified deps
 
     const loadDiary = async (isLoadMore = false) => {
         try {
@@ -60,10 +64,9 @@ export const DiaryPage: React.FC = () => {
     };
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
-        e.stopPropagation(); // Prevent card click
+        e.stopPropagation();
         if (!window.confirm("정말 이 추억을 삭제하시겠습니까? (Notion에서 아카이브됩니다)")) return;
 
-        // Optimistic update
         const oldItems = [...items];
         setItems(prev => prev.filter(i => i.id !== id));
 
@@ -72,14 +75,8 @@ export const DiaryPage: React.FC = () => {
         } catch (error) {
             console.error("Delete failed:", error);
             alert("삭제에 실패했습니다.");
-            setItems(oldItems); // Revert
+            setItems(oldItems);
         }
-    };
-
-    const handleEdit = (id: string, e: React.MouseEvent) => {
-        e.stopPropagation();
-        console.log("Edit requested for:", id);
-        alert("수정 기능은 준비 중입니다!");
     };
 
     const handleCreateSuccess = () => {
@@ -87,160 +84,160 @@ export const DiaryPage: React.FC = () => {
         setIsWriteModalOpen(false);
     };
 
-    // Sort by Date Descending
-    const sortedItems = [...items].sort((a, b) => {
-        return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
+    // Group items by week
+    const groupedItems = useMemo(() => {
+        const sorted = [...items].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const groups: { [key: string]: NotionItem[] } = {};
+
+        sorted.forEach(item => {
+            if (!item.date) return;
+            const date = parseISO(item.date);
+            if (!isValid(date)) return;
+
+            const year = getYear(date);
+            const week = getWeek(date);
+            const key = `${year} Week ${week}`;
+
+            if (!groups[key]) groups[key] = [];
+
+            // Filter Logic (Client-side for now)
+            // Assuming we determine 'me' vs 'partner' via author field
+            const isMe = item.author === '나' || item.author === userData?.name; // Improve check
+
+            if (filter === 'all') groups[key].push(item);
+            else if (filter === 'me' && isMe) groups[key].push(item);
+            else if (filter === 'partner' && !isMe) groups[key].push(item);
+        });
+
+        // Remove empty groups
+        Object.keys(groups).forEach(key => {
+            if (groups[key].length === 0) delete groups[key];
+        });
+
+        return groups;
+    }, [filter, items, userData]);
 
     if (loading && items.length === 0) {
         return <div className="min-h-screen flex items-center justify-center bg-background-light dark:bg-background-dark text-text-muted">Loading...</div>;
     }
 
     return (
-        <div className="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-white antialiased min-h-screen flex flex-col pb-24">
-            {/* Header Area */}
-            <header className="bg-background-light dark:bg-background-dark pt-12 pb-2 px-6 sticky top-0 z-10">
-                <div className="flex items-center justify-between mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight uppercase font-display">Archive / Diary</h1>
-                    {/* Menu Icon */}
-                    <button className="text-text-main dark:text-white p-2 -mr-2 rounded-full hover:bg-surface-light dark:hover:bg-surface-dark transition-colors">
-                        <span className="material-symbols-outlined text-3xl">drag_handle</span>
-                    </button>
+        <div className="bg-background-light dark:bg-background-dark text-text-main dark:text-white font-sans antialiased pb-28 min-h-screen">
+            <header className="sticky top-0 z-50 bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md border-b border-gray-100 dark:border-gray-800 transition-colors duration-300">
+                <div className="max-w-md mx-auto px-5 h-14 flex items-center justify-between">
+                    <h1 className="text-xl font-bold tracking-tight text-black dark:text-white">일기장</h1>
+                    <div className="flex items-center space-x-3">
+                        <button
+                            className="p-2 -mr-2 text-gray-400 hover:text-black dark:hover:text-white transition-colors"
+                            onClick={() => setIsWriteModalOpen(true)}
+                        >
+                            <span className="material-symbols-outlined text-2xl">add</span>
+                        </button>
+                    </div>
                 </div>
-                {/* Minimalist Filters */}
-                <div className="flex gap-8 border-b border-gray-100 dark:border-gray-800 pb-4">
-                    <button className="relative group">
-                        <span className="text-sm font-bold text-text-main dark:text-white">전체</span>
-                        <span className="absolute -bottom-4 left-0 w-full h-0.5 bg-text-main dark:bg-white"></span>
-                    </button>
-                    {/* Placeholder Filters */}
-                    <button className="relative group opacity-50 cursor-not-allowed">
-                        <span className="text-sm font-medium text-text-muted">나</span>
-                    </button>
-                    <button className="relative group opacity-50 cursor-not-allowed">
-                        <span className="text-sm font-medium text-text-muted">상대방</span>
-                    </button>
+                <div className="max-w-md mx-auto px-5 pb-4">
+                    <div className="flex space-x-1 p-1 bg-gray-100 dark:bg-zinc-800 rounded-lg">
+                        <button
+                            onClick={() => setFilter('all')}
+                            className={`flex-1 py-1.5 text-xs font-semibold rounded-[4px] shadow-sm transition-all ${filter === 'all' ? 'bg-white dark:bg-zinc-700 text-black dark:text-white border border-gray-200 dark:border-zinc-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                        >
+                            전체
+                        </button>
+                        <button
+                            onClick={() => setFilter('me')}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-[4px] transition-all ${filter === 'me' ? 'bg-white dark:bg-zinc-700 text-black dark:text-white border border-gray-200 dark:border-zinc-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                        >
+                            나
+                        </button>
+                        <button
+                            onClick={() => setFilter('partner')}
+                            className={`flex-1 py-1.5 text-xs font-medium rounded-[4px] transition-all ${filter === 'partner' ? 'bg-white dark:bg-zinc-700 text-black dark:text-white border border-gray-200 dark:border-zinc-600' : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'}`}
+                        >
+                            상대방
+                        </button>
+                    </div>
                 </div>
             </header>
 
-            {/* Main Scrollable Content */}
-            <main className="flex-1 overflow-y-auto no-scrollbar px-6">
-                <div className="h-6"></div>
+            <main className="max-w-md mx-auto px-5 pt-6 space-y-10">
+                {Object.entries(groupedItems).map(([weekKey, weekItems]) => (
+                    <section key={weekKey}>
+                        <div className="flex items-center space-x-2 mb-4 group cursor-pointer select-none">
+                            <div className="w-5 h-5 flex items-center justify-center rounded hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                                <span className="material-symbols-outlined text-gray-400 dark:text-gray-500 text-sm transform transition-transform group-hover:text-gray-600 dark:group-hover:text-gray-300 rotate-90">play_arrow</span>
+                            </div>
+                            <h2 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">{weekKey}</h2>
+                            <div className="h-px bg-gray-100 dark:bg-zinc-800 flex-grow ml-2"></div>
+                        </div>
 
-                {sortedItems.map((item) => {
-                    const date = parseISO(item.date);
-                    const dateStr = isValid(date) ? format(date, 'MM.dd') : '--.--';
-                    const hasImage = item.images && item.images.length > 0;
-                    const coverImage = hasImage ? item.images![0] : null;
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
+                            {weekItems.map((item) => {
+                                const date = parseISO(item.date);
+                                const hasImage = item.images && item.images.length > 0;
+                                const coverImage = hasImage ? item.images![0] : null;
 
-                    // Mixed Layout: Visual Card if image exists, Text Row otherwise
-                    if (hasImage && coverImage) {
-                        return (
-                            <div key={item.id} className="py-8">
-                                <div className="relative w-full aspect-[4/5] rounded-2xl overflow-hidden shadow-sm group">
-                                    {/* Image with B&W Filter */}
-                                    <div
-                                        className="absolute inset-0 bg-cover bg-center transition-all duration-500 hover:grayscale-0 active:grayscale-0 grayscale"
-                                        style={{ backgroundImage: `url('${coverImage}')` }}
-                                    ></div>
+                                return (
+                                    <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => {/* Open Detail? */ }}>
+                                        <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-gray-50 dark:bg-zinc-800 border border-transparent dark:border-zinc-700">
+                                            {coverImage ? (
+                                                <div
+                                                    className="w-full h-full bg-cover bg-center transition-all duration-500 grayscale group-hover:grayscale-0 group-active:grayscale-0"
+                                                    style={{ backgroundImage: `url('${coverImage}')` }}
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-zinc-800 text-gray-300">
+                                                    <span className="material-symbols-outlined text-4xl">image</span>
+                                                </div>
+                                            )}
 
-                                    {/* Overlay Gradient */}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none"></div>
-
-                                    {/* Action Buttons (Edit/Delete) - Absolute Top Right */}
-                                    <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                                        <button
-                                            onClick={(e) => handleEdit(item.id, e)}
-                                            className="p-2 bg-black/40 backdrop-blur-md rounded-full text-white hover:bg-black/60 transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined text-[18px]">edit</span>
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(item.id, e)}
-                                            className="p-2 bg-black/40 backdrop-blur-md rounded-full text-red-300 hover:bg-black/60 transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined text-[18px]">delete</span>
-                                        </button>
-                                    </div>
-
-                                    {/* Content Overlay */}
-                                    <div className="absolute bottom-0 left-0 w-full p-6 text-white flex flex-col items-start pointer-events-none">
-                                        <div className="text-xs font-bold tracking-widest mb-2 opacity-80 font-display">{dateStr}</div>
-                                        <h2 className="font-serif text-3xl font-normal leading-snug mb-4">{item.title}</h2>
-
-                                        <div className="flex items-center gap-4 text-white/80">
-                                            {/* Mock Stats */}
-                                            <div className="flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-[18px]">favorite</span>
-                                                <span className="text-xs font-medium">0</span>
-                                            </div>
+                                            {/* Trash Icon for Deletion (Hover only) */}
+                                            <button
+                                                onClick={(e) => handleDelete(item.id, e)}
+                                                className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
+                                            >
+                                                <span className="material-symbols-outlined text-[14px]">delete</span>
+                                            </button>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    } else {
-                        // Text Entry
-                        return (
-                            <div key={item.id} className="group flex items-baseline justify-between py-5 border-b border-dashed border-gray-200 dark:border-gray-800 relative hover:bg-surface-light dark:hover:bg-surface-dark/10 transition-colors -mx-2 px-2 rounded-lg">
-                                <div className="text-sm font-bold text-text-main dark:text-white w-16 shrink-0 font-display">{dateStr}</div>
-                                <div className="flex flex-col items-end flex-1 gap-1 min-w-0">
-                                    <h3 className="font-serif text-xl text-text-main dark:text-white leading-tight text-right truncate w-full">
-                                        {item.title}
-                                    </h3>
 
-                                    {/* Action Buttons (Edit/Delete) - Reveal on Hover */}
-                                    <div className="flex items-center gap-3 mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button
-                                            onClick={(e) => handleEdit(item.id, e)}
-                                            className="text-text-muted hover:text-text-main transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">edit</span>
-                                        </button>
-                                        <button
-                                            onClick={(e) => handleDelete(item.id, e)}
-                                            className="text-text-muted hover:text-red-500 transition-colors"
-                                        >
-                                            <span className="material-symbols-outlined text-[16px]">delete</span>
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    }
-                })}
+                                        <div className="space-y-1.5 px-0.5">
+                                            <div className="flex items-center justify-between">
+                                                <time className="text-[11px] font-bold text-black dark:text-white uppercase tracking-wide">
+                                                    {isValid(date) ? format(date, 'yyyy년 M월 d일') : item.date}
+                                                </time>
+                                                {/* Dot indicator, maybe for author? */}
+                                                <span className={`w-1.5 h-1.5 rounded-full opacity-50 ${item.author === 'Me' ? 'bg-blue-500' : 'bg-red-500'}`}></span>
+                                            </div>
+                                            <p className="text-[13px] text-gray-600 dark:text-gray-400 font-serif leading-snug line-clamp-2">
+                                                {item.title || item.previewText}
+                                            </p>
+                                        </div>
+                                    </article>
+                                );
+                            })}
+                        </div>
+                    </section>
+                ))}
 
                 {hasMore && (
                     <div className="flex justify-center py-6">
                         <button
                             onClick={() => loadDiary(true)}
                             disabled={loading}
-                            className="bg-white dark:bg-gray-800 text-text-main dark:text-white px-6 py-2 rounded-full shadow-sm hover:shadow-md transition-shadow font-display text-sm font-medium disabled:opacity-50"
+                            className="text-xs font-medium text-gray-400 hover:text-black dark:hover:text-white transition-colors"
                         >
-                            {loading ? 'Loading...' : 'Load More'}
+                            {loading ? '불러오는 중...' : '더 보기'}
                         </button>
                     </div>
                 )}
-
-                <div className="h-10"></div>
             </main>
 
-            {/* Floating Action Button */}
-            <div className="fixed bottom-24 right-6 z-20">
-                <button
-                    onClick={() => setIsWriteModalOpen(true)}
-                    className="flex items-center justify-center size-14 rounded-full bg-text-main dark:bg-primary shadow-xl hover:scale-105 active:scale-95 transition-transform group text-white"
-                >
-                    <span className="material-symbols-outlined text-3xl font-light">add</span>
-                </button>
-            </div>
-
-            {/* Write Modal - Using existing component if possible */}
-            <FeedWriteModal
-                isOpen={isWriteModalOpen}
-                onClose={() => setIsWriteModalOpen(false)}
-                onSuccess={handleCreateSuccess}
-            />
+            {isWriteModalOpen && (
+                <FeedWriteModal
+                    isOpen={isWriteModalOpen}
+                    onClose={() => setIsWriteModalOpen(false)}
+                    onSuccess={handleCreateSuccess}
+                />
+            )}
         </div>
     );
 };

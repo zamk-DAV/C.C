@@ -91,16 +91,17 @@ export const HomePage: React.FC = () => {
 
     const loadMemories = async (cursor?: string) => {
         try {
-            const result = await fetchNotionData('Memory', cursor, 5); // Limit 5 items
+            // Changed filter from 'Memory' to 'Diary' to match the "Archive / Diary" title and user's intent
+            const result = await fetchNotionData('Diary', cursor, 5);
             const newItems = result.data.map(item => ({
                 id: item.id,
-                type: item.coverImage ? 'image' : 'quote',
+                type: (item.images && item.images.length > 0) || item.coverImage ? 'image' : 'quote',
                 imageUrl: item.coverImage || undefined,
                 quote: item.previewText || 'No content',
                 title: item.title,
-                subtitle: item.date,
-                date: item.date, // Keep original date for badge check
-                images: item.images // Pass images
+                subtitle: item.previewText || '',
+                date: item.date,
+                images: item.images // Pass the images array
             }));
 
             if (cursor) {
