@@ -141,10 +141,27 @@ export const HomePage: React.FC = () => {
         }
     };
 
+    const partnerName = partnerData?.name || "Partner";
+
+    // Check for NEW Feed items
+    const hasNewMemories = useMemo(() => {
+        if (!memories.length) return false;
+        if (!userData?.lastCheckedFeed) return true; // Never checked before
+
+        const lastChecked = userData.lastCheckedFeed.toDate ? userData.lastCheckedFeed.toDate() : new Date(userData.lastCheckedFeed);
+        const latestItemDate = new Date(memories[0].date);
+
+        return latestItemDate > lastChecked;
+    }, [memories, userData?.lastCheckedFeed]);
+
+    // Recent Message Logic
+    const displayMessage = latestMessage ? latestMessage.text : "아직 대화가 없습니다.";
+    const displaySender = latestMessage ? (latestMessage.senderId === user?.uid ? '나' : partnerName) : "";
+    const displayTime = latestMessage?.createdAt ? formatTime(latestMessage.createdAt) : "";
+    const hasUnreadMessages = (userData?.unreadCount || 0) > 0;
+
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
     if (!user) return null;
-
-    const partnerName = partnerData?.name || "Partner";
 
     // If not connected, show the splash screen
     if (!userData?.coupleId) {
@@ -161,42 +178,6 @@ export const HomePage: React.FC = () => {
             </div>
         );
     }
-
-    // Check for NEW Feed items
-    const hasNewMemories = useMemo(() => {
-        if (!memories.length) return false;
-        if (!userData.lastCheckedFeed) return true; // Never checked before
-
-        const lastChecked = userData.lastCheckedFeed.toDate ? userData.lastCheckedFeed.toDate() : new Date(userData.lastCheckedFeed);
-        // Assuming memories are sorted by date desc
-        // The endpoint fetchNotionData returns sorted items? Usually yes.
-        // Let's check the first item's date. The item.date is string "YYYY-MM-DD" usually from Notion.
-        // We might need to be careful if it's just date string.
-        // But assuming NotionItem.date is the relevant timestamp equivalent.
-        // Actually, Notion only gives date string "2023-10-24".
-        // Comparing date string "2023-10-24" vs timestamp...
-        // If lastChecked is today, and item is today...
-        // Let's just compare if item date > usedData.lastCheckedFeed date part.
-
-        const latestItemDate = new Date(memories[0].date); // parseISO logic
-        // Reset time to 00:00:00 for item date (since it's YYYY-MM-DD)
-        // And lastChecked might include time.
-        // If I checked YESTERDAY, lastChecked < TODAY.
-        // NEW should show if latestItemDate >= lastChecked status? No, >.
-        // Let's rely on serverTimestamp() vs string date.
-        // Ideally we need created_time from Notion, but we only have `date` property mapped.
-        // Let's use `latestItemDate` at 00:00 vs `lastChecked`. 
-
-        return latestItemDate > lastChecked;
-    }, [memories, userData.lastCheckedFeed]);
-
-    // Recent Message Logic
-    // If no messages yet, show default? Or hidden?
-    // Current UI shows hardcoded. Let's start with a fallback if no message.
-    const displayMessage = latestMessage ? latestMessage.text : "아직 대화가 없습니다.";
-    const displaySender = latestMessage ? (latestMessage.senderId === user.uid ? '나' : partnerName) : "";
-    const displayTime = latestMessage?.createdAt ? formatTime(latestMessage.createdAt) : "";
-    const hasUnreadMessages = (userData.unreadCount || 0) > 0;
 
     return (
         <div className="min-h-screen bg-background pb-24 transition-colors duration-300">
