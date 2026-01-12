@@ -205,17 +205,6 @@ export const HomePage: React.FC = () => {
                         </div>
                     )}
 
-                    {/* Feed Section Divider & Header */}
-                    <div className="px-6 py-6 mt-4">
-                        <div className="h-px w-full bg-border/50 mb-8"></div>
-                        <div className="flex items-center justify-between">
-                            <h2 className="text-xl font-bold tracking-tight uppercase font-display text-text-main dark:text-white">Archive / Diary</h2>
-                            <button className="text-text-secondary hover:text-primary transition-colors">
-                                <span className="material-symbols-outlined">filter_list</span>
-                            </button>
-                        </div>
-                    </div>
-
                     <MemoryFeed
                         items={memories}
                         hasMore={hasMore}
