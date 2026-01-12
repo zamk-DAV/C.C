@@ -50,10 +50,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const userRef = doc(db, 'users', firebaseUser.uid);
 
                 unsubscribeUser = onSnapshot(userRef, (docSnap) => {
-                    console.log("[Auth] Firestore response received:", docSnap.exists());
                     if (docSnap.exists()) {
                         const data = docSnap.data() as UserData;
-                        console.log("[Auth] userData loaded, coupleId:", data.coupleId);
                         setUserData(data);
 
                         // LOCK LOGIC: If passcode exists and app hasn't been unlocked yet
@@ -65,12 +63,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         }
 
                         if (!data.coupleId) {
-                            console.log("[Auth] No coupleId, ending loading");
                             setLoading(false);
-                            setCoupleData(null); // Reset couple data if disconnected
+                            setCoupleData(null);
                         }
                     } else {
-                        console.log("[Auth] User document does not exist");
                         setUserData(null);
                         setLoading(false);
                     }

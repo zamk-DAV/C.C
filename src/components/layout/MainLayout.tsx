@@ -42,7 +42,11 @@ export const MainLayout = () => {
         };
 
         if (userData) {
-            checkNewDiary();
+            // Delay to avoid concurrent calls with HomePage's loadMemories
+            const timer = setTimeout(() => {
+                checkNewDiary();
+            }, 2000);
+            return () => clearTimeout(timer);
         }
         // Remove lastCheckedDiary from deps to prevent re-triggering on timestamp updates
         // eslint-disable-next-line react-hooks/exhaustive-deps
