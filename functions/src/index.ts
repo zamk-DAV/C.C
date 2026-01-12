@@ -2,6 +2,7 @@ import * as functions from "firebase-functions";
 import * as admin from "firebase-admin";
 import axios from "axios";
 import * as cors from "cors";
+import * as FormData from "form-data";
 
 admin.initializeApp();
 
@@ -164,17 +165,21 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const { apiKey, databaseId } = userData.notionConfig;
             const { content, images } = req.body; // images: { base64: string, type: string }[]
 
-            // 1. Upload Images to Notion
+            // 1. Upload Images to Notion (Method: v1/file_uploads/{id}/send)
             const uploadedFiles = [];
             if (images && images.length > 0) {
-                console.log(`Processing ${images.length} images...`);
+                console.log(`Processing ${images.length} images via /send endpoint...`);
                 for (const img of images) {
                     try {
+                        const buffer = Buffer.from(img.base64.split(",")[1], 'base64');
+                        console.log(`Preparing upload: ${img.name}, Size: ${buffer.length} bytes`);
+
+                        // 1. Init Upload
                         const initRes = await axios.post(
                             "https://api.notion.com/v1/file_uploads",
                             {
                                 content_type: img.type,
-                                content_length: img.size
+                                content_length: buffer.length
                             },
                             {
                                 headers: {
@@ -185,28 +190,45 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                             }
                         );
 
-                        const { signed_put_url, url, file_upload } = initRes.data;
-
-                        if (!signed_put_url || !file_upload || !file_upload.id) {
-                            console.error("Failed to get upload URL or ID. Response:", initRes.data);
-                            throw new Error("Invalid response from Notion file_uploads");
+                        const { file_upload } = initRes.data;
+                        if (!file_upload || !file_upload.id) {
+                            throw new Error("Failed to get file_upload ID");
                         }
 
-                        // Upload File
-                        const buffer = Buffer.from(img.base64.split(",")[1], 'base64');
-                        await axios.put(signed_put_url, buffer, {
-                            headers: { "Content-Type": img.type }
+                        const fileId = file_upload.id;
+                        console.log(`Initialized file ID: ${fileId}`);
+
+                        // 2. Send Content (POST .../send)
+                        const form = new FormData();
+                        form.append("file", buffer, {
+                            filename: img.name || "image.png",
+                            contentType: img.type
                         });
+
+                        await axios.post(
+                            `https://api.notion.com/v1/file_uploads/${fileId}/send`,
+                            form,
+                            {
+                                headers: {
+                                    ...form.getHeaders(),
+                                    "Authorization": `Bearer ${apiKey}`,
+                                    "Notion-Version": "2022-06-28"
+                                }
+                            }
+                        );
 
                         uploadedFiles.push({
-                            url: url,
-                            id: file_upload.id,
+                            url: "", // Not returned by send, but we use ID anyway
+                            id: fileId,
                             name: img.name
                         });
-                        console.log(`Uploaded image ID: ${file_upload.id}`);
+                        console.log(`Successfully sent file content for ID: ${fileId}`);
 
-                    } catch (e) {
-                        console.error("Image upload step failed:", e);
+                    } catch (e: any) {
+                        console.error("Image upload step failed:", e.message || e);
+                        if (e.response) {
+                            console.error("Response data:", e.response.data);
+                        }
                         throw e;
                     }
                 }
