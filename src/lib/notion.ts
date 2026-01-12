@@ -74,6 +74,28 @@ export const createDiaryEntry = async (
     return await response.json();
 };
 
+const DELETE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/deleteDiaryEntry";
+
+export const deleteDiaryEntry = async (pageId: string) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+    const token = await user.getIdToken();
+
+    const response = await fetch(DELETE_DIARY_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ pageId })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to delete entry: ${response.statusText}`);
+    }
+    return await response.json();
+};
+
 export interface PaginatedNotionResponse {
     data: NotionItem[];
     hasMore: boolean;

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.validateNotionSchema = exports.searchNotionDatabases = exports.createDiaryEntry = exports.getNotionDatabase = void 0;
+exports.deleteDiaryEntry = exports.validateNotionSchema = exports.searchNotionDatabases = exports.createDiaryEntry = exports.getNotionDatabase = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios_1 = require("axios");
@@ -21,14 +21,24 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             const decodedToken = await admin.auth().verifyIdToken(tokenId);
             const uid = decodedToken.uid;
             const targetUserId = req.body.targetUserId || uid;
-            // 2. Fetch Notion Config from Firestore
+            // 2. Fetch Notion Config from Firestore (Couple > User Priority)
             const userDoc = await admin.firestore().collection("users").doc(targetUserId).get();
             const userData = userDoc.data();
-            if (!userData || !userData.notionConfig) {
-                res.status(404).send({ error: "Notion configuration not found for this user." });
-                return;
+            let apiKey, databaseId;
+            // 1. Try Shared Couple Config First (Priority)
+            if (userData === null || userData === void 0 ? void 0 : userData.coupleId) {
+                const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+                const coupleData = coupleDoc.data();
+                if (coupleData === null || coupleData === void 0 ? void 0 : coupleData.notionConfig) {
+                    apiKey = coupleData.notionConfig.apiKey;
+                    databaseId = coupleData.notionConfig.databaseId;
+                }
             }
-            const { apiKey, databaseId } = userData.notionConfig;
+            // 2. Fallback to Personal Config
+            if ((!apiKey || !databaseId) && (userData === null || userData === void 0 ? void 0 : userData.notionConfig)) {
+                apiKey = userData.notionConfig.apiKey;
+                databaseId = userData.notionConfig.databaseId;
+            }
             if (!apiKey || !databaseId) {
                 res.status(400).send({ error: "Incomplete Notion configuration." });
                 return;
@@ -124,11 +134,27 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             const uid = decodedToken.uid;
             const userDoc = await admin.firestore().collection("users").doc(uid).get();
             const userData = userDoc.data();
-            if (!userData || !userData.notionConfig) {
-                res.status(404).send({ error: "Configuration not found." });
+            let apiKey, databaseId;
+            // 1. Try Shared Couple Config First (Priority)
+            if (userData === null || userData === void 0 ? void 0 : userData.coupleId) {
+                const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+                const coupleData = coupleDoc.data();
+                if (coupleData === null || coupleData === void 0 ? void 0 : coupleData.notionConfig) {
+                    apiKey = coupleData.notionConfig.apiKey;
+                    databaseId = coupleData.notionConfig.databaseId;
+                    console.log(`[Config] Using Shared Couple Config for ${userData.coupleId}`);
+                }
+            }
+            // 2. Fallback to Personal Config
+            if ((!apiKey || !databaseId) && (userData === null || userData === void 0 ? void 0 : userData.notionConfig)) {
+                apiKey = userData.notionConfig.apiKey;
+                databaseId = userData.notionConfig.databaseId;
+                console.log("[Config] Using Personal User Config (Legacy)");
+            }
+            if (!apiKey || !databaseId) {
+                res.status(404).send({ error: "Configuration not found. Please check Settings." });
                 return;
             }
-            const { apiKey, databaseId } = userData.notionConfig;
             // Destructure new properties with defaults
             const { content, images, category = "일기", mood = "평온", sender = "나", date = new Date().toISOString().split('T')[0] } = req.body;
             // 1. Upload Images to Notion (Method: v1/file_uploads/{id}/send)
@@ -195,13 +221,28 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             // 2. Create Page (Header & Props ONLY)
             // We do separate steps to avoid 'Invalid URL' errors during page creation
             // if Notion validates block children strictly.
-            // 2. Create Page (With Required Properties)
+            // 2. Dynamic Title Property Lookup
+            // Fetch database schema to find the actual Title property name (it might not be "Name" or "제목")
+            console.log("Fetching database schema to find Title property...");
+            const dbSchemaRes = await axios_1.default.get(`https://api.notion.com/v1/databases/${databaseId}`, {
+                headers: {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Notion-Version": "2022-06-28",
+                },
+            });
+            const dbProperties = dbSchemaRes.data.properties;
+            let titlePropertyName = "Name"; // Default fallback
+            for (const key in dbProperties) {
+                if (dbProperties[key].type === "title") {
+                    titlePropertyName = key;
+                    break;
+                }
+            }
+            console.log(`Detected Title property name: "${titlePropertyName}"`);
+            // 3. Create Page (With Required Properties)
             console.log("Creating page with properties...");
-            // Construct Properties matching Dear23 Schema
-            // Speculative Fix: Using "제목" instead of "Name" based on Dear23 naming conventions.
-            // If this fails, the IMPROVED error handling below will tell us the real property name.
             const pageProperties = {
-                "제목": { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
+                [titlePropertyName]: { title: [{ text: { content: content ? content.slice(0, 20) : "Diary" } }] },
                 "dear23_날짜": { date: { start: date } },
                 "dear23_카테고리": { select: { name: category } },
                 "dear23_기분": { select: { name: mood } },
@@ -353,6 +394,7 @@ exports.validateNotionSchema = functions.https.onRequest((req, res) => {
                 "dear23_수정일시": { last_edited_time: {} },
                 // Diary
                 "dear23_대표이미지": { files: {} },
+                "dear23_이미지유무": { checkbox: {} },
                 "dear23_기분": { select: { options: [{ name: "행복", color: "yellow" }, { name: "슬픔", color: "blue" }, { name: "화남", color: "red" }, { name: "보통", color: "gray" }, { name: "평온", color: "default" }] } },
                 "dear23_날씨": { select: { options: [{ name: "맑음", color: "orange" }, { name: "흐림", color: "gray" }, { name: "비", color: "blue" }, { name: "눈", color: "default" }] } },
                 "dear23_상대방한마디": { rich_text: {} },
@@ -401,6 +443,58 @@ exports.validateNotionSchema = functions.https.onRequest((req, res) => {
         catch (error) {
             console.error("Error validating Notion schema:", ((_b = error.response) === null || _b === void 0 ? void 0 : _b.data) || error);
             res.status(500).send({ error: error.message, details: (_c = error.response) === null || _c === void 0 ? void 0 : _c.data });
+        }
+    });
+});
+exports.deleteDiaryEntry = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        var _a, _b;
+        const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+            const { pageId } = req.body;
+            if (!pageId) {
+                res.status(400).send({ error: "Page ID is required" });
+                return;
+            }
+            // Fetch Config
+            const userDoc = await admin.firestore().collection("users").doc(uid).get();
+            const userData = userDoc.data();
+            let apiKey, databaseId;
+            if (userData === null || userData === void 0 ? void 0 : userData.coupleId) {
+                const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+                const coupleData = coupleDoc.data();
+                if (coupleData === null || coupleData === void 0 ? void 0 : coupleData.notionConfig) {
+                    apiKey = coupleData.notionConfig.apiKey;
+                    databaseId = coupleData.notionConfig.databaseId;
+                }
+            }
+            if ((!apiKey || !databaseId) && (userData === null || userData === void 0 ? void 0 : userData.notionConfig)) {
+                apiKey = userData.notionConfig.apiKey;
+                databaseId = userData.notionConfig.databaseId;
+            }
+            if (!apiKey) {
+                res.status(404).send({ error: "Notion API Key not found" });
+                return;
+            }
+            // Call Notion API to Archive (Delete)
+            await axios_1.default.patch(`https://api.notion.com/v1/pages/${pageId}`, { archived: true }, {
+                headers: {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Notion-Version": "2022-06-28",
+                    "Content-Type": "application/json"
+                }
+            });
+            res.status(200).send({ success: true, message: "Entry deleted successfully" });
+        }
+        catch (error) {
+            console.error("Error deleting diary entry:", error);
+            res.status(500).send({ error: error.message, details: (_b = error.response) === null || _b === void 0 ? void 0 : _b.data });
         }
     });
 });

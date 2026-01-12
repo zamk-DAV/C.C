@@ -561,3 +561,67 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
         }
     });
 });
+
+export const deleteDiaryEntry = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            const { pageId } = req.body;
+            if (!pageId) {
+                res.status(400).send({ error: "Page ID is required" });
+                return;
+            }
+
+            // Fetch Config
+            const userDoc = await admin.firestore().collection("users").doc(uid).get();
+            const userData = userDoc.data();
+            let apiKey, databaseId;
+
+            if (userData?.coupleId) {
+                const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+                const coupleData = coupleDoc.data();
+                if (coupleData?.notionConfig) {
+                    apiKey = coupleData.notionConfig.apiKey;
+                    databaseId = coupleData.notionConfig.databaseId;
+                }
+            }
+
+            if ((!apiKey || !databaseId) && userData?.notionConfig) {
+                apiKey = userData.notionConfig.apiKey;
+                databaseId = userData.notionConfig.databaseId;
+            }
+
+            if (!apiKey) {
+                res.status(404).send({ error: "Notion API Key not found" });
+                return;
+            }
+
+            // Call Notion API to Archive (Delete)
+            await axios.patch(
+                `https://api.notion.com/v1/pages/${pageId}`,
+                { archived: true },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json"
+                    }
+                }
+            );
+
+            res.status(200).send({ success: true, message: "Entry deleted successfully" });
+
+        } catch (error: any) {
+            console.error("Error deleting diary entry:", error);
+            res.status(500).send({ error: error.message, details: error.response?.data });
+        }
+    });
+});

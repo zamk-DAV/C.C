@@ -21,9 +21,9 @@ export default {
                 "background-dark": "var(--bg-color)",  // alias (dynamic now)
             },
             fontFamily: {
-                "display": ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
-                "sans": ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "Malgun Gothic", "sans-serif"],
-                "serif": ["-apple-system", "BlinkMacSystemFont", "Apple SD Gothic Neo", "Malgun Gothic", "serif"],
+                "display": ["Plus Jakarta Sans", "sans-serif"],
+                "sans": ["Plus Jakarta Sans", "sans-serif"],
+                "serif": ["Playfair Display", "serif"],
             },
             borderRadius: {
                 "DEFAULT": "6px",
