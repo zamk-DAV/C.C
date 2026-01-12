@@ -151,8 +151,8 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                         });
                         // Fix: Response IS the file_upload object, not { file_upload: ... }
                         const fileData = initRes.data;
+                        console.log("File Init Response:", JSON.stringify(fileData));
                         if (!fileData || !fileData.id) {
-                            console.error("Invalid response from v1/file_uploads:", fileData);
                             throw new Error("Failed to get file_upload ID from Notion response");
                         }
                         const fileId = fileData.id;
@@ -163,8 +163,10 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                             filename: img.name || "image.png",
                             contentType: img.type
                         });
+                        const formHeaders = form.getHeaders();
                         await axios_1.default.post(`https://api.notion.com/v1/file_uploads/${fileId}/send`, form, {
-                            headers: Object.assign(Object.assign({}, form.getHeaders()), { "Authorization": `Bearer ${apiKey}`, "Notion-Version": "2022-06-28" })
+                            headers: Object.assign(Object.assign({}, formHeaders), { "Authorization": `Bearer ${apiKey}`, "Notion-Version": "2022-06-28", "Content-Length": form.getLengthSync() // Explicitly set length
+                             })
                         });
                         uploadedFiles.push({
                             url: "",
