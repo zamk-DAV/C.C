@@ -59,14 +59,6 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         onClose();
     };
 
-    const formatMonth = (m: number) => {
-        return format(new Date(2024, m - 1, 1), 'M월', { locale: ko });
-    };
-
-    const formatDay = (d: number) => {
-        return `${d}일`;
-    };
-
     return (
         <AnimatePresence>
             {isOpen && (

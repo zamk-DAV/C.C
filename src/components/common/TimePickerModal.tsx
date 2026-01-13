@@ -41,9 +41,6 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
         onClose();
     };
 
-    const formatHour = (h: number) => `${h}시`;
-    const formatMinute = (m: number) => `${m.toString().padStart(2, '0')}분`;
-
     // Calculate display time for preview
     const getDisplayTime = () => {
         const displayHour = hour.toString().padStart(2, '0');
