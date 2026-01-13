@@ -72,22 +72,17 @@ export const MailboxPage: React.FC = () => {
     return (
         <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-background font-display text-primary transition-colors duration-300 border-x border-border">
 
-            {/* Editorial Header */}
-            <header className="flex items-center px-6 pt-8 pb-4 justify-between sticky top-0 bg-background z-10">
-                <div className="flex flex-col">
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary mb-1">
-                        EDITION NO. {editionNumber}
-                    </span>
-                    <h2 className="text-primary text-2xl font-bold leading-tight tracking-tight uppercase italic">
-                        VOL. 01 / INBOX
-                    </h2>
+            {/* Header */}
+            <header className="sticky top-0 z-10 flex flex-col bg-background/95 backdrop-blur-md transition-colors duration-300">
+                <div className="flex items-center px-6 pt-6 pb-2 justify-between">
+                    <div
+                        onClick={() => navigate(-1)}
+                        className="flex size-10 shrink-0 items-center justify-start text-primary cursor-pointer"
+                    >
+                        <span className="material-symbols-outlined">arrow_back_ios</span>
+                    </div>
+                    <h2 className="text-primary text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">우편함</h2>
                 </div>
-                <button
-                    onClick={() => navigate(-1)}
-                    className="p-2 border border-primary rounded-full flex items-center justify-center hover:bg-secondary transition-colors"
-                >
-                    <span className="material-symbols-outlined text-[18px]">arrow_back</span>
-                </button>
             </header>
 
             {/* Segmented Tab System */}
