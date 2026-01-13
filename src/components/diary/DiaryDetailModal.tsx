@@ -58,8 +58,6 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
         }
     }, [currentImageIndex, images.length, onClose]);
 
-    if (!item) return null;
-
     // Download image
     const handleDownload = async () => {
         if (images.length === 0) return;
@@ -81,6 +79,8 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
             window.open(imageUrl, '_blank');
         }
     };
+
+    if (!item) return null;
 
     return (
         <AnimatePresence>

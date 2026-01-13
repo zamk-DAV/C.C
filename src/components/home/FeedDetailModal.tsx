@@ -58,7 +58,8 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
         setDragDirection(null);
     }, [currentImageIndex, images.length, onClose]);
 
-    if (!item) return null;
+    // Move this check to allow all hooks to run first
+    // if (!item) return null; // Removed from here
 
     const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (!dragDirection) {
@@ -69,6 +70,8 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
             }
         }
     }, [dragDirection]);
+
+    if (!item) return null;
 
     // Download image
     const handleDownload = async () => {
