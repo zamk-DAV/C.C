@@ -142,7 +142,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
             {isOpen && (
                 <>
                     {/* Backdrop */}
-                    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]" onClick={onClose} />
+                    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-[2px]" onClick={onClose} />
 
                     {/* Modal Bottom Sheet */}
                     <motion.div
@@ -150,7 +150,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                        className="fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-background-secondary text-primary flex flex-col overflow-hidden shadow-2xl border-t border-border/20"
+                        className="fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-background-secondary/90 backdrop-blur-xl text-primary flex flex-col overflow-hidden shadow-2xl border-t border-border/20"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-5 h-16 border-b border-border/10 bg-background-secondary">

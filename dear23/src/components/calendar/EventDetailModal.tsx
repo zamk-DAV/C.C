@@ -95,7 +95,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50"
+                        className="fixed inset-0 bg-background/80 backdrop-blur-[2px] z-50"
                     />
 
                     {/* Modal Content - Slide up from bottom */}
@@ -104,7 +104,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-lg mx-auto bg-background-secondary border-t border-border/20 rounded-t-3xl h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+                        className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-lg mx-auto bg-background-secondary/90 backdrop-blur-xl border-t border-border/20 rounded-t-3xl h-[90vh] flex flex-col shadow-2xl overflow-hidden"
                     >
                         {/* Header */}
                         <header className="flex items-center justify-between px-6 h-16 border-b border-border/10 bg-background-secondary/80 backdrop-blur-md shrink-0">

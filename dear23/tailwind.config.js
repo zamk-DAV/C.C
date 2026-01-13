@@ -7,14 +7,14 @@ export default {
     theme: {
         extend: {
             colors: {
-                primary: 'var(--primary-color)',
-                'text-primary': 'var(--text-primary)',
-                'text-secondary': 'var(--text-secondary)',
-                'background': 'var(--bg-color)',
-                'background-secondary': 'var(--bg-secondary)',
-                'border': 'var(--border-color)',
-                'accent': 'var(--accent-color)',
-                'input-bg': 'var(--input-bg)',
+                primary: 'hsl(var(--primary))',
+                'text-primary': 'hsl(var(--text-primary))',
+                'text-secondary': 'hsl(var(--text-secondary))',
+                background: 'hsl(var(--background))',
+                'background-secondary': 'hsl(var(--background-secondary))',
+                border: 'hsl(var(--border))',
+                accent: 'hsl(var(--accent))',
+                'input-bg': 'hsl(var(--input-bg))',
             },
             fontFamily: {
                 "display": ["Plus Jakarta Sans", "Inter", "sans-serif"],

@@ -1,23 +1,38 @@
 :root {
-  --primary-color: #000000;
-  --text-primary: #1d1d1f;
-  --text-secondary: #86868b;
-  --bg-color: #ffffff;
-  --bg-secondary: #f5f5f7;
-  --border-color: #d2d2d7;
-  --accent-color: #0071e3;
-  --input-bg: #f5f5f7;
+  /* Light Theme - Modern Charcoal/Minimalist */
+  --background: 0 0% 100%;
+  --background-secondary: 240 5% 96%;
+  --primary: 240 10% 4%;
+  --text-primary: 240 10% 4%;
+  --text-secondary: 240 4% 46%;
+  --border: 240 6% 90%;
+  --accent: 221 83% 53%;
+  --input-bg: 240 5% 96%;
+
+  /* Color aliasing for legacy component support */
+  --bg-color: hsl(var(--background));
+  --bg-secondary: hsl(var(--background-secondary));
+  --primary-color: hsl(var(--primary));
+  --border-color: hsl(var(--border));
+  --accent-color: hsl(var(--accent));
 }
 
 .dark {
-  --primary-color: #ffffff;
-  --text-primary: #f5f5f7;
-  --text-secondary: #86868b;
-  --bg-color: #000000;
-  --bg-secondary: #1C1C1E;
-  --border-color: #38383a;
-  --accent-color: #0A84FF;
-  --input-bg: #1c1c1e;
+  /* Dark Theme - Obsidian/Premium Night */
+  --background: 240 10% 4%;
+  --background-secondary: 240 10% 8%;
+  --primary: 0 0% 98%;
+  --text-primary: 0 0% 98%;
+  --text-secondary: 240 5% 65%;
+  --border: 240 5% 15%;
+  --accent: 217 91% 60%;
+  --input-bg: 240 10% 8%;
+
+  --bg-color: hsl(var(--background));
+  --bg-secondary: hsl(var(--background-secondary));
+  --primary-color: hsl(var(--primary));
+  --border-color: hsl(var(--border));
+  --accent-color: hsl(var(--accent));
 }
 
 body {
@@ -56,20 +71,20 @@ body {
   }
 
   .toggle-pill {
-    @apply relative w-10 h-5 bg-neutral-100 rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
+    @apply relative w-10 h-5 bg-border/20 rounded-full transition-colors duration-200 ease-in-out cursor-pointer;
   }
 
   .toggle-pill::after {
     content: '';
-    @apply absolute top-1 left-1 bg-black w-3 h-3 rounded-full transition-transform duration-200 ease-in-out;
+    @apply absolute top-1 left-1 bg-text-secondary w-3 h-3 rounded-full transition-transform duration-200 ease-in-out;
   }
 
   .toggle-active.toggle-pill {
-    @apply bg-black;
+    @apply bg-accent;
   }
 
   .toggle-active.toggle-pill::after {
-    @apply bg-white translate-x-5;
+    @apply bg-background translate-x-5;
   }
 
   /* Chat Bubble Styles */
