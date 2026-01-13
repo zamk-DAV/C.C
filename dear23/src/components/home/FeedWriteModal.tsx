@@ -1,7 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { ko } from 'date-fns/locale';
 import { createDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
 import { DatePickerModal } from '../common/DatePickerModal';
@@ -156,8 +155,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={w.value}
                                             onClick={() => setSelectedWeather(w.value)}
                                             className={`flex flex-col items-center justify-center min-w-[72px] h-[84px] rounded-2xl transition-all duration-300 cursor-pointer border-2 ${selectedWeather === w.value
-                                                    ? 'bg-primary text-background border-primary shadow-lg scale-105'
-                                                    : 'bg-secondary/50 text-text-secondary border-transparent hover:border-secondary'
+                                                ? 'bg-primary text-background border-primary shadow-lg scale-105'
+                                                : 'bg-secondary/50 text-text-secondary border-transparent hover:border-secondary'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-3xl">{w.icon}</span>
@@ -177,8 +176,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={m.value}
                                             onClick={() => setSelectedMood(m.value)}
                                             className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${selectedMood === m.value
-                                                    ? 'bg-primary text-background shadow-xl transform scale-110'
-                                                    : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
+                                                ? 'bg-primary text-background shadow-xl transform scale-110'
+                                                : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
                                                 }`}
                                         >
                                             <span
