@@ -19,6 +19,7 @@ interface MemoryItem {
     sender?: string;
     isRead?: boolean;
     author?: string;
+    images?: string[];
 }
 
 export const getNotionDatabase = functions.https.onRequest((req, res) => {
@@ -107,17 +108,22 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const dateProp = props["dear23_날짜"]?.date || props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
                 const date = dateProp ? dateProp.start : "";
 
-                // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
+                // Extract Images (Files & Media property: 'dear23_대표이미지')
                 const fileProp = props["dear23_대표이미지"]?.files || [];
-                let coverImage = null;
+                const images: string[] = [];
+
                 if (fileProp.length > 0) {
-                    const file = fileProp[0];
-                    if (file.type === "file") {
-                        coverImage = file.file.url; // Expiring URL
-                    } else if (file.type === "external") {
-                        coverImage = file.external.url;
-                    }
+                    fileProp.forEach((f: any) => {
+                        if (f.type === "file") {
+                            images.push(f.file.url);
+                        } else if (f.type === "external") {
+                            images.push(f.external.url);
+                        }
+                    });
                 }
+
+                const coverImage = images.length > 0 ? images[0] : null;
+
 
                 // Extract Preview Text (Text property: 'dear23_내용미리보기')
                 const previewList = props["dear23_내용미리보기"]?.rich_text || [];
@@ -152,7 +158,9 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     previewText,
                     author,
                     mood,
-                    weather
+                    mood,
+                    weather,
+                    images
                 };
             });
 
@@ -254,7 +262,45 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const { apiKey, databaseId } = userData.notionConfig;
 
             // 3. Prepare Notion Page Properties
-            const { title, content, type, date, mood, weather } = req.body; // type: 'Diary' | 'Memory' | ...
+            const { title, content, type, date, mood, weather, images } = req.body; // type: 'Diary' | 'Memory' | ...
+
+            // Upload Images to Firebase Storage if present
+            const imageUrls: string[] = [];
+
+            if (images && Array.isArray(images) && images.length > 0) {
+                try {
+                    const bucket = admin.storage().bucket();
+
+                    // Upload concurrently
+                    await Promise.all(images.map(async (img: any, idx: number) => {
+                        if (img.base64) {
+                            const buffer = Buffer.from(img.base64.split(',')[1], 'base64');
+                            const filename = `memories/${Date.now()}_${idx}_${Math.random().toString(36).substring(2, 9)}.${img.type?.split('/')[1] || 'jpg'}`;
+                            const file = bucket.file(filename);
+
+                            await file.save(buffer, {
+                                metadata: { contentType: img.type || 'image/jpeg' },
+                                public: true,
+                            });
+
+                            // For publicly accessible bucket (if configured)
+                            // const publicUrl = file.publicUrl(); 
+
+                            // Safer: Generate Signed URL valid for a long time (e.g., 50 years)
+                            const [url] = await file.getSignedUrl({
+                                action: 'read',
+                                expires: '01-01-2100'
+                            });
+                            imageUrls.push(url);
+                        }
+                    }));
+                    console.log(`[Storage] Uploaded ${imageUrls.length} images.`);
+                } catch (storageError: any) {
+                    console.error("[Storage] Failed to upload images:", storageError);
+                    // Continue without images if upload fails, or throw? 
+                    // Let's continue but log error.
+                }
+            }
 
             let categoryValue = "일기"; // Default
             switch (type) {
@@ -312,6 +358,13 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         name: req.body.sender
                     }
                 } : undefined,
+                "dear23_대표이미지": imageUrls.length > 0 ? {
+                    files: imageUrls.map(url => ({
+                        name: "image",
+                        type: "external",
+                        external: { url: url }
+                    }))
+                } : undefined
             };
 
             // 4. Create Page in Notion with Retry Logic
