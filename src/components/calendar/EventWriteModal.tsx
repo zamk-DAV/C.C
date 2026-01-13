@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
-import { format, parseISO } from 'date-fns';
+import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
 import { useHaptics } from '../../hooks/useHaptics';

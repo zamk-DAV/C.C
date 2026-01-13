@@ -37,7 +37,7 @@ export const ChatPage: React.FC = () => {
 
     const [showNewMessageToast, setShowNewMessageToast] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(true);
-    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
 
     // Auto-scroll to bottom combined with messages and typing status
     const scrollToBottom = (force = false) => {

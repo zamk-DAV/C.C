@@ -20,7 +20,7 @@ interface DraggableEventProps {
 }
 
 const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick, onDrag }) => {
-    const { heavy, medium, light, success } = useHaptics();
+    const { heavy, medium } = useHaptics();
     const [isDragging, setIsDragging] = React.useState(false);
     const [dropSuccess, setDropSuccess] = React.useState(false);
 
