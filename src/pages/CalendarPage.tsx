@@ -389,7 +389,6 @@ export const CalendarPage: React.FC = () => {
             >
                 <span className="material-symbols-outlined text-2xl">add</span>
             </motion.button>
-            // ...
 
             {/* Event Write Modal */}
             <EventWriteModal
