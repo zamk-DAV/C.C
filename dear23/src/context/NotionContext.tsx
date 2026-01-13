@@ -24,6 +24,8 @@ interface NotionContextType {
     hasMoreLetter: boolean;
     loadMoreLetter: () => Promise<void>;
 
+    authorId?: string; // Added for UID based filtering
+
     // Common
     isLoading: boolean;
     error: string | null;
