@@ -258,75 +258,77 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             // Use provided date or fallback to today
             const entryDate = date || new Date().toISOString().split('T')[0];
 
-            // 4. Create Page in Notion
-            const response = await axios.post(
-                "https://api.notion.com/v1/pages",
-                {
-                    parent: { database_id: databaseId },
-                    properties: {
-                        "Name": {
-                            title: [
-                                {
-                                    text: {
-                                        content: title || "Untitled"
-                                    }
-                                }
-                            ]
-                        },
-                        "dear23_카테고리": {
-                            select: {
-                                name: categoryValue
-                            }
-                        },
-                        "dear23_날짜": {
-                            date: {
-                                start: entryDate
-                            }
-                        },
-                        "dear23_내용미리보기": {
-                            rich_text: [
-                                {
-                                    text: {
-                                        content: content ? content.substring(0, 1000) : ""
-                                    }
-                                }
-                            ]
-                        },
-                        "dear23_기분": mood ? {
-                            select: {
-                                name: mood
-                            }
-                        } : undefined,
-                        "dear23_날씨": weather ? {
-                            select: {
-                                name: weather
-                            }
-                        } : undefined,
-                        "작성자": req.body.sender ? {
-                            select: {
-                                name: req.body.sender
-                            }
-                        } : undefined,
+            // 4. Create Page in Notion with Retry Logic
+            try {
+                const response = await axios.post(
+                    "https://api.notion.com/v1/pages",
+                    {
+                        parent: { database_id: databaseId },
+                        properties: properties,
                     },
-                    // Optional: Add content blocks if needed
-                },
-                {
-                    headers: {
-                        "Authorization": `Bearer ${apiKey}`,
-                        "Notion-Version": "2022-06-28",
-                        "Content-Type": "application/json",
-                    },
-                }
-            );
+                    {
+                        headers: {
+                            "Authorization": `Bearer ${apiKey}`,
+                            "Notion-Version": "2022-06-28",
+                            "Content-Type": "application/json",
+                        },
+                    }
+                );
+                res.status(200).send({ data: response.data });
+            } catch (firstError: any) {
+                console.error("First attempt failed:", firstError.message);
 
-            res.status(200).send({ data: response.data });
+                // If 400 Bad Request, try removing potentially problematic Select properties (Author, Weather, Mood)
+                if (firstError.response?.status === 400) {
+                    console.warn("Retrying without custom select properties (Author, Weather, Mood)...");
+
+                    const safeProperties = { ...properties };
+                    delete safeProperties["작성자"];
+                    delete safeProperties["dear23_날씨"];
+                    delete safeProperties["dear23_기분"]; // 기분도 안전하게 제외
+
+                    try {
+                        const retryResponse = await axios.post(
+                            "https://api.notion.com/v1/pages",
+                            {
+                                parent: { database_id: databaseId },
+                                properties: safeProperties,
+                            },
+                            {
+                                headers: {
+                                    "Authorization": `Bearer ${apiKey}`,
+                                    "Notion-Version": "2022-06-28",
+                                    "Content-Type": "application/json",
+                                },
+                            }
+                        );
+                        console.log("Retry successful without select properties.");
+                        res.status(200).send({ data: retryResponse.data, warning: "Some properties (Author, Weather) were omitted due to Notion API restrictions." });
+                    } catch (retryError: any) {
+                        console.error("Retry attempt also failed:", retryError.message);
+                        if (retryError.response) {
+                            console.error("Retry Error Data:", JSON.stringify(retryError.response.data));
+                        }
+                        // Return the ORIGINAL error to helps debug the root cause
+                        res.status(500).send({ error: firstError.message, details: firstError.response?.data });
+                    }
+                } else {
+                    throw firstError;
+                }
+            }
+
 
         } catch (error: any) {
             console.error("Error creating Notion page:", error);
             if (error.response) {
-                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
+                console.error("Notion API Error Response Status:", error.response.status);
+                console.error("Notion API Error Response Data:", JSON.stringify(error.response.data));
+            } else if (error.request) {
+                console.error("Notion API No Response received:", error.request);
+            } else {
+                console.error("Notion API Request Setup Error:", error.message);
             }
-            res.status(500).send({ error: error.message });
+            res.status(500).send({ error: error.message, details: error.response?.data });
         }
     });
 });
