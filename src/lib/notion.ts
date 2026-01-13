@@ -86,7 +86,7 @@ export const createDiaryEntry = async (
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
     type: 'Diary' | 'Memory' | 'Event' | 'Letter' = 'Diary',
-    options: { mood?: string, sender?: string, date?: string } = {}
+    options: { mood?: string, sender?: string, date?: string, weather?: string } = {}
 ) => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
@@ -104,7 +104,8 @@ export const createDiaryEntry = async (
             type, // Send type to backend
             mood: options.mood,
             sender: options.sender,
-            date: options.date || new Date().toISOString().split('T')[0]
+            date: options.date || new Date().toISOString().split('T')[0],
+            weather: options.weather
         })
     });
 

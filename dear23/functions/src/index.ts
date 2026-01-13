@@ -237,7 +237,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const { apiKey, databaseId } = userData.notionConfig;
 
             // 3. Prepare Notion Page Properties
-            const { title, content, type, date, mood } = req.body; // type: 'Diary' | 'Memory' | ...
+            const { title, content, type, date, mood, weather } = req.body; // type: 'Diary' | 'Memory' | ...
 
             let categoryValue = "일기"; // Default
             switch (type) {
@@ -279,7 +279,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                             rich_text: [
                                 {
                                     text: {
-                                        content: content ? content.substring(0, 500) : ""
+                                        content: content ? content.substring(0, 1000) : ""
                                     }
                                 }
                             ]
@@ -287,6 +287,11 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         "dear23_기분": mood ? {
                             select: {
                                 name: mood
+                            }
+                        } : undefined,
+                        "dear23_날씨": weather ? {
+                            select: {
+                                name: weather
                             }
                         } : undefined,
                     },

@@ -1,10 +1,9 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { createDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
-import { DatePickerModal } from '../common/DatePickerModal';
 
 interface FeedWriteModalProps {
     isOpen: boolean;
@@ -13,32 +12,37 @@ interface FeedWriteModalProps {
     type?: 'Diary' | 'Memory';
 }
 
+const WEATHER_OPTIONS = [
+    { icon: 'wb_sunny', label: 'Sunny', value: '맑음' },
+    { icon: 'cloud', label: 'Cloudy', value: '구름' },
+    { icon: 'rainy', label: 'Rainy', value: '비' },
+    { icon: 'ac_unit', label: 'Snowy', value: '눈' },
+    { icon: 'air', label: 'Windy', value: '바람' },
+];
+
 const MOOD_OPTIONS = [
-    { emoji: '😊', label: '행복', value: '행복' },
-    { emoji: '😌', label: '평온', value: '평온' },
-    { emoji: '🥰', label: '사랑', value: '사랑' },
-    { emoji: '😢', label: '슬픔', value: '슬픔' },
-    { emoji: '😤', label: '화남', value: '화남' },
-    { emoji: '😴', label: '피곤', value: '피곤' },
-    { emoji: '🤔', label: '고민', value: '고민' },
-    { emoji: '✨', label: '설렘', value: '설렘' },
+    { icon: 'sentiment_very_dissatisfied', value: '매우 나쁨' },
+    { icon: 'sentiment_dissatisfied', value: '나쁨' },
+    { icon: 'sentiment_satisfied', value: '좋음', fill: true },
+    { icon: 'sentiment_very_satisfied', value: '매우 좋음' },
+    { icon: 'bolt', value: '상태 이상' },
 ];
 
 const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary' }) => {
     const { user, userData } = useAuth();
+    const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
-    const [selectedMood, setSelectedMood] = useState('평온');
-    const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
-    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-    const [isMoodPickerOpen, setIsMoodPickerOpen] = useState(false);
+    const [selectedMood, setSelectedMood] = useState('좋음');
+    const [selectedWeather, setSelectedWeather] = useState('맑음');
+    const [currentDate] = useState(new Date());
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-
             files.forEach(file => {
                 const reader = new FileReader();
                 reader.onloadend = () => {
@@ -59,207 +63,215 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
     };
 
     const handleSubmit = async () => {
-        if (!content && images.length === 0) return;
+        if (!content && images.length === 0 && !title) return;
 
         setIsLoading(true);
         try {
             await createDiaryEntry(content, images, type, {
                 mood: selectedMood,
+                weather: selectedWeather,
                 sender: userData?.name || user?.displayName || "나",
-                date: selectedDate
+                date: format(currentDate, 'yyyy-MM-dd')
             });
+
+            // Success reset
+            setTitle('');
             setContent('');
             setImages([]);
-            setSelectedMood('평온');
-            setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
             onSuccess();
             onClose();
         } catch (error) {
             console.error(error);
-            alert('업로드에 실패했습니다. 다시 시도해주세요.');
+            alert('업로드에 실패했습니다.');
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleClose = () => {
-        if ((content || images.length > 0) && !isLoading) {
-            if (window.confirm('작성 중인 내용이 있습니다. 정말 닫으시겠습니까?')) {
-                setContent('');
-                setImages([]);
-                onClose();
-            }
-        } else {
-            onClose();
-        }
-    };
-
-    const formatDisplayDate = (dateStr: string) => {
-        try {
-            return format(new Date(dateStr), 'M월 d일 (EEE)', { locale: ko });
-        } catch {
-            return dateStr;
-        }
-    };
-
-    const currentMood = MOOD_OPTIONS.find(m => m.value === selectedMood) || MOOD_OPTIONS[1];
-
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
+                <div className="fixed inset-0 z-[60] flex items-center justify-center p-0 sm:p-4">
                     {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        onClick={handleClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+                        onClick={onClose}
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm shadow-2xl"
                     />
 
-                    {/* Modal */}
+                    {/* Modal Container */}
                     <motion.div
-                        initial={{ opacity: 0, y: 100 }}
+                        initial={{ opacity: 0, y: "100%" }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 100 }}
-                        className="fixed inset-x-4 bottom-24 top-32 z-50 bg-background rounded-xl shadow-2xl overflow-hidden max-w-lg mx-auto flex flex-col"
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+                        className="relative w-full max-w-[430px] h-[100dvh] sm:h-[90vh] bg-white overflow-hidden flex flex-col shadow-2xl sm:rounded-[2.5rem] border-black border-0 sm:border-[8px]"
                     >
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-                            <h3 className="text-lg font-bold text-primary">
-                                {type === 'Diary' ? '새 일기' : '새 추억'}
-                            </h3>
+                        {/* Notch Handle (Visual only) */}
+                        <div className="flex flex-col items-center bg-white pt-4 pb-2 shrink-0">
+                            <div className="h-1.5 w-12 rounded-full bg-gray-100"></div>
+                        </div>
+
+                        {/* Top Nav */}
+                        <div className="flex items-center bg-white px-6 py-4 justify-between sticky top-0 z-10 shrink-0">
                             <button
-                                onClick={handleClose}
-                                className="p-1 rounded-full hover:bg-secondary transition-colors"
+                                onClick={onClose}
+                                className="text-gray-400 text-base font-medium hover:text-black transition-colors"
                             >
-                                <span className="material-symbols-outlined text-text-secondary">close</span>
+                                Cancel
+                            </button>
+                            <h2 className="text-black text-lg font-bold tracking-tight">
+                                {format(currentDate, 'MMMM d, yyyy', { locale: ko })}
+                            </h2>
+                            <button
+                                onClick={handleSubmit}
+                                disabled={isLoading || (!title && !content && images.length === 0)}
+                                className="bg-black text-white px-6 py-2.5 rounded-full text-sm font-bold hover:bg-gray-800 transition-all shadow-md active:scale-95 disabled:opacity-30"
+                            >
+                                {isLoading ? '...' : 'Save'}
                             </button>
                         </div>
 
-                        {/* Meta Info Bar */}
-                        <div className="flex items-center gap-2 px-5 py-3 border-b border-border bg-secondary/30">
-                            {/* Date Selector */}
-                            <button
-                                onClick={() => setIsDatePickerOpen(true)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-border hover:border-primary transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-[16px] text-text-secondary">calendar_today</span>
-                                <span className="text-xs font-medium text-primary">{formatDisplayDate(selectedDate)}</span>
-                            </button>
+                        {/* Scroll Content */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-2 space-y-10 custom-scrollbar">
 
-                            {/* Mood Selector */}
-                            <button
-                                onClick={() => setIsMoodPickerOpen(!isMoodPickerOpen)}
-                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-background border border-border hover:border-primary transition-colors"
-                            >
-                                <span className="text-base">{currentMood.emoji}</span>
-                                <span className="text-xs font-medium text-primary">{currentMood.label}</span>
-                                <span className="material-symbols-outlined text-[14px] text-text-secondary">
-                                    {isMoodPickerOpen ? 'expand_less' : 'expand_more'}
-                                </span>
-                            </button>
-                        </div>
-
-                        {/* Mood Picker Dropdown */}
-                        <AnimatePresence>
-                            {isMoodPickerOpen && (
-                                <motion.div
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: 'auto', opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    className="overflow-hidden border-b border-border bg-secondary/20"
-                                >
-                                    <div className="flex flex-wrap gap-2 px-5 py-3">
-                                        {MOOD_OPTIONS.map((mood) => (
-                                            <button
-                                                key={mood.value}
-                                                onClick={() => {
-                                                    setSelectedMood(mood.value);
-                                                    setIsMoodPickerOpen(false);
-                                                }}
-                                                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full transition-all ${selectedMood === mood.value
-                                                        ? 'bg-primary text-background'
-                                                        : 'bg-background border border-border hover:border-primary'
-                                                    }`}
-                                            >
-                                                <span className="text-sm">{mood.emoji}</span>
-                                                <span className="text-xs font-medium">{mood.label}</span>
-                                            </button>
-                                        ))}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {/* Content Area */}
-                        <div className="flex-1 p-5 overflow-y-auto">
-                            <textarea
-                                value={content}
-                                onChange={(e) => setContent(e.target.value)}
-                                placeholder="오늘 하루는 어땠나요?"
-                                className="w-full h-full min-h-[120px] bg-transparent text-primary placeholder-text-secondary/50 resize-none outline-none font-serif text-base leading-relaxed"
-                                autoFocus
-                            />
-
-                            {/* Image Previews */}
-                            {images.length > 0 && (
-                                <div className="flex gap-3 overflow-x-auto py-3 scrollbar-hide">
-                                    {images.map((img, idx) => (
-                                        <div key={idx} className="relative flex-shrink-0 size-20 rounded-lg overflow-hidden shadow-sm group border border-border">
-                                            <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
-                                            <button
-                                                onClick={() => handleRemoveImage(idx)}
-                                                className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 opacity-100 md:opacity-0 group-hover:opacity-100 transition-opacity"
-                                            >
-                                                <span className="material-symbols-outlined text-[14px]">close</span>
-                                            </button>
+                            {/* Weather Section */}
+                            <section>
+                                <h4 className="text-black text-[10px] font-extrabold uppercase tracking-[0.2em] mb-4 opacity-30">Weather</h4>
+                                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                                    {WEATHER_OPTIONS.map((w) => (
+                                        <div
+                                            key={w.value}
+                                            onClick={() => setSelectedWeather(w.value)}
+                                            className={`flex flex-col items-center justify-center min-w-[72px] h-[84px] rounded-2xl transition-all duration-300 cursor-pointer border-2 ${selectedWeather === w.value
+                                                    ? 'bg-black text-white border-black shadow-lg scale-105'
+                                                    : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300'
+                                                }`}
+                                        >
+                                            <span className="material-symbols-outlined text-3xl">{w.icon}</span>
+                                            <p className="text-[9px] font-bold mt-2 uppercase tracking-tight">{w.label}</p>
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            </section>
+
+                            {/* Feeling Section */}
+                            <section>
+                                <h4 className="text-black text-[10px] font-extrabold uppercase tracking-[0.2em] mb-4 opacity-30">How are you feeling?</h4>
+                                <div className="flex justify-between items-center bg-gray-50/50 border border-gray-100 p-2.5 rounded-[2rem] shadow-sm">
+                                    {MOOD_OPTIONS.map((m) => (
+                                        <button
+                                            key={m.value}
+                                            onClick={() => setSelectedMood(m.value)}
+                                            className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${selectedMood === m.value
+                                                    ? 'bg-black text-white shadow-xl transform scale-110'
+                                                    : 'text-gray-300 hover:text-gray-500 hover:bg-white'
+                                                }`}
+                                        >
+                                            <span
+                                                className="material-symbols-outlined text-3xl"
+                                                style={{ fontVariationSettings: m.fill && selectedMood === m.value ? "'FILL' 1" : "'FILL' 0" }}
+                                            >
+                                                {m.icon}
+                                            </span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </section>
+
+                            {/* Text Inputs */}
+                            <section className="space-y-6 pt-2">
+                                <input
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    className="w-full bg-transparent border-b border-gray-100 focus:border-black p-0 pb-3 text-3xl font-bold text-black placeholder-gray-200 focus:ring-0 transition-all outline-none"
+                                    placeholder="Title of your day..."
+                                    type="text"
+                                />
+                                <textarea
+                                    value={content}
+                                    onChange={(e) => setContent(e.target.value)}
+                                    className="w-full bg-transparent border-none p-0 text-xl leading-[1.8] text-gray-800 placeholder-gray-200 focus:ring-0 min-h-[300px] resize-none font-normal outline-none"
+                                    placeholder="Tell your story..."
+                                />
+                            </section>
+
+                            {/* Image Section */}
+                            <section className="pb-8">
+                                <div
+                                    onClick={() => fileInputRef.current?.click()}
+                                    className="group relative w-full aspect-video rounded-3xl border-2 border-dashed border-gray-200 hover:border-black flex flex-col items-center justify-center gap-2 hover:bg-gray-50/50 transition-all cursor-pointer overflow-hidden bg-gray-50/30"
+                                >
+                                    {images.length > 0 ? (
+                                        <div className="absolute inset-0 flex gap-2 p-2 overflow-x-auto scrollbar-hide">
+                                            {images.map((img, idx) => (
+                                                <div key={idx} className="relative h-full aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
+                                                    <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
+                                                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">close</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <div className="h-full aspect-square flex flex-col items-center justify-center bg-white/50 border-2 border-dashed border-gray-200 rounded-xl shrink-0">
+                                                <span className="material-symbols-outlined text-gray-400">add</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col items-center transition-transform group-hover:scale-105 z-10">
+                                            <div className="w-16 h-16 rounded-full bg-white shadow-sm flex items-center justify-center mb-4 group-hover:shadow-md transition-all">
+                                                <span className="material-symbols-outlined text-gray-300 group-hover:text-black text-3xl transition-colors">add_a_photo</span>
+                                            </div>
+                                            <p className="text-gray-400 group-hover:text-black text-sm font-bold tracking-tight transition-colors">Add a memory</p>
+                                        </div>
+                                    )}
+                                    <input
+                                        type="file"
+                                        ref={fileInputRef}
+                                        className="hidden"
+                                        multiple
+                                        accept="image/*"
+                                        onChange={handleFileChange}
+                                    />
+                                </div>
+                            </section>
+
+                            <div className="h-32"></div>
                         </div>
 
-                        {/* Footer Actions */}
-                        <div className="flex items-center justify-between px-5 py-4 border-t border-border">
-                            <button
-                                onClick={() => fileInputRef.current?.click()}
-                                className="flex items-center gap-2 text-text-secondary hover:text-primary transition-colors px-2 py-1"
-                            >
-                                <span className="material-symbols-outlined text-xl">add_photo_alternate</span>
-                                <span className="text-xs font-medium">사진 추가</span>
-                            </button>
-                            <input
-                                type="file"
-                                ref={fileInputRef}
-                                className="hidden"
-                                multiple
-                                accept="image/*"
-                                onChange={handleFileChange}
-                            />
+                        {/* Bottom Actions Floating Bar */}
+                        <div className="absolute bottom-10 left-0 w-full px-6 pointer-events-none z-20">
+                            <div className="w-full flex justify-center">
+                                <motion.div
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="bg-black/90 backdrop-blur-2xl px-8 py-4 rounded-[2rem] shadow-2xl pointer-events-auto flex items-center gap-10 border border-white/10"
+                                >
+                                    <button className="text-gray-500 hover:text-white transition-colors flex items-center active:scale-90">
+                                        <span className="material-symbols-outlined text-2xl font-light">mic</span>
+                                    </button>
+                                    <div className="w-[1px] h-4 bg-gray-800"></div>
+                                    <button className="text-gray-500 hover:text-white transition-colors flex items-center active:scale-90">
+                                        <span className="material-symbols-outlined text-2xl font-light">location_on</span>
+                                    </button>
+                                    <div className="w-[1px] h-4 bg-gray-800"></div>
+                                    <button className="text-gray-500 hover:text-white transition-colors flex items-center active:scale-90">
+                                        <span className="material-symbols-outlined text-2xl font-light">label</span>
+                                    </button>
+                                </motion.div>
+                            </div>
+                        </div>
 
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isLoading || (!content && images.length === 0)}
-                                className="px-6 py-2.5 bg-primary text-background font-bold text-sm rounded-full disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 active:scale-95"
-                            >
-                                {isLoading ? '저장 중...' : '저장하기'}
-                            </button>
+                        {/* Home Indicator */}
+                        <div className="flex justify-center pb-3 bg-white pt-2 shrink-0">
+                            <div className="h-1.5 w-32 rounded-full bg-black/5"></div>
                         </div>
                     </motion.div>
-
-                    {/* Date Picker Modal */}
-                    <DatePickerModal
-                        isOpen={isDatePickerOpen}
-                        onClose={() => setIsDatePickerOpen(false)}
-                        onSelect={(date) => {
-                            if (date) setSelectedDate(date);
-                            setIsDatePickerOpen(false);
-                        }}
-                        selectedDate={selectedDate}
-                        minDate={new Date(2020, 0, 1)} // Allow past dates for diary
-                    />
-                </>
+                </div>
             )}
         </AnimatePresence>
     );
