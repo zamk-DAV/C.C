@@ -211,6 +211,13 @@ export const CalendarPage: React.FC = () => {
     };
 
     const handleEventDrop = async (event: CalendarEvent, newDate: string) => {
+        // Optimistic Update: Immediately update local state
+        const previousEvents = [...firestoreEvents];
+        const updatedEvents = previousEvents.map(e =>
+            e.id === event.id ? { ...e, date: newDate } : e
+        );
+        setFirestoreEvents(updatedEvents);
+
         try {
             medium();
             // Call API to update date
@@ -229,9 +236,12 @@ export const CalendarPage: React.FC = () => {
                     isShared: event.isShared
                 }
             );
-            // Optimistic update not implemented here as we rely on Firestore snapshot
+            // No need to do anything else, snapshot will eventually confirm this
         } catch (error) {
             console.error("Failed to move event:", error);
+            // Revert on failure
+            setFirestoreEvents(previousEvents);
+            alert("일정 이동에 실패했습니다.");
         }
     };
 
