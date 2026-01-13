@@ -1,109 +1,228 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { format } from 'date-fns';
+import type { Postcard } from '../types';
+import { LetterWriteModal } from '../components/mailbox/LetterWriteModal';
+import { LetterDetailModal } from '../components/mailbox/LetterDetailModal';
 
 export const MailboxPage: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
 
-    // Mock Data
-    const postcards = [
-        {
-            id: 1,
-            sender: '지은',
-            date: '2023. 10. 24',
-            content: '오늘 아침 창가에 비친 햇살이 유난히 밝아서 문득 네 생각이 났어. 우리가 함께 걷던 그 길도...',
-            isRead: false
-        },
-        {
-            id: 2,
-            sender: '지은',
-            date: '2023. 10. 22',
-            content: '바쁜 하루였지만 네 목소리를 들으니 모든 피로가 풀리는 기분이야. 내일은 더 따뜻했으면 좋겠다.',
-            isRead: false
-        },
-        {
-            id: 3,
-            sender: '지은',
-            date: '2023. 10. 15',
-            content: '벌써 우리가 만난 지 백 일이 되었네. 고맙다는 말로 다 표현할 수 없을 만큼 소중한 시간들이야.',
-            isRead: true
+    // Firestore Integration
+    const { user, userData, partnerData, coupleData } = useAuth();
+    const [postcards, setPostcards] = useState<Postcard[]>([]);
+
+    // Modal States
+    const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+    const [selectedLetter, setSelectedLetter] = useState<Postcard | null>(null);
+
+    useEffect(() => {
+        if (!coupleData?.id) return;
+
+        const q = query(
+            collection(db, 'couples', coupleData.id, 'postcards'),
+            orderBy('createdAt', 'desc')
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const items = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    date: data.createdAt?.toDate ? format(data.createdAt.toDate(), 'yyyy.MM.dd') : data.date
+                } as Postcard;
+            });
+            setPostcards(items);
+        });
+
+        return () => unsubscribe();
+    }, [coupleData?.id]);
+
+    // Local filter for tabs
+    const filteredPostcards = postcards.filter(card => {
+        if (activeTab === 'received') return card.senderId !== user?.uid;
+        if (activeTab === 'sent') return card.senderId === user?.uid;
+        return true;
+    });
+
+    // Handle open letter - mark as read
+    const handleOpenLetter = async (letter: Postcard) => {
+        setSelectedLetter(letter);
+
+        // Mark as read if not already
+        if (!letter.isRead && letter.senderId !== user?.uid && coupleData?.id) {
+            try {
+                await updateDoc(doc(db, 'couples', coupleData.id, 'postcards', letter.id), {
+                    isRead: true
+                });
+            } catch (error) {
+                console.error("Failed to mark as read:", error);
+            }
         }
-    ];
+    };
 
     return (
-        <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-white dark:bg-[#121212] font-display text-black dark:text-white">
+        <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-background font-display text-primary transition-colors duration-300 border-x border-border">
+
             {/* Header */}
-            <header className="sticky top-0 z-10 flex flex-col bg-white/95 dark:bg-[#121212]/95 backdrop-blur-md">
+            <header className="sticky top-0 z-10 flex flex-col bg-background/95 backdrop-blur-md transition-colors duration-300">
                 <div className="flex items-center px-6 pt-6 pb-2 justify-between">
                     <div
                         onClick={() => navigate(-1)}
-                        className="flex size-10 shrink-0 items-center justify-start text-black dark:text-white cursor-pointer"
+                        className="flex size-10 shrink-0 items-center justify-start text-primary cursor-pointer"
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </div>
-                    <h2 className="text-black dark:text-white text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">우편함</h2>
-                </div>
-
-                {/* Tabs */}
-                <div className="flex w-full px-6 mt-4 border-b border-gray-100 dark:border-gray-800">
-                    <button
-                        onClick={() => setActiveTab('received')}
-                        className={`flex-1 py-3 text-sm font-bold transition-colors ${activeTab === 'received' ? 'border-b-2 border-black dark:border-white text-black dark:text-white' : 'border-b-2 border-transparent text-gray-400 dark:text-gray-600'}`}
-                    >
-                        받은 우편
-                    </button>
-                    <button
-                        onClick={() => setActiveTab('sent')}
-                        className={`flex-1 py-3 text-sm font-medium transition-colors ${activeTab === 'sent' ? 'border-b-2 border-black dark:border-white text-black dark:text-white' : 'border-b-2 border-transparent text-gray-400 dark:text-gray-600'}`}
-                    >
-                        보낸 우편
-                    </button>
-                </div>
-
-                {/* Filter / Count */}
-                <div className="px-6 py-4 flex justify-between items-center">
-                    <p className="text-[10px] text-gray-400 font-medium uppercase tracking-[0.2em]">
-                        총 {postcards.length}개의 {activeTab === 'received' ? '받은' : '보낸'} 우편
-                    </p>
-                    <span className="material-symbols-outlined text-gray-300 text-sm cursor-pointer hover:text-black dark:hover:text-white transition-colors">filter_list</span>
+                    <h2 className="text-primary text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">우편함</h2>
                 </div>
             </header>
 
-            {/* Content Body */}
-            <main className="flex-1 px-6 space-y-10 pb-32 pt-2">
-                {postcards.map((card) => (
-                    <div key={card.id} className={`postcard-border bg-white dark:bg-black overflow-hidden ${card.isRead ? 'opacity-60' : ''}`}>
-                        <div className="p-8 pb-6">
-                            <div className="mb-10">
-                                <p className="font-serif-kr text-lg leading-relaxed text-black dark:text-white line-clamp-2">
-                                    {card.content}
-                                </p>
-                            </div>
-                            <div className="flex items-end justify-between border-t border-gray-100 dark:border-gray-800 pt-6">
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-2">
-                                        {!card.isRead && <span className="w-1 h-1 rounded-full bg-black dark:bg-white"></span>}
-                                        <p className={`${card.isRead ? 'text-gray-500 dark:text-gray-400' : 'text-black dark:text-white'} text-xs font-bold tracking-tight`}>
-                                            {card.sender}으로부터
-                                        </p>
-                                    </div>
-                                    <p className="text-gray-400 text-[10px] font-medium tracking-widest uppercase">{card.date}</p>
-                                </div>
-                                <a
-                                    href="#"
-                                    className={`${card.isRead ? 'text-gray-500 dark:text-gray-400 no-underline' : 'text-black dark:text-white underline underline-offset-8'} text-xs font-bold tracking-tight`}
-                                >
-                                    열기
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-
-                <div className="py-12 text-center">
-                    <span className="material-symbols-outlined text-gray-200 dark:text-gray-800">fiber_manual_record</span>
+            {/* Segmented Tab System */}
+            <div className="px-6 py-4">
+                <div className="flex h-12 w-full border border-primary p-0">
+                    <button
+                        onClick={() => setActiveTab('received')}
+                        className={`flex-1 flex items-center justify-center transition-all ${activeTab === 'received'
+                            ? 'bg-primary text-background'
+                            : 'bg-background text-primary hover:bg-secondary'
+                            }`}
+                    >
+                        <span className="text-sm font-bold tracking-tight">받은 우편</span>
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('sent')}
+                        className={`flex-1 flex items-center justify-center border-l border-primary transition-all ${activeTab === 'sent'
+                            ? 'bg-primary text-background'
+                            : 'bg-background text-primary hover:bg-secondary'
+                            }`}
+                    >
+                        <span className="text-sm font-bold tracking-tight">보낸 우편</span>
+                    </button>
                 </div>
+            </div>
+
+            {/* Letter List Container */}
+            <main className="flex-1 px-6 space-y-6 pb-32">
+                {filteredPostcards.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-20 text-text-secondary">
+                        <span className="material-symbols-outlined text-4xl mb-4 opacity-50">mail</span>
+                        <p className="text-sm font-medium">
+                            {activeTab === 'received' ? '받은 우편이 없습니다' : '보낸 우편이 없습니다'}
+                        </p>
+                        <p className="text-xs mt-1 opacity-70">
+                            {activeTab === 'received' ? '파트너의 편지를 기다려보세요' : '파트너에게 편지를 보내보세요'}
+                        </p>
+                    </div>
+                ) : (
+                    filteredPostcards.map((card) => {
+                        const isUnread = !card.isRead && card.senderId !== user?.uid;
+                        const isRead = card.isRead || card.senderId === user?.uid;
+                        const isLocked = card.openDate && new Date(card.openDate) > new Date();
+
+                        return (
+                            <div
+                                key={card.id}
+                                className={`group relative p-6 border transition-all ${isLocked
+                                        ? 'border-border/30 opacity-50'
+                                        : isRead
+                                            ? 'border-border/50 hover:bg-secondary/20 cursor-pointer'
+                                            : 'border-primary hover:bg-secondary/30 cursor-pointer'
+                                    }`}
+                                onClick={() => !isLocked && handleOpenLetter(card)}
+                            >
+                                {/* Content Preview */}
+                                <div className="mb-6">
+                                    <p className={`font-serif text-lg leading-relaxed line-clamp-3 ${isLocked
+                                            ? 'text-text-secondary/50 italic'
+                                            : isRead
+                                                ? 'text-text-secondary'
+                                                : 'text-primary'
+                                        }`}>
+                                        {isLocked
+                                            ? '아직 열 수 없는 편지입니다...'
+                                            : card.content
+                                        }
+                                    </p>
+                                </div>
+
+                                {/* Footer */}
+                                <div className="flex items-end justify-between">
+                                    <div className="flex flex-col gap-0.5">
+                                        <span className={`text-[11px] font-bold tracking-wider ${isLocked || isRead ? 'text-text-secondary' : 'text-primary'
+                                            }`}>
+                                            {activeTab === 'received' ? 'FROM.' : 'TO.'} {card.senderName}
+                                        </span>
+                                        <span className={`text-[10px] uppercase tracking-widest ${isRead ? 'text-text-secondary/60' : 'text-text-secondary'
+                                            }`}>
+                                            {card.date}
+                                        </span>
+                                    </div>
+
+                                    <button
+                                        className={`flex items-center gap-1 transition-transform ${isLocked
+                                                ? 'cursor-not-allowed text-text-secondary/50'
+                                                : isRead
+                                                    ? 'active:scale-95 text-text-secondary'
+                                                    : 'active:scale-95 text-primary'
+                                            }`}
+                                        disabled={!!isLocked}
+                                    >
+                                        <span className={`text-xs font-bold border-b pb-0.5 ${isLocked ? 'border-border/50' : isRead ? 'border-border' : 'border-primary'
+                                            }`}>
+                                            {isLocked ? '잠김' : '열기'}
+                                        </span>
+                                        <span className="material-symbols-outlined text-[14px]">
+                                            {isLocked ? 'lock' : 'arrow_forward'}
+                                        </span>
+                                    </button>
+                                </div>
+
+                                {/* Unread Indicator */}
+                                {isUnread && !isLocked && (
+                                    <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                                )}
+                            </div>
+                        );
+                    })
+                )}
+
+                {/* End Marker */}
+                {filteredPostcards.length > 0 && (
+                    <div className="py-8 text-center">
+                        <span className="text-[10px] text-text-secondary tracking-widest">END OF EDITION</span>
+                    </div>
+                )}
             </main>
+
+            {/* Floating Action Button for New Letter */}
+            <button
+                onClick={() => setIsWriteModalOpen(true)}
+                className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-10"
+            >
+                <span className="material-symbols-outlined text-2xl">add</span>
+            </button>
+
+            {/* Modals */}
+            <LetterWriteModal
+                isOpen={isWriteModalOpen}
+                onClose={() => setIsWriteModalOpen(false)}
+                coupleId={coupleData?.id || ''}
+                senderId={user?.uid || ''}
+                senderName={userData?.name || '나'}
+                recipientName={userData?.partnerNickname || partnerData?.name || '파트너'}
+            />
+
+            <LetterDetailModal
+                isOpen={!!selectedLetter}
+                onClose={() => setSelectedLetter(null)}
+                letter={selectedLetter}
+                isFromMe={selectedLetter?.senderId === user?.uid}
+            />
         </div>
     );
 };
