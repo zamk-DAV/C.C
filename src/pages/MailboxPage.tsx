@@ -96,8 +96,8 @@ export const MailboxPage: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('received')}
                         className={`flex-1 flex items-center justify-center transition-all ${activeTab === 'received'
-                                ? 'bg-primary text-background'
-                                : 'bg-background text-primary hover:bg-secondary'
+                            ? 'bg-primary text-background'
+                            : 'bg-background text-primary hover:bg-secondary'
                             }`}
                     >
                         <span className="text-sm font-bold tracking-tight">받은 우편</span>
@@ -105,8 +105,8 @@ export const MailboxPage: React.FC = () => {
                     <button
                         onClick={() => setActiveTab('sent')}
                         className={`flex-1 flex items-center justify-center border-l border-primary transition-all ${activeTab === 'sent'
-                                ? 'bg-primary text-background'
-                                : 'bg-background text-primary hover:bg-secondary'
+                            ? 'bg-primary text-background'
+                            : 'bg-background text-primary hover:bg-secondary'
                             }`}
                     >
                         <span className="text-sm font-bold tracking-tight">보낸 우편</span>
@@ -127,7 +127,7 @@ export const MailboxPage: React.FC = () => {
                         </p>
                     </div>
                 ) : (
-                    filteredPostcards.map((card, index) => {
+                    filteredPostcards.map((card) => {
                         const isUnread = !card.isRead && card.senderId !== user?.uid;
                         const isLocked = card.openDate && new Date(card.openDate) > new Date();
 
@@ -135,16 +135,16 @@ export const MailboxPage: React.FC = () => {
                             <div
                                 key={card.id}
                                 className={`group relative p-6 border transition-all ${isLocked
-                                        ? 'border-border/30 opacity-60'
-                                        : 'border-primary hover:bg-secondary/30 cursor-pointer'
+                                    ? 'border-border/30 opacity-60'
+                                    : 'border-primary hover:bg-secondary/30 cursor-pointer'
                                     }`}
                                 onClick={() => !isLocked && handleOpenLetter(card)}
                             >
                                 {/* Content Preview */}
                                 <div className="mb-6">
                                     <p className={`font-serif text-lg leading-relaxed line-clamp-3 ${isLocked
-                                            ? 'text-text-secondary italic'
-                                            : 'text-primary'
+                                        ? 'text-text-secondary italic'
+                                        : 'text-primary'
                                         }`}>
                                         {isLocked
                                             ? '아직 열 수 없는 편지입니다...'
@@ -166,10 +166,10 @@ export const MailboxPage: React.FC = () => {
 
                                     <button
                                         className={`flex items-center gap-1 transition-transform ${isLocked
-                                                ? 'cursor-not-allowed text-text-secondary'
-                                                : 'active:scale-95 text-primary'
+                                            ? 'cursor-not-allowed text-text-secondary'
+                                            : 'active:scale-95 text-primary'
                                             }`}
-                                        disabled={isLocked}
+                                        disabled={!!isLocked}
                                     >
                                         <span className={`text-xs font-bold border-b pb-0.5 ${isLocked ? 'border-border' : 'border-primary'
                                             }`}>
