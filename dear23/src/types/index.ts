@@ -44,7 +44,8 @@ export interface NotionItem {
     type?: 'Diary' | 'Event' | 'Memory' | 'Letter';
     sender?: string;
     isRead?: boolean;
-    author?: 'Me' | 'Partner';
+    author?: string;
+    authorId?: string; // Added for UID based filtering
     images?: string[];
     tags?: string[];
     content?: string;
