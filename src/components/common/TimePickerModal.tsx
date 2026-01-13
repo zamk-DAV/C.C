@@ -22,11 +22,12 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
     const [initHour, initMinute] = initialTime.split(':').map(Number);
     const [ampm, setAmpm] = useState<'오전' | '오후'>(initHour >= 12 ? '오후' : '오전');
     const [hour, setHour] = useState(initHour > 12 ? initHour - 12 : (initHour === 0 ? 12 : initHour));
-    const [minute, setMinute] = useState(initMinute);
+    // Snap initial minute to nearest 5-minute interval
+    const [minute, setMinute] = useState(Math.round(initMinute / 5) * 5 % 60);
 
     const ampmList: ('오전' | '오후')[] = ['오전', '오후'];
     const hourList = Array.from({ length: 12 }, (_, i) => i + 1);
-    const minuteList = Array.from({ length: 60 }, (_, i) => i);
+    const minuteList = Array.from({ length: 12 }, (_, i) => i * 5);
 
     const handleConfirm = () => {
         let finalHour = hour;
