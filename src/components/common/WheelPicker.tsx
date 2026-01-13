@@ -129,7 +129,7 @@ export function WheelPicker<T>({
                                 opacity,
                                 scrollSnapAlign: 'center'
                             }}
-                            onClick={() => handleItemClick(item, index)}
+                            onClick={() => handleItemClick(item)}
                         >
                             <span
                                 className={`text-[20px] font-semibold transition-colors ${isSelected ? 'text-primary' : 'text-text-secondary/60'
