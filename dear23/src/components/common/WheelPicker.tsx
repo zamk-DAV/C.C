@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useCallback } from 'react';
 import { useHaptics } from '../../hooks/useHaptics';
+import { animate } from 'framer-motion';
 
 interface WheelPickerProps<T> {
     items: T[];
@@ -11,12 +12,12 @@ interface WheelPickerProps<T> {
 }
 
 /**
- * iOS-style 3D wheel picker with mouse wheel and touch scroll support.
+ * iOS-style 3D wheel picker with optimized mouse wheel response.
  * Features:
- * - Robust Mouse wheel scrolling on desktop (1 unit per scroll)
- * - Touch scroll with momentum on mobile
- * - 3D perspective effect
- * - Haptic feedback on value change
+ * - High-performance Wheel handling with Framer Motion (Snappy 0.15s duration)
+ * - Native wheel listener with passive: false to prevent background scroll
+ * - Throttled items movement (80ms) for responsive but controlled scrolling
+ * - 3D perspective effect & Haptic feedback
  */
 export function WheelPicker<T>({
     items,
@@ -33,13 +34,21 @@ export function WheelPicker<T>({
     const lastScrollTime = useRef(0);
     const targetIndexRef = useRef(currentIndex);
     const isProgrammaticScroll = useRef(false);
+    const animationRef = useRef<any>(null);
 
     // Sync targetIndexRef with external prop changes
     useEffect(() => {
         targetIndexRef.current = currentIndex;
     }, [currentIndex]);
 
-    // Robust Wheel Handling: Use native event listener to ensure non-passive preventDefault
+    // Cleanup animation on unmount
+    useEffect(() => {
+        return () => {
+            if (animationRef.current) animationRef.current.stop();
+        };
+    }, []);
+
+    // Optimized Wheel Handling
     useEffect(() => {
         const container = containerRef.current;
         if (!container) return;
@@ -49,7 +58,8 @@ export function WheelPicker<T>({
             e.stopPropagation();
 
             const now = Date.now();
-            if (now - lastScrollTime.current < 150) {
+            // Reduced throttle for snappier response (80ms)
+            if (now - lastScrollTime.current < 80) {
                 return;
             }
             lastScrollTime.current = now;
@@ -63,10 +73,10 @@ export function WheelPicker<T>({
                 onChange(items[nextTarget]);
                 selection();
 
-                // Reset bridge after a short delay or when re-render happens
+                // Keep the lock slightly longer than the move but shorter than before
                 setTimeout(() => {
                     isProgrammaticScroll.current = false;
-                }, 300);
+                }, 100);
             }
         };
 
@@ -74,17 +84,28 @@ export function WheelPicker<T>({
         return () => container.removeEventListener('wheel', onWheelNative);
     }, [items, onChange, selection]);
 
-    // Scroll to current value on mount and value change
+    // Snappy scroll to current value using Framer Motion
     useEffect(() => {
         if (containerRef.current) {
-            const scrollTop = currentIndex * itemHeight;
-            const currentScroll = containerRef.current.scrollTop;
+            const targetScrollTop = currentIndex * itemHeight;
+            const startScrollTop = containerRef.current.scrollTop;
 
-            // Only scroll if there's a significant difference to avoid infinite loops or jitter
-            if (Math.abs(currentScroll - scrollTop) > 1) {
-                containerRef.current.scrollTo({
-                    top: scrollTop,
-                    behavior: 'smooth'
+            if (Math.abs(startScrollTop - targetScrollTop) > 1) {
+                if (animationRef.current) animationRef.current.stop();
+
+                animationRef.current = animate(startScrollTop, targetScrollTop, {
+                    type: "spring",
+                    stiffness: 400,
+                    damping: 35,
+                    mass: 0.8,
+                    onUpdate: (latest) => {
+                        if (containerRef.current) {
+                            containerRef.current.scrollTop = latest;
+                        }
+                    },
+                    onComplete: () => {
+                        animationRef.current = null;
+                    }
                 });
             }
         }
@@ -92,7 +113,6 @@ export function WheelPicker<T>({
 
     // Handle touch scroll snap (for momentum/touch only)
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-        // If it's a programmatic scroll (wheel or click), ignore it to avoid double-firing or jitter
         if (isProgrammaticScroll.current) return;
 
         const target = e.target as HTMLDivElement;
@@ -114,7 +134,7 @@ export function WheelPicker<T>({
 
             setTimeout(() => {
                 isProgrammaticScroll.current = false;
-            }, 300);
+            }, 100);
         }
     };
 
