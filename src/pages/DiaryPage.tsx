@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO, isValid, getWeek, getYear, getMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
@@ -7,9 +7,10 @@ import { deleteDiaryEntry, type NotionItem } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
 import { useNotion } from '../context/NotionContext';
 import FeedWriteModal from '../components/home/FeedWriteModal';
+import { DiaryDetailModal } from '../components/diary/DiaryDetailModal';
 
 export const DiaryPage: React.FC = () => {
-    const { user, userData } = useAuth();
+    const { user, userData, partnerData } = useAuth();
     const { diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
 
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
@@ -17,7 +18,20 @@ export const DiaryPage: React.FC = () => {
 
     // Edit & UX States
     const [editingItem, setEditingItem] = useState<NotionItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<NotionItem | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+    // Display author name with priority: partnerNickname > partnerData.name > "상대방"
+    const displayAuthorName = useCallback((item: NotionItem): string => {
+        const isMe = item.author === '나' || item.author === userData?.name || item.author === user?.uid;
+
+        if (isMe) {
+            return userData?.name || '나';
+        } else {
+            // Partner's entry
+            return userData?.partnerNickname || partnerData?.name || '상대방';
+        }
+    }, [userData, partnerData, user?.uid]);
 
     // Real-time Sync Trigger & Last Checked Update
     useEffect(() => {
@@ -175,7 +189,7 @@ export const DiaryPage: React.FC = () => {
                                     const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
                                     return (
-                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => handleEdit(item, {} as any)}>
+                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => setSelectedItem(item)}>
                                             {/* Image area */}
                                             <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-secondary border border-border">
                                                 {coverImage ? (
@@ -216,12 +230,12 @@ export const DiaryPage: React.FC = () => {
 
                                                 {/* Author & Status */}
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name || item.author === user?.uid
                                                         ? 'bg-blue-500'
                                                         : 'bg-red-500'
                                                         }`}></span>
                                                     <span className="text-[10px] font-medium text-text-secondary">
-                                                        {item.author || "익명"}
+                                                        {displayAuthorName(item)}
                                                     </span>
                                                 </div>
 
@@ -280,6 +294,14 @@ export const DiaryPage: React.FC = () => {
                     mood: editingItem.mood,
                     weather: editingItem.weather
                 } : null}
+            />
+
+            {/* Diary Detail Modal */}
+            <DiaryDetailModal
+                isOpen={!!selectedItem}
+                onClose={() => setSelectedItem(null)}
+                item={selectedItem}
+                authorName={selectedItem ? displayAuthorName(selectedItem) : ''}
             />
         </div>
     );

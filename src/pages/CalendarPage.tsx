@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useNotion } from '../context/NotionContext';
 
 import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import type { CalendarEvent } from '../types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import { EventWriteModal } from '../components/calendar/EventWriteModal';
 
 export const CalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
+    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
     const { coupleData } = useAuth();
+    const { refreshData } = useNotion();
 
     const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -45,21 +49,6 @@ export const CalendarPage: React.FC = () => {
         return () => unsubscribe();
     }, [coupleData?.id]);
 
-    // 2. Convert NotionContext diaryData to CalendarEvents - Removed to prevent Diary entries in Calendar
-    // const diaryEvents = useMemo((): CalendarEvent[] => {
-    //     if (!diaryData.length) return [];
-
-    //     return diaryData.map(item => ({
-    //         id: item.id,
-    //         title: item.title,
-    //         date: new Date(item.date),
-    //         time: '00:00',
-    //         type: 'Diary',
-    //         note: item.previewText || '',
-    //         author: item.author === userData?.name || item.author === 'Me' ? 'Me' : 'Partner'
-    //     })) as CalendarEvent[];
-    // }, [diaryData, userData?.name]);
-
     // Merge events (Removed diaryEvents to solve filtering confusion)
     const events = [...firestoreEvents];
 
@@ -77,6 +66,11 @@ export const CalendarPage: React.FC = () => {
     const selectedDateEvents = events.filter(event =>
         isSameDay(event.date, selectedDate)
     );
+
+    const handleEventSuccess = () => {
+        refreshData();
+        setIsEventModalOpen(false);
+    };
 
     return (
         <div className="relative flex min-h-[100dvh] w-full flex-col max-w-md mx-auto overflow-x-hidden border-x border-border bg-background text-primary font-display transition-colors duration-300">
@@ -175,6 +169,22 @@ export const CalendarPage: React.FC = () => {
                     )}
                 </div>
             </div>
+
+            {/* Floating Action Button */}
+            <button
+                onClick={() => setIsEventModalOpen(true)}
+                className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-10"
+            >
+                <span className="material-symbols-outlined text-2xl">add</span>
+            </button>
+
+            {/* Event Write Modal */}
+            <EventWriteModal
+                isOpen={isEventModalOpen}
+                onClose={() => setIsEventModalOpen(false)}
+                onSuccess={handleEventSuccess}
+                selectedDate={selectedDate}
+            />
         </div>
     );
 };

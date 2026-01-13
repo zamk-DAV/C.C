@@ -1,36 +1,39 @@
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
-import type { MemoryItem } from '../../types';
-import { useAuth } from '../../context/AuthContext';
 import { format, parseISO } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import type { NotionItem } from '../../lib/notion';
 
-interface FeedDetailModalProps {
+interface DiaryDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
-    item: MemoryItem | null;
+    item: NotionItem | null;
+    authorName: string;
 }
 
-export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClose, item }) => {
-    const { userData, partnerData } = useAuth();
+export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
+    isOpen,
+    onClose,
+    item,
+    authorName
+}) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const [dragDirection, setDragDirection] = useState<'x' | 'y' | null>(null);
 
     if (!item) return null;
 
-    const images = item.images && item.images.length > 0 ? item.images : (item.imageUrl ? [item.imageUrl] : []);
+    const images = item.images && item.images.length > 0
+        ? item.images
+        : (item.coverImage ? [item.coverImage] : []);
     const hasMultipleImages = images.length > 1;
 
     // Format date for header
     const formattedDate = item.date ? (() => {
         try {
-            return format(parseISO(item.date), 'yyyy. M. d. a h:mm');
+            return format(parseISO(item.date), 'yyyy. M. d. a h:mm', { locale: ko });
         } catch {
             return item.date;
         }
     })() : '';
-
-    // Author name display (placeholder - will be refined)
-    const authorName = "Memory";
 
     // Handle swipe gestures
     const handleDragEnd = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
@@ -40,12 +43,10 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
         // Horizontal swipe for image navigation
         if (Math.abs(info.offset.x) > Math.abs(info.offset.y)) {
             if (info.offset.x < -threshold || info.velocity.x < -velocity) {
-                // Swipe left - next image
                 if (currentImageIndex < images.length - 1) {
                     setCurrentImageIndex(prev => prev + 1);
                 }
             } else if (info.offset.x > threshold || info.velocity.x > velocity) {
-                // Swipe right - previous image
                 if (currentImageIndex > 0) {
                     setCurrentImageIndex(prev => prev - 1);
                 }
@@ -56,19 +57,7 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
         if (info.offset.y > 100 || info.velocity.y > velocity) {
             onClose();
         }
-
-        setDragDirection(null);
     }, [currentImageIndex, images.length, onClose]);
-
-    const handleDrag = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        if (!dragDirection) {
-            if (Math.abs(info.offset.x) > Math.abs(info.offset.y)) {
-                setDragDirection('x');
-            } else {
-                setDragDirection('y');
-            }
-        }
-    }, [dragDirection]);
 
     // Download image
     const handleDownload = async () => {
@@ -81,14 +70,13 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = `memory_${Date.now()}.jpg`;
+            link.download = `diary_${Date.now()}.jpg`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             window.URL.revokeObjectURL(url);
         } catch (error) {
             console.error('Download failed:', error);
-            // Fallback: open in new tab
             window.open(imageUrl, '_blank');
         }
     };
@@ -134,7 +122,6 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
                                 <span className="text-white/50 text-xs">{formattedDate}</span>
                             </div>
 
-                            {/* Placeholder for grid view button (optional) */}
                             <div className="w-10" />
                         </header>
 
@@ -144,7 +131,6 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
                             drag={hasMultipleImages ? "x" : false}
                             dragConstraints={{ left: 0, right: 0 }}
                             dragElastic={0.2}
-                            onDrag={handleDrag}
                             onDragEnd={handleDragEnd}
                         >
                             {images.length > 0 ? (
@@ -192,7 +178,8 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
                         <footer className="flex items-center justify-center h-16 bg-black border-t border-white/10 shrink-0">
                             <button
                                 onClick={handleDownload}
-                                className="p-3 text-white/70 hover:text-white transition-colors"
+                                disabled={images.length === 0}
+                                className="p-3 text-white/70 hover:text-white transition-colors disabled:opacity-30"
                                 title="다운로드"
                             >
                                 <span className="material-symbols-outlined text-2xl">download</span>
