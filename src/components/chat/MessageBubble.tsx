@@ -37,7 +37,7 @@ const MessageMeta: React.FC<{
             isMine ? "items-end" : "items-start"
         )}>
             {!isRead && (
-                <span className="text-[10px] text-yellow-500 font-bold leading-none mb-0.5">1</span>
+                <Heart className="size-3 text-red-400 fill-red-400" />
             )}
             {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
         </div>
