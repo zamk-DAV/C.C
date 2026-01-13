@@ -57,6 +57,7 @@ export const DesktopMessageItem: React.FC<DesktopMessageItemProps> = ({
 
                 {/* My Message: [Buttons] [Message] */}
                 {isMine && (
+                    <>
                         <div className={`transition-opacity duration-200 flex items-center gap-1 z-20 ${isHovered ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
                             <button
                                 onClick={onReply}
@@ -76,7 +77,7 @@ export const DesktopMessageItem: React.FC<DesktopMessageItemProps> = ({
                         <div className="relative z-10">{children}</div>
                     </>
                 )}
+            </div>
         </div>
-        </div >
     );
 };

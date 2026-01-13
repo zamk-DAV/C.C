@@ -1,14 +1,15 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
-import type { UserData } from '../types';
+import type { UserData, CoupleData } from '../types';
 
 interface AuthContextType {
     user: User | null;
     userData: UserData | null;
     partnerData: UserData | null;
+    coupleData: CoupleData | null;
     loading: boolean;
 }
 
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType>({
     user: null,
     userData: null,
     partnerData: null,
+    coupleData: null,
     loading: true,
 });
 
@@ -25,6 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [userData, setUserData] = useState<UserData | null>(null);
     const [partnerData, setPartnerData] = useState<UserData | null>(null);
+    const [coupleData, setCoupleData] = useState<CoupleData | null>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -33,29 +36,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 setUser(firebaseUser);
                 const userRef = doc(db, 'users', firebaseUser.uid);
 
-                // Subscribe to User Data
                 const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
                     if (docSnap.exists()) {
                         setUserData(docSnap.data() as UserData);
                     } else {
-                        // Handle case where auth exists but firestore doc doesn't (rare, maybe mid-signup)
                         setUserData(null);
+                        setLoading(false);
                     }
-                    // We don't set loading false here because we might need partner data
-                    // But for initial load, user auth is enough to stop "loading" for the auth check
-                    if (!docSnap.exists()) setLoading(false);
                 }, (error) => {
                     console.error("Error fetching user data:", error);
                     setLoading(false);
                 });
 
-                return () => {
-                    unsubscribeUser();
-                };
+                return () => unsubscribeUser();
             } else {
                 setUser(null);
                 setUserData(null);
                 setPartnerData(null);
+                setCoupleData(null);
                 setLoading(false);
             }
         });
@@ -63,31 +61,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return () => unsubscribe();
     }, []);
 
-    // Fetch Partner Data when userData changes
+    // Fetch Partner and Couple Data when userData changes
     useEffect(() => {
         if (user && userData?.coupleId) {
-            const q = query(
+            // 1. Subscribe to Partner
+            const partnerQuery = query(
                 collection(db, 'users'),
                 where('coupleId', '==', userData.coupleId),
                 where('uid', '!=', user.uid)
             );
 
-            // Using onSnapshot for partner real-time updates too
-            const unsubscribePartner = onSnapshot(q, (snapshot) => {
+            const unsubscribePartner = onSnapshot(partnerQuery, (snapshot) => {
                 if (!snapshot.empty) {
                     setPartnerData(snapshot.docs[0].data() as UserData);
                 } else {
                     setPartnerData(null);
                 }
-                setLoading(false); // Fully loaded
-            }, (error) => {
-                console.error("Error fetching partner data:", error);
+            });
+
+            // 2. Subscribe to Couple Doc
+            const coupleRef = doc(db, 'couples', userData.coupleId);
+            const unsubscribeCouple = onSnapshot(coupleRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    setCoupleData({ id: docSnap.id, ...docSnap.data() } as CoupleData);
+                } else {
+                    setCoupleData(null);
+                }
+                setLoading(false);
+            }, (err) => {
+                console.error("Error fetching couple data:", err);
                 setLoading(false);
             });
 
-            return () => unsubscribePartner();
+            return () => {
+                unsubscribePartner();
+                unsubscribeCouple();
+            };
         } else if (user && userData && !userData.coupleId) {
-            setLoading(false); // User loaded, no couple
+            setPartnerData(null);
+            setCoupleData(null);
+            setLoading(false);
         }
     }, [user, userData?.coupleId]);
 
@@ -95,6 +108,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         userData,
         partnerData,
+        coupleData,
         loading
     };
 

@@ -1,13 +1,7 @@
-import React, { useRef, useLayoutEffect } from 'react';
-import { Heart, ThumbsUp, Smile, Frown, Sparkles, Reply } from 'lucide-react';
-import { cn } from '../../../lib/utils'; // Path adjusted for dear23/src/components/chat/MessageBubble.tsx -> ../../../lib/utils
-// Wait, path is dear23/src/components/chat/MessageBubble.tsx
-// lib is dear23/src/lib
-// So ../../../lib/utils is correct.
-
-// Note: I need to verify ChatMessage type import.
-// dear23/src/types/index.ts -> ../../../types
-import type { ChatMessage } from '../../../types';
+import React from 'react';
+import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
+import { cn } from '../../lib/utils';
+import type { ChatMessage } from '../../types';
 
 interface MessageBubbleProps {
     message: ChatMessage;
@@ -66,7 +60,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: 'numeric', hour12: true }).format(msg.createdAt.toDate())
         : '';
 
-    const handleContextMenu = (e: React.MouseEvent) => {
+    const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
         if (onContextMenu) {
             e.preventDefault();
             onContextMenu(e, msg);
@@ -104,7 +98,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     return (
         <div
             className={cn("group flex flex-col max-w-[85%] mb-1 select-none", isMine ? "items-end ml-auto" : "items-start")}
-            onContextMenu={handleContextMenu}
+            onContextMenu={handlePointerDown}
         >
             {/* Name */}
             {!isMine && showProfile && senderName && (
@@ -198,7 +192,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 return (
                                     <button
                                         key={emoji}
-                                        onClick={(e) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
+                                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
                                         className="bg-background border border-border rounded-full p-1 flex items-center justify-center shadow-sm hover:bg-secondary/50 transition-colors"
                                     >
                                         <IconConfig.icon className={cn("w-3 h-3", IconConfig.color)} />

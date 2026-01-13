@@ -58,20 +58,7 @@ export interface NotionDatabase {
     icon?: any;
 }
 
-export interface NotionItem {
-    id: string;
-    title: string;
-    date: string;
-    coverImage: string | null;
-    previewText: string;
-    type?: string;
-    sender?: string;
-    isRead?: boolean;
-    author?: string;
-    images?: string[];
-    mood?: string;
-    weather?: string;
-}
+import { type NotionItem } from '../types';
 
 export interface PaginatedNotionResponse {
     data: NotionItem[];

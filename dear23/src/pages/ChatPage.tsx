@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MobileMessageItem } from '../components/chat/interactions/MobileMessageItem';
@@ -29,7 +29,6 @@ const partnerName = '민수';
 export const ChatPage: React.FC = () => {
     const navigate = useNavigate();
     const { isMobile } = useDeviceType();
-    const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
 
     return (
         <div className="min-h-[100dvh] bg-background-light dark:bg-background-dark text-primary dark:text-white font-display antialiased flex justify-center w-full">

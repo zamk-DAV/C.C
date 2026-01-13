@@ -39,11 +39,17 @@ export interface NotionItem {
     id: string;
     title: string;
     date: string;
-    type: 'Diary' | 'Event' | 'Memory';
-    images: string[];
-    tags: string[];
-    author: 'Me' | 'Partner';
-    content: string;
+    coverImage: string | null;
+    previewText: string;
+    type?: 'Diary' | 'Event' | 'Memory' | 'Letter';
+    sender?: string;
+    isRead?: boolean;
+    author?: 'Me' | 'Partner';
+    images?: string[];
+    tags?: string[];
+    content?: string;
+    mood?: string;
+    weather?: string;
 }
 
 export interface ChatMessage {

@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { format, parseISO } from 'date-fns';
 import { LetterWriteModal } from '../components/mailbox/LetterWriteModal';
 import { LetterDetailModal } from '../components/mailbox/LetterDetailModal';
 import { useLetterData } from '../context/NotionContext';
@@ -18,7 +17,7 @@ export const MailboxPage: React.FC = () => {
 
     // Filter letters based on active tab and author
     const filteredLetters = letterData.filter(letter => {
-        const isFromMe = letter.author === userData?.name || letter.author === '나';
+        const isFromMe = letter.author === 'Me';
         if (activeTab === 'received') return !isFromMe;
         if (activeTab === 'sent') return isFromMe;
         return true;
@@ -93,7 +92,6 @@ export const MailboxPage: React.FC = () => {
                     </div>
                 ) : (
                     filteredLetters.map((letter) => {
-                        const isFromMe = letter.author === userData?.name || letter.author === '나';
                         // Check if it's a scheduled letter that is not yet openable (simplified for MVP)
                         const isLocked = letter.date && new Date(letter.date) > new Date();
 
@@ -182,7 +180,7 @@ export const MailboxPage: React.FC = () => {
                 isOpen={!!selectedLetter}
                 onClose={() => setSelectedLetter(null)}
                 letter={selectedLetter}
-                isFromMe={selectedLetter?.author === userData?.name || selectedLetter?.author === '나'}
+                isFromMe={selectedLetter?.author === 'Me'}
             />
         </div>
     );

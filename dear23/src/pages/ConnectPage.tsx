@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, doc, writeBatch } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { CoupleData } from '../types';
 

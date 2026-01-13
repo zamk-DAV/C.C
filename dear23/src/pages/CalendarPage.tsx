@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { useEventData } from '../context/NotionContext';
 
 export const CalendarPage: React.FC = () => {
-    const navigate = useNavigate();
     const { eventData, isLoading } = useEventData();
     const [currentDate, setCurrentDate] = useState(new Date()); // Calendar view date
     const [selectedDate, setSelectedDate] = useState(new Date()); // Selected specific date
@@ -62,7 +60,7 @@ export const CalendarPage: React.FC = () => {
                 <div className="grid grid-cols-7 gap-y-2">
                     {/* Empty Slots */}
                     {emptyDays.map((_, i) => (
-                        <div key={`empty-${i}`} className="h-10 w-full"></div>
+                        <div key={`empty - ${i} `} className="h-10 w-full"></div>
                     ))}
 
                     {/* Days */}
@@ -86,7 +84,7 @@ export const CalendarPage: React.FC = () => {
                                 {isSelected && (
                                     <div className="absolute size-8 rounded-full border border-primary"></div>
                                 )}
-                                <span className={`relative text-base ${isSelected ? 'font-medium' : 'font-light'}`}>
+                                <span className={`relative text - base ${isSelected ? 'font-medium' : 'font-light'} `}>
                                     {format(day, 'd')}
                                 </span>
                                 {hasEvent && !isSelected && (
@@ -116,7 +114,7 @@ export const CalendarPage: React.FC = () => {
                             불러오는 중...
                         </div>
                     ) : selectedDateEvents.length > 0 ? (
-                        selectedDateEvents.map(event => (
+                        selectedDateEvents.map((event: any) => (
                             <div key={event.id} className="py-6 flex items-baseline gap-6">
                                 <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px] text-primary">
                                     {/* Usually we don't have time in current schema but can add or use default */}

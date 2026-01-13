@@ -3,7 +3,8 @@ import { format, parseISO, isValid, getWeek, getYear, getMonth } from 'date-fns'
 import { ko } from 'date-fns/locale';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { deleteDiaryEntry, type NotionItem } from '../lib/notion';
+import { deleteDiaryEntry } from '../lib/notion';
+import type { NotionItem } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { useNotion } from '../context/NotionContext';
 import FeedWriteModal from '../components/home/FeedWriteModal';
@@ -82,11 +83,11 @@ export const DiaryPage: React.FC = () => {
 
             if (!groups[sortKey]) groups[sortKey] = { items: [], displayKey };
 
-            const isMe = item.author === '나' || item.author === userData?.name; // Simplistic check
+            const isFromMe = item.author === 'Me';
 
             if (filter === 'all') groups[sortKey].items.push(item);
-            else if (filter === 'me' && isMe) groups[sortKey].items.push(item);
-            else if (filter === 'partner' && !isMe) groups[sortKey].items.push(item);
+            else if (filter === 'me' && isFromMe) groups[sortKey].items.push(item);
+            else if (filter === 'partner' && !isFromMe) groups[sortKey].items.push(item);
         });
 
         // Remove empty groups
@@ -126,7 +127,7 @@ export const DiaryPage: React.FC = () => {
                         {['all', 'me', 'partner'].map((f) => (
                             <button
                                 key={f}
-                                onClick={() => setFilter(f as any)}
+                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setFilter(f as any); }}
                                 className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${filter === f
                                     ? 'bg-primary text-background shadow-md transform scale-[1.02]'
                                     : 'text-text-secondary hover:text-primary hover:bg-background/50'
@@ -165,6 +166,7 @@ export const DiaryPage: React.FC = () => {
                             {/* Diary Grid */}
                             <div className={`grid grid-cols-2 gap-x-4 gap-y-8 transition-all duration-500 overflow-hidden ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
                                 {weekItems.map((item) => {
+                                    const isFromMe = item.author === 'Me';
                                     const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
                                     return (
@@ -209,7 +211,7 @@ export const DiaryPage: React.FC = () => {
 
                                                 {/* Author & Status */}
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${isFromMe
                                                         ? 'bg-blue-500'
                                                         : 'bg-red-500'
                                                         }`}></span>

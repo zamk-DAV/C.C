@@ -1,0 +1,73 @@
+
+> dear23@0.0.0 build
+> tsc -b && vite build
+
+src/components/chat/interactions/MobileMessageItem.tsx(2,18): error TS1484: 'PanInfo' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/components/chat/interactions/MobileMessageItem.tsx(41,34): error TS6133: 'event' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(64,11): error TS6133: 'handlePointerDown' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(64,32): error TS6133: 'e' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(79,13): error TS2322: Type '{ children: ReactNode; className: string; drag: "x"; dragConstraints: { left: number; right: number; }; dragElastic: { left: number; right: number; }; onDragStart: () => void; onDragEnd: (event: MouseEvent | ... 1 more ... | PointerEvent, info: PanInfo) => Promise<...>; animate: AnimationControls; onTap: () => void;...' is not assignable to type 'IntrinsicAttributes & Omit<HTMLMotionProps<"div">, "ref"> & RefAttributes<HTMLDivElement>'.
+  Property 'onLongPress' does not exist on type 'IntrinsicAttributes & Omit<HTMLMotionProps<"div">, "ref"> & RefAttributes<HTMLDivElement>'.
+src/components/chat/MessageBubble.tsx(1,17): error TS6133: 'useState' is declared but its value is never read.
+src/components/chat/MessageBubble.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/chat/MessageBubble.tsx(3,20): error TS2307: Cannot find module '../../../lib/utils' or its corresponding type declarations.
+src/components/chat/MessageBubble.tsx(10,34): error TS2307: Cannot find module '../../../types' or its corresponding type declarations.
+src/components/chat/MessageBubble.tsx(194,57): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/home/Header.tsx(2,1): error TS6133: 'cn' is declared but its value is never read.
+src/components/home/MemoryFeed.tsx(3,10): error TS1484: 'NotionItem' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/context/NotionContext.tsx(90,26): error TS2345: Argument of type 'NotionItem[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem[]' is not assignable to type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem[]'.
+    Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(94,27): error TS2345: Argument of type 'NotionItem[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem[]' is not assignable to type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem[]'.
+    Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(98,26): error TS2345: Argument of type 'NotionItem[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem[]' is not assignable to type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem[]'.
+    Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(102,27): error TS2345: Argument of type 'NotionItem[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem[]' is not assignable to type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem[]'.
+    Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(130,26): error TS2345: Argument of type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to type '(prevState: NotionItem[]) => NotionItem[]'.
+    Type '(NotionItem | NotionItem)[]' is not assignable to type 'NotionItem[]'.
+      Type 'NotionItem | NotionItem' is not assignable to type 'NotionItem'.
+        Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(146,27): error TS2345: Argument of type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to type '(prevState: NotionItem[]) => NotionItem[]'.
+    Type '(NotionItem | NotionItem)[]' is not assignable to type 'NotionItem[]'.
+      Type 'NotionItem | NotionItem' is not assignable to type 'NotionItem'.
+        Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(162,26): error TS2345: Argument of type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to type '(prevState: NotionItem[]) => NotionItem[]'.
+    Type '(NotionItem | NotionItem)[]' is not assignable to type 'NotionItem[]'.
+      Type 'NotionItem | NotionItem' is not assignable to type 'NotionItem'.
+        Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/context/NotionContext.tsx(178,27): error TS2345: Argument of type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to parameter of type 'SetStateAction<NotionItem[]>'.
+  Type '(prev: NotionItem[]) => (NotionItem | NotionItem)[]' is not assignable to type '(prevState: NotionItem[]) => NotionItem[]'.
+    Type '(NotionItem | NotionItem)[]' is not assignable to type 'NotionItem[]'.
+      Type 'NotionItem | NotionItem' is not assignable to type 'NotionItem'.
+        Type 'NotionItem' is missing the following properties from type 'NotionItem': tags, content
+src/pages/CalendarPage.tsx(8,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/CalendarPage.tsx(127,44): error TS2339: Property 'previewText' does not exist on type 'NotionItem'.
+src/pages/CalendarPage.tsx(128,113): error TS2339: Property 'previewText' does not exist on type 'NotionItem'.
+src/pages/ChatPage.tsx(32,12): error TS6133: 'hoveredMessageId' is declared but its value is never read.
+src/pages/ChatPage.tsx(32,30): error TS6133: 'setHoveredMessageId' is declared but its value is never read.
+src/pages/ConnectPage.tsx(4,53): error TS6133: 'updateDoc' is declared but its value is never read.
+src/pages/ConnectPage.tsx(4,69): error TS6133: 'serverTimestamp' is declared but its value is never read.
+src/pages/DiaryPage.tsx(85,26): error TS2367: This comparison appears to be unintentional because the types '"Me" | "Partner"' and '"??' have no overlap.
+src/pages/DiaryPage.tsx(87,62): error TS2345: Argument of type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem' is not assignable to parameter of type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem'.
+  Type 'NotionItem' is missing the following properties from type 'NotionItem': coverImage, previewText
+src/pages/DiaryPage.tsx(88,74): error TS2345: Argument of type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem' is not assignable to parameter of type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem'.
+  Type 'NotionItem' is missing the following properties from type 'NotionItem': coverImage, previewText
+src/pages/DiaryPage.tsx(89,80): error TS2345: Argument of type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem' is not assignable to parameter of type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem'.
+  Type 'NotionItem' is missing the following properties from type 'NotionItem': coverImage, previewText
+src/pages/HomePage.tsx(87,33): error TS2322: Type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/types/index").NotionItem[]' is not assignable to type 'import("C:/Users/\uC791\uC5C5\uC6A9/Desktop/C.C/dear23/src/lib/notion").NotionItem[]'.
+  Type 'NotionItem' is missing the following properties from type 'NotionItem': coverImage, previewText
+src/pages/MailboxPage.tsx(4,1): error TS6192: All imports in import declaration are unused.
+src/pages/MailboxPage.tsx(8,1): error TS6133: 'NotionItem' is declared but its value is never read.
+src/pages/MailboxPage.tsx(8,33): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/pages/MailboxPage.tsx(22,62): error TS2367: This comparison appears to be unintentional because the types '"Me" | "Partner"' and '"??' have no overlap.
+src/pages/MailboxPage.tsx(97,31): error TS6133: 'isFromMe' is declared but its value is never read.
+src/pages/MailboxPage.tsx(97,78): error TS2367: This comparison appears to be unintentional because the types '"Me" | "Partner"' and '"??' have no overlap.
+src/pages/MailboxPage.tsx(118,54): error TS2339: Property 'previewText' does not exist on type 'NotionItem'.
+src/pages/SettingsPage.tsx(7,26): error TS6133: 'getDoc' is declared but its value is never read.

@@ -1,0 +1,29 @@
+
+> dear23@0.0.0 build
+> tsc -b && vite build
+
+src/components/chat/interactions/MobileMessageItem.tsx(2,18): error TS1484: 'PanInfo' is a type and must be imported using a type-only import when 'verbatimModuleSyntax' is enabled.
+src/components/chat/interactions/MobileMessageItem.tsx(41,34): error TS6133: 'event' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(64,11): error TS6133: 'handlePointerDown' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(64,32): error TS6133: 'e' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(79,13): error TS2322: Type '{ children: ReactNode; className: string; drag: "x"; dragConstraints: { left: number; right: number; }; dragElastic: { left: number; right: number; }; onDragStart: () => void; onDragEnd: (event: MouseEvent | ... 1 more ... | PointerEvent, info: PanInfo) => Promise<...>; animate: AnimationControls; onTap: () => void;...' is not assignable to type 'IntrinsicAttributes & Omit<HTMLMotionProps<"div">, "ref"> & RefAttributes<HTMLDivElement>'.
+  Property 'onLongPress' does not exist on type 'IntrinsicAttributes & Omit<HTMLMotionProps<"div">, "ref"> & RefAttributes<HTMLDivElement>'.
+src/components/chat/MessageBubble.tsx(1,17): error TS6133: 'useState' is declared but its value is never read.
+src/components/chat/MessageBubble.tsx(1,27): error TS6133: 'useEffect' is declared but its value is never read.
+src/components/chat/MessageBubble.tsx(3,20): error TS2307: Cannot find module '../../../lib/utils' or its corresponding type declarations.
+src/components/chat/MessageBubble.tsx(10,34): error TS2307: Cannot find module '../../../types' or its corresponding type declarations.
+src/components/chat/MessageBubble.tsx(194,57): error TS2339: Property 'length' does not exist on type '{}'.
+src/components/home/Header.tsx(2,1): error TS6133: 'cn' is declared but its value is never read.
+src/components/home/MemoryFeed.tsx(3,33): error TS2307: Cannot find module '../types' or its corresponding type declarations.
+src/pages/CalendarPage.tsx(8,11): error TS6133: 'navigate' is declared but its value is never read.
+src/pages/ChatPage.tsx(32,12): error TS6133: 'hoveredMessageId' is declared but its value is never read.
+src/pages/ChatPage.tsx(32,30): error TS6133: 'setHoveredMessageId' is declared but its value is never read.
+src/pages/ConnectPage.tsx(4,53): error TS6133: 'updateDoc' is declared but its value is never read.
+src/pages/ConnectPage.tsx(4,69): error TS6133: 'serverTimestamp' is declared but its value is never read.
+src/pages/DiaryPage.tsx(6,33): error TS2459: Module '"../lib/notion"' declares 'NotionItem' locally, but it is not exported.
+src/pages/DiaryPage.tsx(129,100): error TS2345: Argument of type 'string' is not assignable to parameter of type 'SetStateAction<"all" | "me" | "partner">'.
+src/pages/MailboxPage.tsx(4,1): error TS6192: All imports in import declaration are unused.
+src/pages/MailboxPage.tsx(8,1): error TS6133: 'NotionItem' is declared but its value is never read.
+src/pages/MailboxPage.tsx(8,33): error TS2307: Cannot find module '../../types' or its corresponding type declarations.
+src/pages/MailboxPage.tsx(97,31): error TS6133: 'isFromMe' is declared but its value is never read.
+src/pages/SettingsPage.tsx(7,26): error TS6133: 'getDoc' is declared but its value is never read.

@@ -1,6 +1,6 @@
 import React from 'react';
 
-import { NotionItem } from '../../lib/notion';
+import { type NotionItem } from '../../types';
 
 interface MemoryFeedProps {
     items: NotionItem[];

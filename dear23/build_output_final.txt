@@ -1,0 +1,20 @@
+
+> dear23@0.0.0 build
+> tsc -b && vite build
+
+[36mvite v7.3.1 [32mbuilding client environment for production...[36m[39m
+transforming...
+[32m??[39m 21 modules transformed.
+??[39m Build failed in 920ms
+error during build:
+[commonjs--resolver] Failed to resolve entry for package "framer-motion". The package may have incorrect main/module/exports specified in its package.json.
+    at packageEntryFailure (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/vite/dist/node/chunks/config.js:32816:32)
+    at resolvePackageEntry (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/vite/dist/node/chunks/config.js:32813:2)
+    at tryNodeResolve (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/vite/dist/node/chunks/config.js:32716:70)
+    at Object.handler (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/vite/dist/node/chunks/config.js:32555:16)
+    at Object.handler (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/vite/dist/node/chunks/config.js:33706:13)
+    at file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/rollup/dist/es/shared/node-entry.js:22571:40
+    at async PluginDriver.hookFirstAndGetPlugin (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/rollup/dist/es/shared/node-entry.js:22453:28)
+    at async resolveId (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/rollup/dist/es/shared/node-entry.js:20929:26)
+    at async ModuleLoader.resolveId (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/rollup/dist/es/shared/node-entry.js:21366:15)
+    at async Object.resolveId (file:///C:/Users/%EC%9E%91%EC%97%85%EC%9A%A9/Desktop/C.C/dear23/node_modules/vite/dist/node/chunks/config.js:4154:21)

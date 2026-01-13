@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
@@ -7,7 +8,7 @@ import { useAuth } from '../context/AuthContext';
 import { useMemoryData } from '../context/NotionContext';
 
 export const HomePage: React.FC = () => {
-    const { user, userData, loading, coupleData } = useAuth();
+    const { user, userData, loading, coupleData, partnerData } = useAuth();
     const { memoryData, isLoading: isMemoryLoading } = useMemoryData();
     const navigate = useNavigate();
 
@@ -25,13 +26,16 @@ export const HomePage: React.FC = () => {
     if (!user) return null;
 
     // Use partner data if available
-    const partnerName = userData?.partnerNickname || "나의 파트너";
-    const partnerImage = userData?.partnerPhotoURL || "/default-avatar.png";
+    const partnerName = partnerData?.name || "나의 파트너";
+    const partnerImage = partnerData?.photoURL || "/default-avatar.png";
     const myImage = user.photoURL || "/default-avatar.png";
 
     // Calculate days together
-    const startDate = coupleData?.startDate?.toDate?.() || new Date();
-    const daysTogether = Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    let daysTogether = 0;
+    if (coupleData?.startDate) {
+        const start = new Date(coupleData.startDate);
+        daysTogether = Math.floor((new Date().getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    }
 
     if (!userData?.coupleId) {
         return (

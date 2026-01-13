@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { auth, db } from '../lib/firebase';
 import { searchNotionDatabases, validateNotionSchema } from '../lib/notion';
 import { signOut } from 'firebase/auth';
-import { doc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 
 export const SettingsPage: React.FC = () => {
     const { user, userData, partnerData } = useAuth();

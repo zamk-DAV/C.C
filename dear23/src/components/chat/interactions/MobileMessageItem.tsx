@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { motion, PanInfo, useAnimation } from 'framer-motion';
+import React, { useRef } from 'react';
+import { type PanInfo, motion, useAnimation } from 'framer-motion';
 import { useHaptics } from '../../../hooks/useHaptics';
 
 interface MobileMessageItemProps {
@@ -15,11 +15,9 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     isMine,
     onReply,
     onReaction,
-    onLongPress,
 }) => {
     const controls = useAnimation();
     const { heavy, success } = useHaptics();
-    const [isDragging, setIsDragging] = useState(false);
 
     // Double tap detection
     const lastTap = useRef<number>(0);
@@ -38,17 +36,8 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     };
 
     // Drag logic for Swipe to Reply
-    const handleDragEnd = async (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-        setIsDragging(false);
+    const handleDragEnd = async (_: any, info: PanInfo) => {
         const threshold = 50; // px to trigger reply
-
-        // Swipe logic: 
-        // If 'isMine' (Right side) -> Swipe Left to reply? Or standard is always swipe right?
-        // Usually swipe locally leads to reply.
-        // Let's implement generic "Swipe one way to reply".
-        // Most apps: Swipe from message towards center triggers reply.
-        // If isMine (Right aligned), swipe Left.
-        // If partner (Left aligned), swipe Right.
 
         const dragDistance = isMine ? -info.offset.x : info.offset.x;
 
@@ -61,30 +50,17 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
         controls.start({ x: 0 });
     };
 
-    const handlePointerDown = (e: React.PointerEvent) => {
-        // Long press handled via logic if needed, or rely on touch handlers
-        // For now, let's use a simple long press simulation with timer if Motion's onLongPress isn't enough
-    };
-
     return (
         <motion.div
             className="relative touch-manipulation"
             drag="x"
             dragConstraints={{ left: 0, right: 0 }}
             dragElastic={{ left: isMine ? 0.5 : 0.05, right: isMine ? 0.05 : 0.5 }}
-            onDragStart={() => setIsDragging(true)}
             onDragEnd={handleDragEnd}
             animate={controls}
             onTap={handleTap}
-            onLongPress={() => {
-                if (!isDragging) {
-                    heavy();
-                    onLongPress?.();
-                }
-            }}
             style={{ touchAction: 'pan-y' }} // Allow vertical scroll, handle horizontal in JS
         >
-            {/* Visual Indicator for Reply (Icon appearing behind) could be added here */}
             {children}
         </motion.div>
     );

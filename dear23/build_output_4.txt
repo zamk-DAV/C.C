@@ -1,0 +1,12 @@
+
+> dear23@0.0.0 build
+> tsc -b && vite build
+
+src/components/chat/interactions/MobileMessageItem.tsx(18,5): error TS6133: 'onLongPress' is declared but its value is never read.
+src/components/chat/interactions/MobileMessageItem.tsx(22,12): error TS6133: 'isDragging' is declared but its value is never read.
+src/pages/ChatPage.tsx(1,17): error TS6133: 'useState' is declared but its value is never read.
+src/pages/MailboxPage.tsx(4,1): error TS6192: All imports in import declaration are unused.
+src/pages/MailboxPage.tsx(8,1): error TS6133: 'NotionItem' is declared but its value is never read.
+src/pages/MailboxPage.tsx(18,12): error TS6133: 'isDragging' is declared but its value is never read.
+src/pages/MailboxPage.tsx(18,24): error TS6133: 'setIsDragging' is declared but its value is never read.
+src/pages/MailboxPage.tsx(98,31): error TS6133: 'isFromMe' is declared but its value is never read.
