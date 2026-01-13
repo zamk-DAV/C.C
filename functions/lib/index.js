@@ -43,14 +43,18 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
             const notionResponse = await axios_1.default.post(`https://api.notion.com/v1/databases/${databaseId}/query`, {
                 page_size: 20,
                 start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
-                /*
-                                    sorts: [
-                                        {
-                                            property: "date", // Assuming 'date' property exists
-                                            direction: "descending"
-                                        }
-                                    ]
-                */
+                filter: req.body.type ? {
+                    property: "dear23_카테고리",
+                    select: {
+                        equals: req.body.type === 'Diary' ? '일기' : '추억'
+                    }
+                } : undefined,
+                sorts: [
+                    {
+                        property: "dear23_날짜",
+                        direction: "descending"
+                    }
+                ]
             }, {
                 headers: {
                     "Authorization": `Bearer ${apiKey}`,
@@ -64,16 +68,16 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                 console.log("[DEBUG_KEYS] Notion Properties:", JSON.stringify(Object.keys(results[0].properties)));
             }
             const memories = results.map((page) => {
-                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p;
+                var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q;
                 const props = page.properties;
                 // Extract Title
                 const titleList = ((_a = props["Name"]) === null || _a === void 0 ? void 0 : _a.title) || ((_b = props["이름"]) === null || _b === void 0 ? void 0 : _b.title) || ((_c = props["title"]) === null || _c === void 0 ? void 0 : _c.title) || [];
                 const title = titleList.length > 0 ? titleList[0].plain_text : "Untitled";
                 // Extract Date
-                const dateProp = ((_d = props["Date"]) === null || _d === void 0 ? void 0 : _d.date) || ((_e = props["날짜"]) === null || _e === void 0 ? void 0 : _e.date) || ((_f = props["date"]) === null || _f === void 0 ? void 0 : _f.date);
+                const dateProp = ((_d = props["dear23_날짜"]) === null || _d === void 0 ? void 0 : _d.date) || ((_e = props["Date"]) === null || _e === void 0 ? void 0 : _e.date) || ((_f = props["날짜"]) === null || _f === void 0 ? void 0 : _f.date) || ((_g = props["date"]) === null || _g === void 0 ? void 0 : _g.date);
                 const date = dateProp ? dateProp.start : "";
                 // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
-                const fileProp = ((_g = props["dear23_대표이미지"]) === null || _g === void 0 ? void 0 : _g.files) || [];
+                const fileProp = ((_h = props["dear23_대표이미지"]) === null || _h === void 0 ? void 0 : _h.files) || [];
                 let coverImage = null;
                 if (fileProp.length > 0) {
                     const file = fileProp[0];
@@ -85,17 +89,17 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                     }
                 }
                 // Extract Preview Text (Text property: 'dear23_내용미리보기')
-                const previewList = ((_h = props["dear23_내용미리보기"]) === null || _h === void 0 ? void 0 : _h.rich_text) || [];
+                const previewList = ((_j = props["dear23_내용미리보기"]) === null || _j === void 0 ? void 0 : _j.rich_text) || [];
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
                 // Extract Author (Select property: '작성자' or Created By)
                 // Priority: '작성자' (Select) > 'Created by'
-                const authorSelect = (_j = props["작성자"]) === null || _j === void 0 ? void 0 : _j.select;
+                const authorSelect = (_k = props["작성자"]) === null || _k === void 0 ? void 0 : _k.select;
                 let author = "상대방"; // Default to Korean 'Partner'
                 if (authorSelect) {
                     author = authorSelect.name;
                 }
                 else {
-                    const createdBy = (_k = props["Created by"]) === null || _k === void 0 ? void 0 : _k.created_by;
+                    const createdBy = (_l = props["Created by"]) === null || _l === void 0 ? void 0 : _l.created_by;
                     if (createdBy) {
                         // We might get an ID or name depending on expansion, but usually it's an object.
                         // For now, let's leave it as is or default to something safe if '작성자' is missing.
@@ -103,9 +107,9 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                     }
                 }
                 // Extract Mood (Select property: 'dear23_기분')
-                const mood = (_m = (_l = props["dear23_기분"]) === null || _l === void 0 ? void 0 : _l.select) === null || _m === void 0 ? void 0 : _m.name;
+                const mood = (_o = (_m = props["dear23_기분"]) === null || _m === void 0 ? void 0 : _m.select) === null || _o === void 0 ? void 0 : _o.name;
                 // Extract Weather (Select property: 'dear23_날씨')
-                const weather = (_p = (_o = props["dear23_날씨"]) === null || _o === void 0 ? void 0 : _o.select) === null || _p === void 0 ? void 0 : _p.name;
+                const weather = (_q = (_p = props["dear23_날씨"]) === null || _p === void 0 ? void 0 : _p.select) === null || _q === void 0 ? void 0 : _q.name;
                 return {
                     id: page.id,
                     title,

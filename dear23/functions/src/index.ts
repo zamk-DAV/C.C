@@ -65,14 +65,18 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 {
                     page_size: 20, // Default to 20
                     start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
-                    /*
-                                        sorts: [
-                                            {
-                                                property: "date", // Assuming 'date' property exists
-                                                direction: "descending"
-                                            }
-                                        ]
-                    */
+                    filter: req.body.type ? {
+                        property: "dear23_카테고리",
+                        select: {
+                            equals: req.body.type === 'Diary' ? '일기' : '추억'
+                        }
+                    } : undefined,
+                    sorts: [
+                        {
+                            property: "dear23_날짜",
+                            direction: "descending"
+                        }
+                    ]
                 },
                 {
                     headers: {
@@ -96,7 +100,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const title = titleList.length > 0 ? titleList[0].plain_text : "Untitled";
 
                 // Extract Date
-                const dateProp = props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
+                const dateProp = props["dear23_날짜"]?.date || props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
                 const date = dateProp ? dateProp.start : "";
 
                 // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
