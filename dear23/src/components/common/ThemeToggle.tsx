@@ -15,7 +15,7 @@ interface ThemeToggleProps {
  * Features:
  * - Smooth spring animations
  * - Scale effect on interaction
- * - System Green for "on" state
+ * - Uses theme accent color for "on" state
  * - Haptic feedback
  */
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({
@@ -52,11 +52,11 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
                     relative w-[51px] h-[31px] rounded-full p-[2px] 
                     transition-colors duration-300 ease-out
                     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    ${checked ? 'bg-[#34C759]' : 'bg-border/40'}
+                    ${checked ? 'bg-accent' : 'bg-border/40'}
                 `}
                 style={{
                     boxShadow: checked
-                        ? 'inset 0 0 0 1px rgba(52, 199, 89, 0.3)'
+                        ? 'inset 0 0 0 1px var(--accent-color)'
                         : 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)'
                 }}
             >

@@ -94,7 +94,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                         </div>
 
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-3">
+                        <div className="flex items-center justify-between px-6 py-3 border-b border-border/10">
                             <button
                                 onClick={onClose}
                                 className="text-text-secondary font-medium text-[17px] active:opacity-70 transition-opacity"
@@ -110,35 +110,42 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                             </button>
                         </div>
 
+                        {/* Column Labels */}
+                        <div className="flex px-4 pt-4 pb-2 gap-2">
+                            <div className="flex-1 text-center text-[13px] font-medium text-text-secondary">년</div>
+                            <div className="flex-1 text-center text-[13px] font-medium text-text-secondary">월</div>
+                            <div className="flex-1 text-center text-[13px] font-medium text-text-secondary">일</div>
+                        </div>
+
                         {/* Wheel Pickers */}
-                        <div className="flex px-4 py-6 gap-2">
+                        <div className="flex px-4 pb-4 gap-2">
                             {/* Year */}
-                            <div className="flex-1">
+                            <div className="flex-1 border border-border/10 rounded-xl overflow-hidden">
                                 <WheelPicker
                                     items={years}
                                     value={year}
                                     onChange={setYear}
-                                    formatItem={(y) => `${y}년`}
+                                    formatItem={(y) => `${y}`}
                                 />
                             </div>
 
                             {/* Month */}
-                            <div className="flex-1">
+                            <div className="flex-1 border border-border/10 rounded-xl overflow-hidden">
                                 <WheelPicker
                                     items={months}
                                     value={month}
                                     onChange={setMonth}
-                                    formatItem={formatMonth}
+                                    formatItem={(m) => `${m}`}
                                 />
                             </div>
 
                             {/* Day */}
-                            <div className="flex-1">
+                            <div className="flex-1 border border-border/10 rounded-xl overflow-hidden">
                                 <WheelPicker
                                     items={days}
                                     value={day}
                                     onChange={setDay}
-                                    formatItem={formatDay}
+                                    formatItem={(d) => `${d}`}
                                 />
                             </div>
                         </div>

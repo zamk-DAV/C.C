@@ -95,10 +95,17 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                             </button>
                         </div>
 
+                        {/* Column Labels */}
+                        <div className="flex px-4 pt-4 pb-2 gap-2">
+                            <div className="flex-1 text-center text-[13px] font-medium text-text-secondary">오전/오후</div>
+                            <div className="flex-1 text-center text-[13px] font-medium text-text-secondary">시</div>
+                            <div className="flex-1 text-center text-[13px] font-medium text-text-secondary">분</div>
+                        </div>
+
                         {/* Wheel Pickers */}
-                        <div className="flex px-4 py-6 gap-2">
+                        <div className="flex px-4 pb-4 gap-2">
                             {/* AM/PM */}
-                            <div className="flex-1">
+                            <div className="flex-1 border border-border/10 rounded-xl overflow-hidden">
                                 <WheelPicker
                                     items={ampmList}
                                     value={ampm}
@@ -107,22 +114,22 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                             </div>
 
                             {/* Hour */}
-                            <div className="flex-1">
+                            <div className="flex-1 border border-border/10 rounded-xl overflow-hidden">
                                 <WheelPicker
                                     items={hourList}
                                     value={hour}
                                     onChange={setHour}
-                                    formatItem={formatHour}
+                                    formatItem={(h) => `${h}`}
                                 />
                             </div>
 
                             {/* Minute */}
-                            <div className="flex-1">
+                            <div className="flex-1 border border-border/10 rounded-xl overflow-hidden">
                                 <WheelPicker
                                     items={minuteList}
                                     value={minute}
                                     onChange={setMinute}
-                                    formatItem={formatMinute}
+                                    formatItem={(m) => m.toString().padStart(2, '0')}
                                 />
                             </div>
                         </div>
