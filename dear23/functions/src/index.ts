@@ -4,7 +4,7 @@ import axios from "axios";
 import * as cors from "cors";
 
 admin.initializeApp();
-// Deploy Timestamp: 2026-01-13 11:20
+// Deploy Timestamp: 2026-01-13 11:35
 
 const corsHandler = cors({ origin: true });
 
@@ -19,6 +19,7 @@ interface MemoryItem {
     sender?: string;
     isRead?: boolean;
     author?: string;
+    authorId?: string; // Added for UID based filtering
     images?: string[];
 }
 
@@ -39,8 +40,6 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             const uid = decodedToken.uid;
 
             // Allow requesting a specific user's data (e.g., partner) if provided, otherwise self
-            // For higher security, we should verify 'targetUserId' is actually the partner.
-            // For now, allow any user to be queried (assuming RLS-like logic here or just open for couple MVP)
             const targetUserId = req.body.targetUserId || uid;
 
             // 2. Fetch Notion Config from Firestore
@@ -129,20 +128,16 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const previewList = props["dear23_내용미리보기"]?.rich_text || [];
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
 
-                // Extract Author (Select property: '작성자' or Created By)
-                // Priority: '작성자' (Select) > 'Created by'
+                // Extract Author (Select property: '작성자')
                 const authorSelect = props["작성자"]?.select;
-                let author = "상대방"; // Default to Korean 'Partner'
+                let author = "상대방";
                 if (authorSelect) {
                     author = authorSelect.name;
-                } else {
-                    const createdBy = props["Created by"]?.created_by;
-                    if (createdBy) {
-                        // We might get an ID or name depending on expansion, but usually it's an object.
-                        // For now, let's leave it as is or default to something safe if '작성자' is missing.
-                        // Ideally '작성자' should be used.
-                    }
                 }
+
+                // Extract Author ID (Text property: 'dear23_authorId')
+                const authorIdList = props["dear23_authorId"]?.rich_text || [];
+                const authorId = authorIdList.length > 0 ? authorIdList[0].plain_text : undefined;
 
                 // Extract Mood (Select property: 'dear23_기분')
                 const mood = props["dear23_기분"]?.select?.name;
@@ -157,7 +152,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     coverImage,
                     previewText,
                     author,
-                    mood,
+                    authorId,
                     mood,
                     weather,
                     images
@@ -168,7 +163,6 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 data: memories,
                 hasMore: notionResponse.data.has_more,
                 nextCursor: notionResponse.data.next_cursor,
-                // [DEBUG] Show available property keys from the first item
                 debug_properties: results.length > 0 ? Object.keys(results[0].properties) : []
             });
 
@@ -283,10 +277,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                                 public: true,
                             });
 
-                            // For publicly accessible bucket (if configured)
-                            // const publicUrl = file.publicUrl(); 
-
-                            // Safer: Generate Signed URL valid for a long time (e.g., 50 years)
+                            // Generate Signed URL valid for a long time
                             const [url] = await file.getSignedUrl({
                                 action: 'read',
                                 expires: '01-01-2100'
@@ -297,8 +288,6 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                     console.log(`[Storage] Uploaded ${imageUrls.length} images.`);
                 } catch (storageError: any) {
                     console.error("[Storage] Failed to upload images:", storageError);
-                    // Continue without images if upload fails, or throw? 
-                    // Let's continue but log error.
                 }
             }
 
@@ -358,6 +347,15 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         name: req.body.sender
                     }
                 } : undefined,
+                "dear23_authorId": {
+                    rich_text: [
+                        {
+                            text: {
+                                content: uid // Save the User UID
+                            }
+                        }
+                    ]
+                },
                 "dear23_대표이미지": imageUrls.length > 0 ? {
                     files: imageUrls.map(url => ({
                         name: "image",
@@ -390,25 +388,16 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                 if (firstError.response?.status === 400) {
                     console.warn("Retrying with alternative strategies...");
 
-                    const errorDetail = JSON.stringify(firstError.response?.data);
-                    console.warn("Error Detail:", errorDetail);
-
-                    // Strategy: Try alternative title keys if 'Name is not a property' or similar error
                     const possibleTitleKeys = ["Name", "title", "제목", "Title"];
                     const currentTitleKey = "이름";
-
                     let lastError = firstError;
 
                     for (const altKey of possibleTitleKeys) {
                         try {
                             console.log(`[Retry] Trying with title key: ${altKey}`);
                             const retryProps: any = { ...properties };
-                            delete retryProps[currentTitleKey]; // Remove the one that likely failed
-
-                            retryProps[altKey] = properties["이름"]; // Copy value
-
-                            // Also optionally remove potentially problematic select props in second retry if still failing
-                            // But let's try just the key first
+                            delete retryProps[currentTitleKey];
+                            retryProps[altKey] = properties["이름"];
 
                             const retryResponse = await axios.post(
                                 "https://api.notion.com/v1/pages",
@@ -424,7 +413,6 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                                     },
                                 }
                             );
-                            console.log(`[Retry] Success with key: ${altKey}`);
                             res.status(200).send({ data: retryResponse.data, warning: `Title key switched to ${altKey}` });
                             return;
                         } catch (retryError: any) {
@@ -433,14 +421,13 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         }
                     }
 
-                    // Final Strategy: Remove all custom props and try the first property that failed (likely '이름' or 'Name')
-                    // to at least save the core properties
                     console.warn("Final Attempt: Stripping everything except core Notion fields...");
                     try {
                         const minimalProps: any = { ...properties };
                         delete minimalProps["작성자"];
                         delete minimalProps["dear23_날씨"];
                         delete minimalProps["dear23_기분"];
+                        delete minimalProps["dear23_authorId"]; // Also remove new prop in minimal retry
 
                         const finalResponse = await axios.post(
                             "https://api.notion.com/v1/pages",
@@ -460,9 +447,6 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                     } catch (finalError: any) {
                         res.status(500).send({
                             error: "Failed after all retries",
-                            firstError: firstError.message,
-                            lastRetryError: lastError.message,
-                            finalError: finalError.message,
                             details: finalError.response?.data
                         });
                     }
@@ -474,14 +458,6 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
 
         } catch (error: any) {
             console.error("Error creating Notion page:", error);
-            if (error.response) {
-                console.error("Notion API Error Response Status:", error.response.status);
-                console.error("Notion API Error Response Data:", JSON.stringify(error.response.data));
-            } else if (error.request) {
-                console.error("Notion API No Response received:", error.request);
-            } else {
-                console.error("Notion API Request Setup Error:", error.message);
-            }
             res.status(500).send({ error: error.message, details: error.response?.data });
         }
     });
@@ -569,6 +545,11 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
                 patchProps["작성자"] = { select: {} };
                 created.push("작성자");
             }
+            // NEW: Ensure 'dear23_authorId' exists
+            if (!currentProps["dear23_authorId"]) {
+                patchProps["dear23_authorId"] = { rich_text: {} };
+                created.push("dear23_authorId");
+            }
 
             // 4. Update Database if needed
             if (Object.keys(patchProps).length > 0) {
@@ -648,9 +629,6 @@ export const deleteDiaryEntry = functions.https.onRequest((req, res) => {
 
         } catch (error: any) {
             console.error("Error deleting Notion page:", error);
-            if (error.response) {
-                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
-            }
             res.status(500).send({ error: error.message });
         }
     });
@@ -722,6 +700,9 @@ export const updateDiaryEntry = functions.https.onRequest((req, res) => {
                         name: weather
                     }
                 } : undefined,
+                // Update AuthorId if missing? Usually we don't change author info on edit. 
+                // But we could enforce it if we want to "claim" it. 
+                // Let's stick to content updates for now to avoid side effects.
             };
 
             // Remove undefined keys
@@ -746,9 +727,6 @@ export const updateDiaryEntry = functions.https.onRequest((req, res) => {
 
         } catch (error: any) {
             console.error("Error updating Notion page:", error);
-            if (error.response) {
-                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
-            }
             res.status(500).send({ error: error.message });
         }
     });

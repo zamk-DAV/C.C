@@ -1,16 +1,16 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO, isValid, getWeek, getYear, getMonth } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { deleteDiaryEntry } from '../lib/notion';
-import type { NotionItem } from '../types';
+import { deleteDiaryEntry, type NotionItem } from '../lib/notion';
 import { useAuth } from '../context/AuthContext';
 import { useNotion } from '../context/NotionContext';
 import FeedWriteModal from '../components/home/FeedWriteModal';
+import { DiaryDetailModal } from '../components/diary/DiaryDetailModal';
 
 export const DiaryPage: React.FC = () => {
-    const { user, userData } = useAuth();
+    const { user, userData, partnerData } = useAuth();
     const { diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
 
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
@@ -18,7 +18,22 @@ export const DiaryPage: React.FC = () => {
 
     // Edit & UX States
     const [editingItem, setEditingItem] = useState<NotionItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<NotionItem | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
+    // Display author name with priority: partnerNickname > partnerData.name > "상대방"
+    const displayAuthorName = useCallback((item: NotionItem): string => {
+        // Check filtering prioritization: UID > Name
+        const isMe = (item.authorId && item.authorId === user?.uid) ||
+            (!item.authorId && (item.author === '나' || item.author === userData?.name));
+
+        if (isMe) {
+            return userData?.name || '나';
+        } else {
+            // Partner's entry
+            return userData?.partnerNickname || partnerData?.name || '상대방';
+        }
+    }, [userData, partnerData, user?.uid]);
 
     // Real-time Sync Trigger & Last Checked Update
     useEffect(() => {
@@ -66,15 +81,20 @@ export const DiaryPage: React.FC = () => {
         const groups: { [key: string]: { items: NotionItem[], displayKey: string } } = {};
 
         sorted.forEach(item => {
-            if (!item.date) return;
+            if (!item.date) {
+                console.warn("[DiaryGroup] Missing date for item:", item.id);
+                return;
+            }
             const date = parseISO(item.date);
-            if (!isValid(date)) return;
+            if (!isValid(date)) {
+                console.warn("[DiaryGroup] Invalid date for item:", item.id, item.date);
+                return;
+            }
 
             const year = getYear(date);
-            const month = getMonth(date) + 1; // 0-indexed
+            const month = getMonth(date) + 1;
             const week = getWeek(date, { weekStartsOn: 0 });
 
-            // Calculate week of month (1-4)
             const firstDayOfMonth = new Date(year, month - 1, 1);
             const weekOfMonth = Math.ceil((date.getDate() + firstDayOfMonth.getDay()) / 7);
 
@@ -83,12 +103,16 @@ export const DiaryPage: React.FC = () => {
 
             if (!groups[sortKey]) groups[sortKey] = { items: [], displayKey };
 
-            const isFromMe = item.author === 'Me';
+            // Improved Filtering Logic: UID > Name
+            const isMe = (item.authorId && item.authorId === user?.uid) ||
+                (!item.authorId && (item.author === '나' || item.author === userData?.name));
 
             if (filter === 'all') groups[sortKey].items.push(item);
-            else if (filter === 'me' && isFromMe) groups[sortKey].items.push(item);
-            else if (filter === 'partner' && !isFromMe) groups[sortKey].items.push(item);
+            else if (filter === 'me' && isMe) groups[sortKey].items.push(item);
+            else if (filter === 'partner' && !isMe) groups[sortKey].items.push(item);
         });
+
+        console.log("[DiaryGroup] Final Groups:", Object.keys(groups).length, groups, "filter:", filter);
 
         // Remove empty groups
         Object.keys(groups).forEach(key => {
@@ -96,7 +120,7 @@ export const DiaryPage: React.FC = () => {
         });
 
         return groups;
-    }, [filter, diaryData, userData]);
+    }, [filter, diaryData, userData, user?.uid]);
 
     // Format date with day of week
     const formatDateWithDay = (dateStr: string) => {
@@ -127,7 +151,7 @@ export const DiaryPage: React.FC = () => {
                         {['all', 'me', 'partner'].map((f) => (
                             <button
                                 key={f}
-                                onClick={(e: React.MouseEvent) => { e.stopPropagation(); setFilter(f as any); }}
+                                onClick={() => setFilter(f as any)}
                                 className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${filter === f
                                     ? 'bg-primary text-background shadow-md transform scale-[1.02]'
                                     : 'text-text-secondary hover:text-primary hover:bg-background/50'
@@ -166,11 +190,10 @@ export const DiaryPage: React.FC = () => {
                             {/* Diary Grid */}
                             <div className={`grid grid-cols-2 gap-x-4 gap-y-8 transition-all duration-500 overflow-hidden ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
                                 {weekItems.map((item) => {
-                                    const isFromMe = item.author === 'Me';
                                     const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
                                     return (
-                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={(e) => handleEdit(item, e)}>
+                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => setSelectedItem(item)}>
                                             {/* Image area */}
                                             <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-secondary border border-border">
                                                 {coverImage ? (
@@ -211,12 +234,12 @@ export const DiaryPage: React.FC = () => {
 
                                                 {/* Author & Status */}
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${isFromMe
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name || item.author === user?.uid
                                                         ? 'bg-blue-500'
                                                         : 'bg-red-500'
                                                         }`}></span>
                                                     <span className="text-[10px] font-medium text-text-secondary">
-                                                        {item.author || "익명"}
+                                                        {displayAuthorName(item)}
                                                     </span>
                                                 </div>
 
@@ -275,6 +298,14 @@ export const DiaryPage: React.FC = () => {
                     mood: editingItem.mood,
                     weather: editingItem.weather
                 } : null}
+            />
+
+            {/* Diary Detail Modal */}
+            <DiaryDetailModal
+                isOpen={!!selectedItem}
+                onClose={() => setSelectedItem(null)}
+                item={selectedItem}
+                authorName={selectedItem ? displayAuthorName(selectedItem) : ''}
             />
         </div>
     );

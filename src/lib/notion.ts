@@ -68,6 +68,7 @@ export interface NotionItem {
     sender?: string;
     isRead?: boolean;
     author?: string;
+    authorId?: string; // Added for UID based filtering
     images?: string[];
     mood?: string;
     weather?: string;

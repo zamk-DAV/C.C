@@ -68,6 +68,7 @@ export interface NotionItem {
     sender?: string;
     isRead?: boolean;
     author?: string;
+    authorId?: string; // Added for UID based filtering
     images?: string[];
     mood?: string;
     weather?: string;
@@ -88,18 +89,19 @@ export interface PaginatedNotionResponse {
 // API Functions
 // ============================================
 const CREATE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/createDiaryEntry";
+// Trigger Vercel Redeploy: 2026-01-13
 
 export const createDiaryEntry = async (
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
     type: 'Diary' | 'Memory' | 'Event' | 'Letter' = 'Diary',
     options: {
-        mood?: string;
-        sender?: string;
-        date?: string;
-        weather?: string;
-        endDate?: string;
-        color?: string;
+        mood?: string,
+        sender?: string,
+        date?: string,
+        weather?: string,
+        endDate?: string,
+        color?: string,
         isImportant?: boolean,
         isShared?: boolean,
         url?: string,
@@ -187,12 +189,12 @@ export const updateDiaryEntry = async (
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
     options: {
-        mood?: string;
-        weather?: string;
-        date?: string;
-        title?: string;
-        endDate?: string;
-        color?: string;
+        mood?: string,
+        weather?: string,
+        date?: string,
+        title?: string,
+        endDate?: string,
+        color?: string,
         isImportant?: boolean,
         isShared?: boolean,
         url?: string
@@ -369,6 +371,33 @@ export const validateNotionSchema = async (apiKey: string, databaseId: string): 
             // Ignore JSON parse error
         }
         throw new Error(errorMessage);
+    }
+
+    return await response.json();
+};
+
+const PAGE_CONTENT_URL = "https://us-central1-ccdear23.cloudfunctions.net/getNotionPageContent";
+
+export const fetchNotionPageContent = async (pageId: string): Promise<any> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+
+    await waitForThrottle();
+    lastApiCallTime = Date.now();
+
+    const token = await user.getIdToken();
+
+    const response = await fetch(PAGE_CONTENT_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ pageId })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch page content: ${response.statusText}`);
     }
 
     return await response.json();

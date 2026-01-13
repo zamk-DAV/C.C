@@ -23,7 +23,9 @@ export const DiaryPage: React.FC = () => {
 
     // Display author name with priority: partnerNickname > partnerData.name > "상대방"
     const displayAuthorName = useCallback((item: NotionItem): string => {
-        const isMe = item.author === '나' || item.author === userData?.name || item.author === user?.uid;
+        // Check filtering prioritization: UID > Name
+        const isMe = (item.authorId && item.authorId === user?.uid) ||
+            (!item.authorId && (item.author === '나' || item.author === userData?.name));
 
         if (isMe) {
             return userData?.name || '나';
@@ -101,7 +103,9 @@ export const DiaryPage: React.FC = () => {
 
             if (!groups[sortKey]) groups[sortKey] = { items: [], displayKey };
 
-            const isMe = item.author === '나' || item.author === userData?.name;
+            // Improved Filtering Logic: UID > Name
+            const isMe = (item.authorId && item.authorId === user?.uid) ||
+                (!item.authorId && (item.author === '나' || item.author === userData?.name));
 
             if (filter === 'all') groups[sortKey].items.push(item);
             else if (filter === 'me' && isMe) groups[sortKey].items.push(item);
@@ -116,7 +120,7 @@ export const DiaryPage: React.FC = () => {
         });
 
         return groups;
-    }, [filter, diaryData, userData]);
+    }, [filter, diaryData, userData, user?.uid]);
 
     // Format date with day of week
     const formatDateWithDay = (dateStr: string) => {
