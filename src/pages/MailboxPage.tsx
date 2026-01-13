@@ -50,9 +50,6 @@ export const MailboxPage: React.FC = () => {
         return true;
     });
 
-    // Calculate edition number based on total postcards
-    const editionNumber = String(postcards.length + 1).padStart(2, '0');
-
     // Handle open letter - mark as read
     const handleOpenLetter = async (letter: Postcard) => {
         setSelectedLetter(letter);
