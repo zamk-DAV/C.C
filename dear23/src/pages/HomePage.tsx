@@ -1,16 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import { useAuth } from '../context/AuthContext';
-import { useMemoryData } from '../context/NotionContext';
+import { useNotion } from '../context/NotionContext';
+import FeedWriteModal from '../components/home/FeedWriteModal';
 
 export const HomePage: React.FC = () => {
     const { user, userData, loading, coupleData, partnerData } = useAuth();
-    const { memoryData, isLoading: isMemoryLoading } = useMemoryData();
+    const { memoryData, isLoading: isMemoryLoading, refreshData } = useNotion();
     const navigate = useNavigate();
+    const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
     useEffect(() => {
         if (!loading) {
@@ -61,6 +63,11 @@ export const HomePage: React.FC = () => {
         );
     }
 
+    const handleCreateSuccess = () => {
+        refreshData();
+        setIsWriteModalOpen(false);
+    };
+
     return (
         <div className="min-h-screen bg-background pb-24 font-display">
             <Header
@@ -92,6 +99,22 @@ export const HomePage: React.FC = () => {
                     </div>
                 )}
             </main>
+
+            {/* Floating Action Button */}
+            <button
+                onClick={() => setIsWriteModalOpen(true)}
+                className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-40"
+            >
+                <span className="material-symbols-outlined text-2xl">add</span>
+            </button>
+
+            {/* Write Modal */}
+            <FeedWriteModal
+                isOpen={isWriteModalOpen}
+                onClose={() => setIsWriteModalOpen(false)}
+                type="Memory"
+                onSuccess={handleCreateSuccess}
+            />
         </div>
     );
 };
