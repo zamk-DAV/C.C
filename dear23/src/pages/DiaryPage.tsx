@@ -170,7 +170,7 @@ export const DiaryPage: React.FC = () => {
                                     const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
                                     return (
-                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => handleEdit(item, {} as any)}>
+                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={(e) => handleEdit(item, e)}>
                                             {/* Image area */}
                                             <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-secondary border border-border">
                                                 {coverImage ? (
