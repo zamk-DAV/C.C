@@ -79,7 +79,7 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                         initial={{ opacity: 0, y: 100 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: 100 }}
-                        className="fixed inset-x-4 bottom-24 top-20 z-50 bg-background rounded-xl shadow-2xl overflow-hidden max-w-lg mx-auto flex flex-col"
+                        className="fixed inset-x-4 bottom-24 top-40 z-50 bg-background rounded-xl shadow-2xl overflow-hidden max-w-lg mx-auto flex flex-col"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
