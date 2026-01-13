@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -146,8 +146,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={w.value}
                                             onClick={() => setSelectedWeather(w.value)}
                                             className={`flex flex-col items-center justify-center min-w-[72px] h-[84px] rounded-2xl transition-all duration-300 cursor-pointer border-2 ${selectedWeather === w.value
-                                                    ? 'bg-black text-white border-black shadow-lg scale-105'
-                                                    : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300'
+                                                ? 'bg-black text-white border-black shadow-lg scale-105'
+                                                : 'bg-white text-gray-400 border-gray-100 hover:border-gray-300'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-3xl">{w.icon}</span>
@@ -166,8 +166,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={m.value}
                                             onClick={() => setSelectedMood(m.value)}
                                             className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${selectedMood === m.value
-                                                    ? 'bg-black text-white shadow-xl transform scale-110'
-                                                    : 'text-gray-300 hover:text-gray-500 hover:bg-white'
+                                                ? 'bg-black text-white shadow-xl transform scale-110'
+                                                : 'text-gray-300 hover:text-gray-500 hover:bg-white'
                                                 }`}
                                         >
                                             <span
