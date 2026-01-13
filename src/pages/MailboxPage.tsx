@@ -121,22 +121,27 @@ export const MailboxPage: React.FC = () => {
                 ) : (
                     filteredPostcards.map((card) => {
                         const isUnread = !card.isRead && card.senderId !== user?.uid;
+                        const isRead = card.isRead || card.senderId === user?.uid;
                         const isLocked = card.openDate && new Date(card.openDate) > new Date();
 
                         return (
                             <div
                                 key={card.id}
                                 className={`group relative p-6 border transition-all ${isLocked
-                                    ? 'border-border/30 opacity-60'
-                                    : 'border-primary hover:bg-secondary/30 cursor-pointer'
+                                        ? 'border-border/30 opacity-50'
+                                        : isRead
+                                            ? 'border-border/50 hover:bg-secondary/20 cursor-pointer'
+                                            : 'border-primary hover:bg-secondary/30 cursor-pointer'
                                     }`}
                                 onClick={() => !isLocked && handleOpenLetter(card)}
                             >
                                 {/* Content Preview */}
                                 <div className="mb-6">
                                     <p className={`font-serif text-lg leading-relaxed line-clamp-3 ${isLocked
-                                        ? 'text-text-secondary italic'
-                                        : 'text-primary'
+                                            ? 'text-text-secondary/50 italic'
+                                            : isRead
+                                                ? 'text-text-secondary'
+                                                : 'text-primary'
                                         }`}>
                                         {isLocked
                                             ? '아직 열 수 없는 편지입니다...'
@@ -148,24 +153,28 @@ export const MailboxPage: React.FC = () => {
                                 {/* Footer */}
                                 <div className="flex items-end justify-between">
                                     <div className="flex flex-col gap-0.5">
-                                        <span className={`text-[11px] font-bold tracking-wider ${isLocked ? 'text-text-secondary' : 'text-primary'}`}>
+                                        <span className={`text-[11px] font-bold tracking-wider ${isLocked || isRead ? 'text-text-secondary' : 'text-primary'
+                                            }`}>
                                             {activeTab === 'received' ? 'FROM.' : 'TO.'} {card.senderName}
                                         </span>
-                                        <span className="text-[10px] text-text-secondary uppercase tracking-widest">
+                                        <span className={`text-[10px] uppercase tracking-widest ${isRead ? 'text-text-secondary/60' : 'text-text-secondary'
+                                            }`}>
                                             {card.date}
                                         </span>
                                     </div>
 
                                     <button
                                         className={`flex items-center gap-1 transition-transform ${isLocked
-                                            ? 'cursor-not-allowed text-text-secondary'
-                                            : 'active:scale-95 text-primary'
+                                                ? 'cursor-not-allowed text-text-secondary/50'
+                                                : isRead
+                                                    ? 'active:scale-95 text-text-secondary'
+                                                    : 'active:scale-95 text-primary'
                                             }`}
                                         disabled={!!isLocked}
                                     >
-                                        <span className={`text-xs font-bold border-b pb-0.5 ${isLocked ? 'border-border' : 'border-primary'
+                                        <span className={`text-xs font-bold border-b pb-0.5 ${isLocked ? 'border-border/50' : isRead ? 'border-border' : 'border-primary'
                                             }`}>
-                                            {isLocked ? '잠김' : (isUnread ? '읽기' : '열기')}
+                                            {isLocked ? '잠김' : '열기'}
                                         </span>
                                         <span className="material-symbols-outlined text-[14px]">
                                             {isLocked ? 'lock' : 'arrow_forward'}
