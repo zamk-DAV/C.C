@@ -51,6 +51,8 @@ export const clearNotionCache = () => {
 // ============================================
 // Interfaces
 // ============================================
+import type { NotionItem } from '../types';
+
 export interface NotionDatabase {
     id: string;
     title: string;
@@ -58,26 +60,9 @@ export interface NotionDatabase {
     icon?: any;
 }
 
-export interface NotionItem {
-    id: string;
-    title: string;
-    date: string;
-    coverImage: string | null;
-    previewText: string;
-    type?: string;
-    sender?: string;
-    isRead?: boolean;
-    author?: string;
-    authorId?: string; // Added for UID based filtering
-    images?: string[];
-    mood?: string;
-    weather?: string;
-    endDate?: string | null;
-    color?: string;
-    isImportant?: boolean;
-    isShared?: boolean;
-    url?: string;
-}
+// Remove duplicate NotionItem interface and use the imported one
+export type { NotionItem };
+
 
 export interface PaginatedNotionResponse {
     data: NotionItem[];

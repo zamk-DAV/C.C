@@ -1,20 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from './AuthContext';
 import { fetchNotionData, clearNotionCache } from '../lib/notion';
-
-// Inline interface to avoid import issues
-interface NotionItem {
-    id: string;
-    title: string;
-    date: string;
-    coverImage: string | null;
-    previewText: string;
-    type?: string;
-    sender?: string;
-    isRead?: boolean;
-    author?: string;
-    images?: string[];
-}
+import type { NotionItem } from '../types';
 
 // interface PaginatedNotionResponse {
 //     data: NotionItem[];
