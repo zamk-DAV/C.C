@@ -58,7 +58,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 z-[60]"
+                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]"
                     />
 
                     {/* Modal */}
@@ -67,17 +67,17 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-[#1C1C1E] rounded-t-2xl shadow-2xl max-w-lg mx-auto overflow-hidden pb-8"
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/95 backdrop-blur-xl rounded-t-2xl shadow-2xl max-w-lg mx-auto overflow-hidden pb-8 border-t border-border/20"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-border/10">
                             <button
                                 onClick={onClose}
-                                className="text-gray-400 font-medium text-[16px]"
+                                className="text-text-secondary font-medium text-[16px]"
                             >
                                 취소
                             </button>
-                            <h3 className="text-[17px] font-semibold text-white">날짜 선택</h3>
+                            <h3 className="text-[17px] font-semibold text-primary">날짜 선택</h3>
                             <div className="w-[30px]" /> {/* Spacer for centering */}
                         </div>
 
@@ -85,16 +85,16 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                         <div className="flex items-center justify-between px-6 py-6">
                             <button
                                 onClick={handlePrevMonth}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+                                className="p-2 hover:bg-primary/10 rounded-full transition-colors text-primary"
                             >
                                 <span className="material-symbols-outlined">chevron_left</span>
                             </button>
-                            <span className="text-[18px] font-bold text-white">
+                            <span className="text-[18px] font-bold text-primary">
                                 {format(currentMonth, 'yyyy년 M월', { locale: ko })}
                             </span>
                             <button
                                 onClick={handleNextMonth}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
+                                className="p-2 hover:bg-primary/10 rounded-full transition-colors text-primary"
                             >
                                 <span className="material-symbols-outlined">chevron_right</span>
                             </button>
@@ -105,7 +105,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                             {weekDays.map((day, idx) => (
                                 <div
                                     key={day}
-                                    className={`text-center text-xs font-bold py-2 ${idx === 0 ? 'text-[#FF453A]' : idx === 6 ? 'text-[#0A84FF]' : 'text-gray-400'
+                                    className={`text-center text-xs font-bold py-2 ${idx === 0 ? 'text-[#FF453A]' : idx === 6 ? 'text-accent' : 'text-text-secondary'
                                         }`}
                                 >
                                     {day}
@@ -129,18 +129,17 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                                     <button
                                         key={date.toISOString()}
                                         onClick={() => handleSelectDate(date)}
-                                        // disabled={isDisabled} // Allow selecting past dates for diary/events usually
                                         className={`aspect-square flex items-center justify-center rounded-full text-[15px] font-medium transition-all ${isSelected
-                                            ? 'bg-[#0A84FF] text-white'
+                                            ? 'bg-accent text-white'
                                             : isToday
-                                                ? 'text-[#0A84FF] font-bold'
+                                                ? 'text-accent font-bold'
                                                 : isDisabled
-                                                    ? 'text-gray-600'
+                                                    ? 'text-text-secondary/30'
                                                     : dayOfWeek === 0
                                                         ? 'text-[#FF453A]'
                                                         : dayOfWeek === 6
-                                                            ? 'text-[#0A84FF]'
-                                                            : 'text-white'
+                                                            ? 'text-accent'
+                                                            : 'text-primary'
                                             }`}
                                     >
                                         {format(date, 'd')}
