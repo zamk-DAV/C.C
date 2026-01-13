@@ -3,12 +3,6 @@ import { useAuth } from './AuthContext';
 import { fetchNotionData, clearNotionCache } from '../lib/notion';
 import type { NotionItem } from '../types';
 
-// interface PaginatedNotionResponse {
-//     data: NotionItem[];
-//     hasMore: boolean;
-//     nextCursor: string | null;
-// }
-
 interface NotionContextType {
     // Diary Data
     diaryData: NotionItem[];
@@ -29,6 +23,8 @@ interface NotionContextType {
     letterData: NotionItem[];
     hasMoreLetter: boolean;
     loadMoreLetter: () => Promise<void>;
+
+    authorId?: string; // Added for UID based filtering
 
     // Common
     isLoading: boolean;
@@ -77,55 +73,39 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         notionConfig?.databaseId
     );
 
-    useEffect(() => {
-        if (hasInitializedRef.current) return;
-        if (!isNotionConfigured) return;
-
-        hasInitializedRef.current = true;
-        fetchInitialData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [isNotionConfigured]);
-
-    const fetchInitialData = async () => {
+    const fetchInitialData = useCallback(async () => {
         if (isLoadingRef.current) return;
         isLoadingRef.current = true;
         setIsLoading(true);
         setError(null);
 
-        console.log('[NotionContext] Fetching initial data (Diary & Memory)...');
+        console.log('[NotionContext] Fetching initial data...');
 
         try {
             const [diaryResult, memoryResult, eventResult, letterResult] = await Promise.all([
                 fetchNotionData('Diary', undefined, 20),
                 fetchNotionData('Memory', undefined, 20),
-                fetchNotionData('Event', undefined, 50), // Fetch more events for calendar
+                fetchNotionData('Event', undefined, 50),
                 fetchNotionData('Letter', undefined, 20)
             ]);
 
-            console.log('[DEBUG] Notion Results Loaded');
-
-            // Set Diary
             setDiaryData(diaryResult.data);
             setHasMoreDiary(diaryResult.hasMore);
             setNextCursorDiary(diaryResult.nextCursor);
 
-            // Set Memory
             setMemoryData(memoryResult.data);
             setHasMoreMemory(memoryResult.hasMore);
             setNextCursorMemory(memoryResult.nextCursor);
 
-            // Set Event
             setEventData(eventResult.data);
             setHasMoreEvent(eventResult.hasMore);
             setNextCursorEvent(eventResult.nextCursor);
 
-            // Set Letter
             setLetterData(letterResult.data);
             setHasMoreLetter(letterResult.hasMore);
             setNextCursorLetter(letterResult.nextCursor);
 
             setLastFetched(Date.now());
-            console.log(`[NotionContext] Data loaded: D:${diaryResult.data.length}, M:${memoryResult.data.length}, E:${eventResult.data.length}, L:${letterResult.data.length}`);
         } catch (err: any) {
             console.error('[NotionContext] Failed to load data:', err);
             setError(err.message || 'Failed to load Notion data');
@@ -133,7 +113,36 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setIsLoading(false);
             isLoadingRef.current = false;
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        if (hasInitializedRef.current) return;
+        if (!isNotionConfigured) return;
+
+        hasInitializedRef.current = true;
+        fetchInitialData();
+    }, [isNotionConfigured, fetchInitialData]);
+
+    // Auto-refresh logic on App Foreground
+    useEffect(() => {
+        const TOKEN_EXPIRY_TIME = 50 * 60 * 1000; // 50 minutes
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && lastFetched) {
+                const now = Date.now();
+                const timeSinceLastFetch = now - lastFetched;
+
+                if (timeSinceLastFetch > TOKEN_EXPIRY_TIME) {
+                    console.log(`[NotionContext] Data is stale (${Math.floor(timeSinceLastFetch / 60000)}m ago). Refreshing...`);
+                    // Force refresh background style (or just call fetchInitialData)
+                    fetchInitialData();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [lastFetched, fetchInitialData]);
 
     const loadMoreDiary = useCallback(async () => {
         if (!hasMoreDiary || !nextCursorDiary || isLoadingRef.current) return;
@@ -200,9 +209,7 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }, [hasMoreLetter, nextCursorLetter]);
 
     const refreshData = useCallback(async () => {
-        console.log('[NotionContext] Refreshing data...');
         clearNotionCache();
-
         setDiaryData([]);
         setMemoryData([]);
         setEventData([]);
@@ -215,10 +222,9 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setHasMoreMemory(false);
         setHasMoreEvent(false);
         setHasMoreLetter(false);
-
         hasInitializedRef.current = false;
         await fetchInitialData();
-    }, []);
+    }, [fetchInitialData]);
 
     const value: NotionContextType = {
         diaryData,
@@ -254,7 +260,6 @@ export const useNotion = (): NotionContextType => {
     return context;
 };
 
-// Helper hooks
 export const useDiaryData = () => {
     const { diaryData, isLoading, error, hasMoreDiary, loadMoreDiary } = useNotion();
     return { diaryData, isLoading, error, hasMore: hasMoreDiary, loadMore: loadMoreDiary };
@@ -266,8 +271,8 @@ export const useMemoryData = () => {
 };
 
 export const useEventData = () => {
-    const { eventData, isLoading, error, hasMoreEvent, loadMoreEvent } = useNotion();
-    return { eventData, isLoading, error, hasMore: hasMoreEvent, loadMore: loadMoreEvent };
+    const { eventData, isLoading, error, hasMoreEvent, loadMoreEvent, refreshData } = useNotion();
+    return { eventData, isLoading, error, hasMore: hasMoreEvent, loadMore: loadMoreEvent, refreshData };
 };
 
 export const useLetterData = () => {

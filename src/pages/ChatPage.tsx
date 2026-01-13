@@ -227,6 +227,12 @@ export const ChatPage: React.FC = () => {
             const data = partnerDoc.data();
             console.log("[Push] Partner data loaded", { isPushEnabled: data.isPushEnabled, isChatActive: data.isChatActive, tokensCount: data.fcmTokens?.length });
 
+            // If partner is active in chat, skip push
+            if (data.isChatActive) {
+                console.log("[Push] Partner is active in chat - skipping push notification");
+                return;
+            }
+
             // Do NOT block push if disabled. Instead, mark as silent.
             const isSilent = data.isPushEnabled === false;
 

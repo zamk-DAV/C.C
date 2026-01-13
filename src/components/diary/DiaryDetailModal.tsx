@@ -1,8 +1,9 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { NotionItem } from '../../lib/notion';
+import { useNotion } from '../../context/NotionContext';
 
 interface DiaryDetailModalProps {
     isOpen: boolean;
@@ -17,7 +18,9 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     item,
     authorName
 }) => {
+    const { refreshData } = useNotion();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
+    const retryRef = useRef(false);
 
     // Safe derivation of values for hooks
     const images = item
@@ -143,6 +146,16 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
                                     alt={`Image ${currentImageIndex + 1}`}
                                     className="max-w-full max-h-full object-contain select-none"
                                     draggable={false}
+                                    onError={() => {
+                                        // If image fails (likely 403 due to expiry), try refreshing data once
+                                        if (!retryRef.current) {
+                                            console.log("[DiaryDetail] Image load failed. Attempting refresh...");
+                                            retryRef.current = true;
+                                            refreshData().then(() => {
+                                                console.log("[DiaryDetail] Data refreshed. Retrying image...");
+                                            });
+                                        }
+                                    }}
                                 />
                             ) : (
                                 <div className="text-white/50 text-center">

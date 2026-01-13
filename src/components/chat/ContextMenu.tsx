@@ -20,6 +20,10 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 }) => {
     const menuRef = useRef<HTMLDivElement>(null);
 
+    // Edge Detection: If click is near right edge (assuming menu width ~220px), shift left
+    const isRightEdge = typeof window !== 'undefined' && (x + 220 > window.innerWidth);
+    const transformStyle = isRightEdge ? 'translate(-95%, -10%)' : 'translate(-10%, -10%)';
+
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
@@ -38,7 +42,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
             style={{
                 top: y,
                 left: x,
-                transform: 'translate(-10%, -10%)'
+                transform: transformStyle
             }}
         >
             {/* Emoji Reactions */}
