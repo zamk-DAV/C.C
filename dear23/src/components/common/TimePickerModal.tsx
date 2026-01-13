@@ -129,7 +129,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 z-[60] backdrop-blur-[2px]"
+                        className="fixed inset-0 bg-background/80 z-[60] backdrop-blur-[2px]"
                     />
 
                     {/* Modal */}
@@ -138,7 +138,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary rounded-t-2xl overflow-hidden pb-8 shadow-2xl border-t border-border/50"
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/90 backdrop-blur-xl rounded-t-2xl overflow-hidden pb-8 shadow-2xl border-t border-border/20"
                         // Prevent scroll propagation
                         onClick={(e) => e.stopPropagation()}
                     >

@@ -18,15 +18,15 @@
 }
 
 .dark {
-  /* Dark Theme - Obsidian/Premium Night */
-  --background: 240 10% 4%;
-  --background-secondary: 240 10% 8%;
-  --primary: 0 0% 98%;
-  --text-primary: 0 0% 98%;
-  --text-secondary: 240 5% 65%;
-  --border: 240 5% 15%;
-  --accent: 217 91% 60%;
-  --input-bg: 240 10% 8%;
+  /* Dark Theme - Premium Obsidian Navy */
+  --background: 230 15% 7%;
+  --background-secondary: 230 15% 12%;
+  --primary: 230 10% 90%;
+  --text-primary: 230 10% 90%;
+  --text-secondary: 230 5% 60%;
+  --border: 230 15% 18%;
+  --accent: 217 91% 65%;
+  --input-bg: 230 15% 12%;
 
   --bg-color: hsl(var(--background));
   --bg-secondary: hsl(var(--background-secondary));
