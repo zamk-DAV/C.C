@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useState } from 'react';
 import { useHaptics } from '../../hooks/useHaptics';
 
 interface WheelPickerProps<T> {
@@ -13,7 +13,7 @@ interface WheelPickerProps<T> {
 /**
  * iOS-style 3D wheel picker with mouse wheel and touch scroll support.
  * Features:
- * - Mouse wheel scrolling on desktop
+ * - Mouse wheel scrolling on desktop (throttled to 1 item per scroll)
  * - Touch scroll with momentum on mobile
  * - 3D perspective effect
  * - Haptic feedback on value change
@@ -29,6 +29,8 @@ export function WheelPicker<T>({
     const containerRef = useRef<HTMLDivElement>(null);
     const { selection } = useHaptics();
     const currentIndex = items.indexOf(value);
+    const [isThrottled, setIsThrottled] = useState(false);
+    const lastScrollTime = useRef(0);
 
     // Scroll to current value on mount and value change
     useEffect(() => {
@@ -41,9 +43,17 @@ export function WheelPicker<T>({
         }
     }, [currentIndex, itemHeight]);
 
-    // Handle mouse wheel
+    // Handle mouse wheel with throttling - only 1 item per 150ms
     const handleWheel = useCallback((e: React.WheelEvent) => {
         e.preventDefault();
+        e.stopPropagation();
+
+        const now = Date.now();
+        if (now - lastScrollTime.current < 150) {
+            return; // Throttle: ignore if within 150ms of last scroll
+        }
+        lastScrollTime.current = now;
+
         const delta = Math.sign(e.deltaY);
         const newIndex = currentIndex + delta;
 
@@ -53,7 +63,7 @@ export function WheelPicker<T>({
         }
     }, [currentIndex, items, onChange, selection]);
 
-    // Handle scroll snap
+    // Handle touch scroll snap
     const handleScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
         const target = e.target as HTMLDivElement;
         const scrollTop = target.scrollTop;
@@ -64,6 +74,14 @@ export function WheelPicker<T>({
             selection();
         }
     }, [items, itemHeight, value, onChange, selection]);
+
+    // Click to select item
+    const handleItemClick = (item: T, index: number) => {
+        if (item !== value) {
+            onChange(item);
+            selection();
+        }
+    };
 
     const containerHeight = itemHeight * visibleItems;
     const paddingY = (containerHeight - itemHeight) / 2;
@@ -83,7 +101,7 @@ export function WheelPicker<T>({
             {/* Scrollable container */}
             <div
                 ref={containerRef}
-                className="h-full overflow-y-auto no-scrollbar snap-y snap-mandatory"
+                className="h-full overflow-y-auto no-scrollbar snap-y snap-mandatory overscroll-none"
                 onWheel={handleWheel}
                 onScroll={handleScroll}
                 style={{
@@ -104,13 +122,14 @@ export function WheelPicker<T>({
                     return (
                         <div
                             key={String(item)}
-                            className="flex items-center justify-center snap-center transition-all duration-150"
+                            className="flex items-center justify-center snap-center transition-all duration-150 cursor-pointer"
                             style={{
                                 height: itemHeight,
                                 transform: `perspective(200px) rotateX(${rotateX}deg) scale(${scale})`,
                                 opacity,
                                 scrollSnapAlign: 'center'
                             }}
+                            onClick={() => handleItemClick(item, index)}
                         >
                             <span
                                 className={`text-[20px] font-semibold transition-colors ${isSelected ? 'text-primary' : 'text-text-secondary/60'
