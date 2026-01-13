@@ -7,7 +7,7 @@ interface DatePickerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (date: string) => void;
-    selectedDate?: string;
+    selectedDate?: string | Date;
     minDate?: Date;
 }
 

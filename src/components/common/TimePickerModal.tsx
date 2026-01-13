@@ -77,11 +77,11 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
         onChange: (val: any) => void,
         containerRef: React.RefObject<HTMLDivElement>
     }) => {
-        const handleScroll = () => {
-            if (!containerRef.current) return;
+        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+            const target = e.target as HTMLDivElement;
             // Simple snap logic (for visual update, actual snap handled by CSS)
-            const scrollTop = containerRef.current.scrollTop;
-            const index = Math.round(scrollTop / ITEM_HEIGHT);
+            // const scrollTop = target.scrollTop; // Removed unused var
+            const index = Math.round(target.scrollTop / ITEM_HEIGHT);
             if (items[index] !== undefined && items[index] !== value) {
                 onChange(items[index]);
                 selection();
@@ -96,15 +96,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                 <div
                     ref={containerRef}
                     className="h-full overflow-y-auto no-scrollbar snap-y snap-mandatory py-[80px]"
-                    onScroll={(e) => {
-                        // Debounce or throttle could be added here for performance
-                        const target = e.target as HTMLDivElement;
-                        const index = Math.round(target.scrollTop / ITEM_HEIGHT);
-                        if (items[index] !== undefined && items[index] !== value) {
-                            onChange(items[index]);
-                            // Haptic feedback could be triggered here, but might differ by browser
-                        }
-                    }}
+                    onScroll={handleScroll}
                 >
                     {items.map((item) => (
                         <div
@@ -112,7 +104,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                             className={`h-[40px] flex items-center justify-center text-[17px] font-medium snap-center transition-colors ${item === value ? 'text-white' : 'text-gray-500'
                                 }`}
                         >
-                            {item}
+                            {typeof item === 'number' ? item.toString().padStart(2, '0') : item}
                         </div>
                     ))}
                 </div>
@@ -140,6 +132,8 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
                         className="fixed bottom-0 left-0 right-0 z-[60] bg-[#1C1C1E] rounded-t-2xl overflow-hidden pb-8"
+                        // Prevent scroll propagation
+                        onClick={(e) => e.stopPropagation()}
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
@@ -185,33 +179,12 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
 
                             {/* Minute */}
                             <div className="flex-1">
-                                <div className="relative h-[200px] w-full overflow-hidden">
-                                    {/* Selection Highlight */}
-                                    <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[40px] bg-white/10 rounded-lg pointer-events-none z-10" />
-
-                                    <div
-                                        ref={minuteRef}
-                                        className="h-full overflow-y-auto no-scrollbar snap-y snap-mandatory py-[80px]"
-                                        onScroll={(e) => {
-                                            const target = e.target as HTMLDivElement;
-                                            // Find closest 5-min step
-                                            const index = Math.round(target.scrollTop / ITEM_HEIGHT);
-                                            if (minuteList[index] !== undefined && minuteList[index] !== minute) {
-                                                setMinute(minuteList[index]);
-                                            }
-                                        }}
-                                    >
-                                        {minuteList.map((m) => (
-                                            <div
-                                                key={m}
-                                                className={`h-[40px] flex items-center justify-center text-[17px] font-medium snap-center transition-colors ${m === minute ? 'text-white' : 'text-gray-500'
-                                                    }`}
-                                            >
-                                                {m.toString().padStart(2, '0')}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
+                                <Wheel
+                                    items={minuteList}
+                                    value={minute}
+                                    onChange={setMinute}
+                                    containerRef={minuteRef as any}
+                                />
                             </div>
                         </div>
                     </motion.div>
