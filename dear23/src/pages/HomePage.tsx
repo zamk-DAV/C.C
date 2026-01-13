@@ -6,7 +6,7 @@ import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import { useAuth } from '../context/AuthContext';
 import { useNotion } from '../context/NotionContext';
-import FeedWriteModal from '../components/home/FeedWriteModal';
+import MemoryWriteModal from '../components/home/MemoryWriteModal';
 
 export const HomePage: React.FC = () => {
     const { user, userData, loading, coupleData, partnerData } = useAuth();
@@ -109,10 +109,9 @@ export const HomePage: React.FC = () => {
             </button>
 
             {/* Write Modal */}
-            <FeedWriteModal
+            <MemoryWriteModal
                 isOpen={isWriteModalOpen}
                 onClose={() => setIsWriteModalOpen(false)}
-                type="Memory"
                 onSuccess={handleCreateSuccess}
             />
         </div>
