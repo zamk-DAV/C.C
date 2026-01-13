@@ -154,13 +154,13 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                         <div
                                             key={w.value}
                                             onClick={() => setSelectedWeather(w.value)}
-                                            className={`flex flex-col items-center justify-center min-w-[72px] h-[84px] rounded-2xl transition-all duration-300 cursor-pointer border-2 ${selectedWeather === w.value
-                                                ? 'bg-primary text-background border-primary shadow-lg scale-105'
-                                                : 'bg-secondary/50 text-text-secondary border-transparent hover:border-secondary'
+                                            className={`flex flex-col items-center justify-center min-w-[62px] h-[74px] rounded-xl transition-all duration-300 cursor-pointer border ${selectedWeather === w.value
+                                                ? 'bg-primary text-background border-primary shadow-md scale-105'
+                                                : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
                                                 }`}
                                         >
-                                            <span className="material-symbols-outlined text-3xl">{w.icon}</span>
-                                            <p className="text-[9px] font-bold mt-2 uppercase tracking-tight">{w.label}</p>
+                                            <span className="material-symbols-outlined text-2xl">{w.icon}</span>
+                                            <p className="text-[8px] font-bold mt-1.5 uppercase tracking-tight">{w.label}</p>
                                         </div>
                                     ))}
                                     <div className="min-w-[10px] shrink-0"></div> {/* Spacer for horizontal scroll padding */}

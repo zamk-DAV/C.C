@@ -129,16 +129,16 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                                         onClick={() => handleSelectDate(date)}
                                         disabled={isDisabled}
                                         className={`aspect-square flex items-center justify-center rounded-full text-sm font-medium transition-all ${isSelected
-                                                ? 'bg-primary text-background'
-                                                : isToday
-                                                    ? 'border-2 border-primary text-primary'
-                                                    : isDisabled
-                                                        ? 'text-text-secondary/30 cursor-not-allowed'
-                                                        : dayOfWeek === 0
-                                                            ? 'text-red-400 hover:bg-secondary'
-                                                            : dayOfWeek === 6
-                                                                ? 'text-blue-400 hover:bg-secondary'
-                                                                : 'text-primary hover:bg-secondary'
+                                            ? 'bg-primary text-background'
+                                            : isToday
+                                                ? 'border-2 border-primary text-primary'
+                                                : isDisabled
+                                                    ? 'text-text-secondary/30 cursor-not-allowed'
+                                                    : dayOfWeek === 0
+                                                        ? 'text-red-400 hover:bg-secondary'
+                                                        : dayOfWeek === 6
+                                                            ? 'text-blue-400 hover:bg-secondary'
+                                                            : 'text-primary hover:bg-secondary'
                                             }`}
                                     >
                                         {format(date, 'd')}
@@ -156,7 +156,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                                 }}
                                 className="w-full py-3 text-text-secondary font-medium text-sm hover:bg-secondary transition-colors rounded-lg"
                             >
-                                예약 취소 (바로 보내기)
+                                취소
                             </button>
                         </div>
                     </motion.div>
