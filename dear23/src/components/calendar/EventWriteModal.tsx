@@ -171,14 +171,14 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
                         {/* Content Scrollable */}
                         <div className="flex-1 overflow-y-auto no-scrollbar pb-10 bg-background">
-                            {/* Title Input */}
-                            <div className="px-5 mt-8 mb-6">
+                            {/* Title Input Section */}
+                            <div className="mx-4 mt-8 mb-6 overflow-hidden rounded-xl bg-background-secondary/50 border border-border/20 px-4 py-4 backdrop-blur-sm shadow-sm">
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
                                     placeholder="제목"
-                                    className="w-full bg-transparent text-3xl font-bold text-primary placeholder-text-secondary/30 border-none focus:ring-0 p-0 leading-tight caret-accent"
+                                    className="w-full bg-transparent text-2xl font-bold text-primary placeholder-text-secondary/30 border-none focus:ring-0 p-0 leading-tight caret-accent"
                                     autoFocus
                                 />
                             </div>
@@ -245,7 +245,15 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                         checked={isImportant}
                                         onChange={setIsImportant}
                                         label="즐겨찾기"
-                                        icon={<span className="material-symbols-outlined text-[20px] text-[#FFD60A]">star</span>}
+                                        icon={
+                                            <motion.span
+                                                animate={isImportant ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                                                transition={{ duration: 0.3, ease: "easeOut" }}
+                                                className="material-symbols-outlined text-[20px] text-[#FFD60A]"
+                                            >
+                                                star
+                                            </motion.span>
+                                        }
                                     />
                                 </div>
                             </div>
@@ -257,7 +265,15 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                         checked={isShared}
                                         onChange={setIsShared}
                                         label="함께 공유"
-                                        icon={<span className="material-symbols-outlined text-[20px] text-[#FF453A]">favorite</span>}
+                                        icon={
+                                            <motion.span
+                                                animate={isShared ? { scale: [1, 1.4, 1] } : { scale: 1 }}
+                                                transition={{ duration: 0.3, ease: "easeOut" }}
+                                                className="material-symbols-outlined text-[20px] text-[#FF453A]"
+                                            >
+                                                favorite
+                                            </motion.span>
+                                        }
                                     />
                                 </div>
                             </div>
