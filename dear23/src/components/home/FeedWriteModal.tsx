@@ -47,8 +47,18 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
     const [selectedWeather, setSelectedWeather] = useState('맑음');
     const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
-
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const imageScrollRef = useRef<HTMLDivElement>(null);
+
+    const scrollImages = (direction: 'left' | 'right') => {
+        if (imageScrollRef.current) {
+            const scrollAmount = 200;
+            imageScrollRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+        }
+    };
 
     useEffect(() => {
         if (isOpen && initialData) {
@@ -290,26 +300,47 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                         </div>
                                     </div>
                                 ) : (
-                                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
-                                        {images.map((img, idx) => (
-                                            <div key={idx} className="relative h-40 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 shadow-md border border-border group/item">
-                                                <img src={img.base64 || img.url} alt="preview" className="w-full h-full object-cover" />
+                                    <div className="relative">
+                                        {images.length > 2 && (
+                                            <>
                                                 <button
-                                                    onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
-                                                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500"
+                                                    onClick={(e) => { e.preventDefault(); scrollImages('left'); }}
+                                                    className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 backdrop-blur-sm transition-all -ml-1"
                                                 >
-                                                    <span className="material-symbols-outlined text-[14px]">close</span>
+                                                    <span className="material-symbols-outlined text-sm">chevron_left</span>
                                                 </button>
-                                            </div>
-                                        ))}
+                                                <button
+                                                    onClick={(e) => { e.preventDefault(); scrollImages('right'); }}
+                                                    className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/30 hover:bg-black/50 text-white rounded-full p-1.5 backdrop-blur-sm transition-all -mr-1"
+                                                >
+                                                    <span className="material-symbols-outlined text-sm">chevron_right</span>
+                                                </button>
+                                            </>
+                                        )}
                                         <div
-                                            onClick={() => fileInputRef.current?.click()}
-                                            className="h-40 aspect-[3/4] rounded-2xl border-2 border-dashed border-secondary/30 hover:border-primary flex flex-col items-center justify-center shrink-0 hover:bg-secondary/20 transition-all cursor-pointer bg-secondary/10"
+                                            ref={imageScrollRef}
+                                            className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2 scroll-smooth"
                                         >
-                                            <span className="material-symbols-outlined text-text-secondary text-2xl">add</span>
-                                            <span className="text-[10px] font-bold text-text-secondary mt-1">더 추가</span>
+                                            {images.map((img, idx) => (
+                                                <div key={idx} className="relative h-40 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 shadow-md border border-border group/item">
+                                                    <img src={img.base64 || img.url} alt="preview" className="w-full h-full object-cover" />
+                                                    <button
+                                                        onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
+                                                        className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">close</span>
+                                                    </button>
+                                                </div>
+                                            ))}
+                                            <div
+                                                onClick={() => fileInputRef.current?.click()}
+                                                className="h-40 aspect-[3/4] rounded-2xl border-2 border-dashed border-secondary/30 hover:border-primary flex flex-col items-center justify-center shrink-0 hover:bg-secondary/20 transition-all cursor-pointer bg-secondary/10"
+                                            >
+                                                <span className="material-symbols-outlined text-text-secondary text-2xl">add</span>
+                                                <span className="text-[10px] font-bold text-text-secondary mt-1">더 추가</span>
+                                            </div>
+                                            <div className="min-w-[10px] shrink-0"></div>
                                         </div>
-                                        <div className="min-w-[10px] shrink-0"></div>
                                     </div>
                                 )}
                             </section>

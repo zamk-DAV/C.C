@@ -248,8 +248,8 @@ export const useMemoryData = () => {
 };
 
 export const useEventData = () => {
-    const { eventData, isLoading, error, hasMoreEvent, loadMoreEvent } = useNotion();
-    return { eventData, isLoading, error, hasMore: hasMoreEvent, loadMore: loadMoreEvent };
+    const { eventData, isLoading, error, hasMoreEvent, loadMoreEvent, refreshData } = useNotion();
+    return { eventData, isLoading, error, hasMore: hasMoreEvent, loadMore: loadMoreEvent, refreshData };
 };
 
 export const useLetterData = () => {

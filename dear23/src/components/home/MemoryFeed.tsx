@@ -1,10 +1,103 @@
-import React from 'react';
-
+import React, { useState } from 'react';
+import { cn } from '../../lib/utils';
 import { type NotionItem } from '../../types';
 
 interface MemoryFeedProps {
     items: NotionItem[];
 }
+
+const FeedCard: React.FC<{ item: NotionItem }> = ({ item }) => {
+    const [imageIndex, setImageIndex] = useState(0);
+
+    // Combine coverImage and images array if needed, or prefer images array if populated
+    // Logic: If images array exists and has content, use it. 
+    // If NOT, fall back to coverImage.
+    const hasMultipleImages = item.images && item.images.length > 1;
+    const displayImages = (item.images && item.images.length > 0)
+        ? item.images
+        : (item.coverImage ? [item.coverImage] : []);
+
+    const currentImage = displayImages[imageIndex];
+
+    const handleNext = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (displayImages.length > 0) {
+            setImageIndex((prev) => (prev + 1) % displayImages.length);
+        }
+    };
+
+    const handlePrev = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (displayImages.length > 0) {
+            setImageIndex((prev) => (prev - 1 + displayImages.length) % displayImages.length);
+        }
+    };
+
+    return (
+        <div className="snap-center shrink-0 w-[82vw] flex flex-col gap-6 group">
+            <div className="relative aspect-[4/5] w-full rounded-3xl overflow-hidden border border-neutral-100 bg-neutral-100">
+                {currentImage ? (
+                    <div
+                        className="w-full h-full bg-center bg-cover grayscale-img transition-all duration-300"
+                        style={{ backgroundImage: `url("${currentImage}")` }}
+                    />
+                ) : (
+                    <div className="w-full h-full border border-border flex items-center justify-center p-12 text-center bg-secondary/10">
+                        <p className="text-xl font-light leading-relaxed tracking-tight italic text-primary/80">
+                            "{item.previewText || item.title}"
+                        </p>
+                    </div>
+                )}
+
+                {/* Navigation Buttons for Multiple Images */}
+                {hasMultipleImages && (
+                    <>
+                        {/* Prev Button */}
+                        <button
+                            onClick={handlePrev}
+                            className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-10 hover:bg-black/70"
+                        >
+                            <span className="material-symbols-outlined text-xl">chevron_left</span>
+                        </button>
+
+                        {/* Next Button */}
+                        <button
+                            onClick={handleNext}
+                            className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-10 hover:bg-black/70"
+                        >
+                            <span className="material-symbols-outlined text-xl">chevron_right</span>
+                        </button>
+
+                        {/* Pagination Dots */}
+                        <div className="absolute bottom-3 left-0 right-0 flex justify-center gap-1.5 z-10">
+                            {displayImages.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={cn(
+                                        "w-1.5 h-1.5 rounded-full shadow-sm transition-colors",
+                                        idx === imageIndex ? "bg-white" : "bg-white/40"
+                                    )}
+                                />
+                            ))}
+                        </div>
+                    </>
+                )}
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+                <p className="text-lg font-bold tracking-tighter uppercase text-primary line-clamp-1">{item.title}</p>
+                <div className="flex items-center justify-between">
+                    <p className="text-[11px] opacity-40 font-bold uppercase tracking-widest text-primary">{item.date}</p>
+                    {hasMultipleImages && (
+                        <p className="text-[10px] text-primary/40 font-bold">
+                            {imageIndex + 1} / {displayImages.length}
+                        </p>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
 
 export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
     return (
@@ -15,24 +108,7 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
             {/* FORCE flex-row and handling scrolling */}
             <div className="flex flex-row overflow-x-auto no-scrollbar snap-x snap-mandatory px-6 gap-8 w-full">
                 {items.map((item) => (
-                    <div key={item.id} className="snap-center shrink-0 w-[82vw] flex flex-col gap-6">
-                        {item.coverImage ? (
-                            <div
-                                className="aspect-[4/5] w-full bg-neutral-100 bg-center bg-cover grayscale-img border border-neutral-100 rounded-3xl overflow-hidden"
-                                style={{ backgroundImage: `url("${item.coverImage}")` }}
-                            />
-                        ) : (
-                            <div className="aspect-[4/5] w-full border border-border flex items-center justify-center p-12 text-center bg-secondary/10 rounded-3xl">
-                                <p className="text-xl font-light leading-relaxed tracking-tight italic text-primary/80">
-                                    "{item.previewText || item.title}"
-                                </p>
-                            </div>
-                        )}
-                        <div className="flex flex-col gap-1.5">
-                            <p className="text-lg font-bold tracking-tighter uppercase text-primary">{item.title}</p>
-                            <p className="text-[11px] opacity-40 font-bold uppercase tracking-widest text-primary">{item.date}</p>
-                        </div>
-                    </div>
+                    <FeedCard key={item.id} item={item} />
                 ))}
             </div>
         </section>
