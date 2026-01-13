@@ -224,7 +224,7 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             const entryDate = date || new Date().toISOString().split('T')[0];
             // Prepare Notion Page Properties Object
             const properties = {
-                "Name": {
+                "이름": {
                     title: [
                         {
                             text: {
@@ -284,13 +284,23 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             }
             catch (firstError) {
                 console.error("First attempt failed:", firstError.message);
-                // If 400 Bad Request, try removing potentially problematic Select properties (Author, Weather, Mood)
                 if (((_b = firstError.response) === null || _b === void 0 ? void 0 : _b.status) === 400) {
-                    console.warn("Retrying without custom select properties (Author, Weather, Mood)...");
+                    console.warn("Retrying with alternative strategies...");
+                    // Strategy 1: Remove custom select properties (Author, Weather, Mood)
+                    // Strategy 2: Switch Title Property ("이름" <-> "Name")
                     const safeProperties = Object.assign({}, properties);
                     delete safeProperties["작성자"];
                     delete safeProperties["dear23_날씨"];
-                    delete safeProperties["dear23_기분"]; // 기분도 안전하게 제외
+                    delete safeProperties["dear23_기분"];
+                    // Check which title property was used and switch to the other
+                    if (safeProperties["이름"]) {
+                        safeProperties["Name"] = safeProperties["이름"];
+                        delete safeProperties["이름"];
+                    }
+                    else if (safeProperties["Name"]) {
+                        safeProperties["이름"] = safeProperties["Name"];
+                        delete safeProperties["Name"];
+                    }
                     try {
                         const retryResponse = await axios_1.default.post("https://api.notion.com/v1/pages", {
                             parent: { database_id: databaseId },
@@ -302,8 +312,8 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                                 "Content-Type": "application/json",
                             },
                         });
-                        console.log("Retry successful without select properties.");
-                        res.status(200).send({ data: retryResponse.data, warning: "Some properties (Author, Weather) were omitted due to Notion API restrictions." });
+                        console.log("Retry successful with safe properties.");
+                        res.status(200).send({ data: retryResponse.data, warning: "Some properties were omitted or title key switched due to API restrictions." });
                     }
                     catch (retryError) {
                         console.error("Retry attempt also failed:", retryError.message);
