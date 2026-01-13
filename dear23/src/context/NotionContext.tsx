@@ -123,6 +123,27 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         fetchInitialData();
     }, [isNotionConfigured, fetchInitialData]);
 
+    // Auto-refresh logic on App Foreground
+    useEffect(() => {
+        const TOKEN_EXPIRY_TIME = 50 * 60 * 1000; // 50 minutes
+
+        const handleVisibilityChange = () => {
+            if (document.visibilityState === 'visible' && lastFetched) {
+                const now = Date.now();
+                const timeSinceLastFetch = now - lastFetched;
+
+                if (timeSinceLastFetch > TOKEN_EXPIRY_TIME) {
+                    console.log(`[NotionContext] Data is stale (${Math.floor(timeSinceLastFetch / 60000)}m ago). Refreshing...`);
+                    // Force refresh background style (or just call fetchInitialData)
+                    fetchInitialData();
+                }
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }, [lastFetched, fetchInitialData]);
+
     const loadMoreDiary = useCallback(async () => {
         if (!hasMoreDiary || !nextCursorDiary || isLoadingRef.current) return;
         isLoadingRef.current = true;
