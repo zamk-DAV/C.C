@@ -221,6 +221,52 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             }
             // Use provided date or fallback to today
             const entryDate = date || new Date().toISOString().split('T')[0];
+            // Prepare Notion Page Properties Object
+            const properties = {
+                "Name": {
+                    title: [
+                        {
+                            text: {
+                                content: title || "Untitled"
+                            }
+                        }
+                    ]
+                },
+                "dear23_카테고리": {
+                    select: {
+                        name: categoryValue
+                    }
+                },
+                "dear23_날짜": {
+                    date: {
+                        start: entryDate
+                    }
+                },
+                "dear23_내용미리보기": {
+                    rich_text: [
+                        {
+                            text: {
+                                content: content ? content.substring(0, 1000) : ""
+                            }
+                        }
+                    ]
+                },
+                "dear23_기분": mood ? {
+                    select: {
+                        name: mood
+                    }
+                } : undefined,
+                "dear23_날씨": weather ? {
+                    select: {
+                        name: weather
+                    }
+                } : undefined,
+                "작성자": req.body.sender ? {
+                    select: {
+                        name: req.body.sender
+                    }
+                } : undefined,
+            };
             // 4. Create Page in Notion with Retry Logic
             try {
                 const response = await axios_1.default.post("https://api.notion.com/v1/pages", {
