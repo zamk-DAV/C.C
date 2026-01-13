@@ -117,7 +117,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 // Extract Author (Select property: '작성자' or Created By)
                 // Priority: '작성자' (Select) > 'Created by'
                 const authorSelect = props["작성자"]?.select;
-                let author = "Partner"; // Default
+                let author = "상대방"; // Default to Korean 'Partner'
                 if (authorSelect) {
                     author = authorSelect.name;
                 } else {
@@ -300,6 +300,11 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         "dear23_날씨": weather ? {
                             select: {
                                 name: weather
+                            }
+                        } : undefined,
+                        "작성자": req.body.sender ? {
+                            select: {
+                                name: req.body.sender
                             }
                         } : undefined,
                     },

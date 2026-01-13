@@ -89,7 +89,7 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                 // Extract Author (Select property: '작성자' or Created By)
                 // Priority: '작성자' (Select) > 'Created by'
                 const authorSelect = (_j = props["작성자"]) === null || _j === void 0 ? void 0 : _j.select;
-                let author = "Partner"; // Default
+                let author = "상대방"; // Default to Korean 'Partner'
                 if (authorSelect) {
                     author = authorSelect.name;
                 }
@@ -261,6 +261,11 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                     "dear23_날씨": weather ? {
                         select: {
                             name: weather
+                        }
+                    } : undefined,
+                    "작성자": req.body.sender ? {
+                        select: {
+                            name: req.body.sender
                         }
                     } : undefined,
                 },
