@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
+
 import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import type { CalendarEvent } from '../types';
@@ -11,8 +11,7 @@ export const CalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
 
-    const { coupleData, userData } = useAuth();
-    const { diaryData } = useNotion();
+    const { coupleData } = useAuth();
 
     const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
@@ -46,20 +45,20 @@ export const CalendarPage: React.FC = () => {
         return () => unsubscribe();
     }, [coupleData?.id]);
 
-    // 2. Convert NotionContext diaryData to CalendarEvents
-    const diaryEvents = useMemo((): CalendarEvent[] => {
-        if (!diaryData.length) return [];
+    // 2. Convert NotionContext diaryData to CalendarEvents - Removed to prevent Diary entries in Calendar
+    // const diaryEvents = useMemo((): CalendarEvent[] => {
+    //     if (!diaryData.length) return [];
 
-        return diaryData.map(item => ({
-            id: item.id,
-            title: item.title,
-            date: new Date(item.date),
-            time: '00:00',
-            type: 'Diary',
-            note: item.previewText || '',
-            author: item.author === userData?.name || item.author === 'Me' ? 'Me' : 'Partner'
-        })) as CalendarEvent[];
-    }, [diaryData, userData?.name]);
+    //     return diaryData.map(item => ({
+    //         id: item.id,
+    //         title: item.title,
+    //         date: new Date(item.date),
+    //         time: '00:00',
+    //         type: 'Diary',
+    //         note: item.previewText || '',
+    //         author: item.author === userData?.name || item.author === 'Me' ? 'Me' : 'Partner'
+    //     })) as CalendarEvent[];
+    // }, [diaryData, userData?.name]);
 
     // Merge events (Removed diaryEvents to solve filtering confusion)
     const events = [...firestoreEvents];
