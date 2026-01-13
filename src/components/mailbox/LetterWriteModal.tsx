@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { db } from '../../lib/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { format } from 'date-fns';
+import { ko } from 'date-fns/locale';
+import { DatePickerModal } from '../common/DatePickerModal';
 
 interface LetterWriteModalProps {
     isOpen: boolean;
@@ -23,6 +26,7 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
     const [content, setContent] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [scheduledDate, setScheduledDate] = useState('');
+    const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
     const handleSend = async () => {
         if (!content.trim() || !coupleId) return;
@@ -35,7 +39,7 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                 content: content.trim(),
                 createdAt: serverTimestamp(),
                 isRead: false,
-                openDate: scheduledDate || null // If scheduled, letter is locked until this date
+                openDate: scheduledDate || null
             });
 
             setContent('');
@@ -58,6 +62,15 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
             }
         } else {
             onClose();
+        }
+    };
+
+    const formatDisplayDate = (dateStr: string) => {
+        if (!dateStr) return '지금 바로 보내기';
+        try {
+            return format(new Date(dateStr), 'yyyy년 M월 d일', { locale: ko });
+        } catch {
+            return dateStr;
         }
     };
 
@@ -105,29 +118,33 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                                 value={content}
                                 onChange={(e) => setContent(e.target.value)}
                                 placeholder="마음을 담아 편지를 써보세요..."
-                                className="w-full h-full min-h-[200px] bg-transparent text-primary placeholder-text-secondary/50 resize-none outline-none font-serif text-lg leading-relaxed"
+                                className="w-full h-full min-h-[120px] bg-transparent text-primary placeholder-text-secondary/50 resize-none outline-none font-serif text-lg leading-relaxed"
                                 autoFocus
                             />
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 border-t border-border space-y-4">
-                            {/* Scheduled Date (Optional) */}
-                            <div className="flex items-center gap-4">
-                                <span className="material-symbols-outlined text-text-secondary">schedule</span>
-                                <div className="flex-1">
-                                    <label className="text-[10px] text-text-secondary uppercase tracking-widest">
-                                        예약 발송 (선택)
-                                    </label>
-                                    <input
-                                        type="date"
-                                        value={scheduledDate}
-                                        onChange={(e) => setScheduledDate(e.target.value)}
-                                        min={new Date().toISOString().split('T')[0]}
-                                        className="w-full bg-transparent text-primary text-sm outline-none border-b border-border py-1 focus:border-primary transition-colors"
-                                    />
+                        <div className="px-6 py-4 border-t border-border space-y-3">
+                            {/* Scheduled Date Button */}
+                            <button
+                                onClick={() => setIsDatePickerOpen(true)}
+                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors"
+                            >
+                                <span className="material-symbols-outlined text-text-secondary">
+                                    {scheduledDate ? 'event' : 'schedule'}
+                                </span>
+                                <div className="flex-1 text-left">
+                                    <p className="text-[10px] text-text-secondary uppercase tracking-widest">
+                                        예약 발송
+                                    </p>
+                                    <p className={`text-sm font-medium ${scheduledDate ? 'text-primary' : 'text-text-secondary'}`}>
+                                        {formatDisplayDate(scheduledDate)}
+                                    </p>
                                 </div>
-                            </div>
+                                <span className="material-symbols-outlined text-text-secondary text-[18px]">
+                                    chevron_right
+                                </span>
+                            </button>
 
                             {/* Send Button */}
                             <button
@@ -139,6 +156,14 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                             </button>
                         </div>
                     </motion.div>
+
+                    {/* Date Picker Modal */}
+                    <DatePickerModal
+                        isOpen={isDatePickerOpen}
+                        onClose={() => setIsDatePickerOpen(false)}
+                        onSelect={setScheduledDate}
+                        selectedDate={scheduledDate}
+                    />
                 </>
             )}
         </AnimatePresence>
