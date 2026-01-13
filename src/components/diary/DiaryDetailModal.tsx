@@ -19,15 +19,14 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
 }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
-    if (!item) return null;
-
-    const images = item.images && item.images.length > 0
-        ? item.images
-        : (item.coverImage ? [item.coverImage] : []);
+    // Safe derivation of values for hooks
+    const images = item
+        ? (item.images && item.images.length > 0 ? item.images : (item.coverImage ? [item.coverImage] : []))
+        : [];
     const hasMultipleImages = images.length > 1;
 
     // Format date for header
-    const formattedDate = item.date ? (() => {
+    const formattedDate = item && item.date ? (() => {
         try {
             return format(parseISO(item.date), 'yyyy. M. d. a h:mm', { locale: ko });
         } catch {
@@ -58,6 +57,8 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
             onClose();
         }
     }, [currentImageIndex, images.length, onClose]);
+
+    if (!item) return null;
 
     // Download image
     const handleDownload = async () => {

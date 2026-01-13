@@ -14,13 +14,12 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [dragDirection, setDragDirection] = useState<'x' | 'y' | null>(null);
 
-    if (!item) return null;
-
-    const images = item.images && item.images.length > 0 ? item.images : (item.imageUrl ? [item.imageUrl] : []);
+    // Safe derivation of values for hooks
+    const images = item ? (item.images && item.images.length > 0 ? item.images : (item.imageUrl ? [item.imageUrl] : [])) : [];
     const hasMultipleImages = images.length > 1;
 
     // Format date for header
-    const formattedDate = item.date ? (() => {
+    const formattedDate = item && item.date ? (() => {
         try {
             return format(parseISO(item.date), 'yyyy. M. d. a h:mm');
         } catch {
@@ -58,6 +57,8 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
 
         setDragDirection(null);
     }, [currentImageIndex, images.length, onClose]);
+
+    if (!item) return null;
 
     const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (!dragDirection) {
