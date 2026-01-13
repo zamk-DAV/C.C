@@ -1,5 +1,5 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useScale, useTransform } from 'framer-motion';
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence, useMotionValue } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../../hooks/useHaptics';
 

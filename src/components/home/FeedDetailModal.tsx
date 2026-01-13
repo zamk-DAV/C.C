@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import type { MemoryItem } from '../../types';
 import { format, parseISO } from 'date-fns';
+import { fetchNotionPageContent } from '../../lib/notion';
 
 interface FeedDetailModalProps {
     isOpen: boolean;
@@ -14,7 +15,6 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [dragDirection, setDragDirection] = useState<'x' | 'y' | null>(null);
     const [extraImages, setExtraImages] = useState<string[]>([]);
-    const [isFetchingExtra, setIsFetchingExtra] = useState(false);
 
     // Reset extra images when item closes or changes
     useEffect(() => {
@@ -29,17 +29,9 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
         const fetchExtraImages = async () => {
             if (!item || !isOpen) return;
 
-            // Limit: Only fetch if we suspect there are more images or just always try for "Photo" entries?
             // Strategy: Always fetch for consistency, but silently.
-            // Optimization: If item.images already has > 1, maybe we don't need to? 
-            // But User wants ALL images. List view provides 'representative' images (max 1 usually due to previous logic).
-            // Now list view might provide all if they were in the property.
-            // But we agreed to lazy load from BLOCKS to keep properties clean.
 
-            setIsFetchingExtra(true);
             try {
-                // Import dynamically to avoid circular dependency issues if any, or just use standard import
-                // const { fetchNotionPageContent } = await import('../../lib/notion'); // Using direct import now
                 const response = await fetchNotionPageContent(item.id);
 
                 if (response.data && response.data.results) {
@@ -54,16 +46,15 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
                     if (blockImages.length > 0) {
                         setExtraImages(prev => {
                             // Filter out duplicates that might already exist in item.images
-                            const existing = new Set([...(item.images || []), ...(item.imageUrl ? [item.imageUrl] : [])]);
+                            const existing = new Set([...prev, ...(item.images || []), ...(item.imageUrl ? [item.imageUrl] : [])]);
                             const newUnique = blockImages.filter(url => !existing.has(url));
-                            return newUnique;
+                            if (newUnique.length === 0) return prev;
+                            return [...prev, ...newUnique];
                         });
                     }
                 }
             } catch (error) {
                 console.error("Failed to fetch extra images:", error);
-            } finally {
-                setIsFetchingExtra(false);
             }
         };
 

@@ -198,7 +198,7 @@ export const CalendarPage: React.FC = () => {
             medium();
             handleOpenNewEvent(date);
         }
-    });
+    } as any);
 
     const selectedDateEvents = events.filter(event =>
         isSameDay(event.date, selectedDate)

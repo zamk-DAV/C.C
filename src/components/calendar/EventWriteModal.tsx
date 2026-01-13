@@ -157,8 +157,12 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                             <h2 className="text-[17px] font-semibold text-white">
                                 {editEvent ? '일정 수정' : '새로운 일정'}
                             </h2>
-                            <button onClick={handleSave} className="text-[#0A84FF] font-semibold text-[17px] active:opacity-70">
-                                저장
+                            <button
+                                onClick={handleSave}
+                                disabled={isSubmitting}
+                                className={`text-[#0A84FF] font-semibold text-[17px] active:opacity-70 transition-opacity ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                            >
+                                {isSubmitting ? '저장 중...' : '저장'}
                             </button>
                         </div>
 
