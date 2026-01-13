@@ -343,6 +343,7 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                         res.status(500).send({
                             error: "Failed after all retries",
                             firstError: firstError.message,
+                            lastRetryError: lastError.message,
                             finalError: finalError.message,
                             details: (_d = finalError.response) === null || _d === void 0 ? void 0 : _d.data
                         });
