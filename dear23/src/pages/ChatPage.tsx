@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc, increment } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc, increment, writeBatch } from 'firebase/firestore';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MobileMessageItem } from '../components/chat/interactions/MobileMessageItem';
 import { DesktopMessageItem } from '../components/chat/interactions/DesktopMessageItem';
@@ -81,11 +81,29 @@ export const ChatPage: React.FC = () => {
             orderBy('createdAt', 'asc')
         );
 
-        const unsubscribeMsgs = onSnapshot(q, (snapshot) => {
+        const unsubscribeMsgs = onSnapshot(q, async (snapshot) => {
             const msgs = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             })) as ChatMessage[];
+
+            // Mark unread messages from partner as read
+            const unreadPartnerMsgs = msgs.filter(
+                m => m.senderId !== user?.uid && !m.isRead
+            );
+
+            if (unreadPartnerMsgs.length > 0 && coupleData?.id) {
+                const batch = writeBatch(db);
+                unreadPartnerMsgs.forEach(msg => {
+                    const msgRef = doc(db, 'couples', coupleData.id, 'messages', msg.id);
+                    batch.update(msgRef, { isRead: true });
+                });
+                try {
+                    await batch.commit();
+                } catch (e) {
+                    console.warn('Failed to mark messages as read:', e);
+                }
+            }
 
             // If new message is from ME, always scroll to bottom
             const lastMsg = msgs[msgs.length - 1];
