@@ -19,13 +19,15 @@ interface EventDetailModalProps {
     onClose: () => void;
     onSave: (data: any) => void;
     initialDate?: Date;
+    initialEvent?: any; // Add initialEvent prop
 }
 
 export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     isOpen,
     onClose,
     onSave,
-    initialDate = new Date()
+    initialDate = new Date(),
+    initialEvent
 }) => {
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);
@@ -35,8 +37,32 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     const [endTime, setEndTime] = useState('11:00');
     const [isFavorite, setIsFavorite] = useState(false);
     const [isShared, setIsShared] = useState(false);
-    const [selectedColor, setSelectedColor] = useState<string>('blue'); // default color
+    const [selectedColor, setSelectedColor] = useState<string>('blue');
     const [note, setNote] = useState('');
+
+    React.useEffect(() => {
+        if (isOpen) {
+            if (initialEvent) {
+                // Populate fields from initialEvent
+                setTitle(initialEvent.title || '');
+                setIsAllDay(initialEvent.isAllDay || false); // Assuming these fields exist or we map them
+                // Date parsing logic might be needed depending on event object structure
+                // For now assuming Notion data structure or a mapped internal event structure
+                setStartDate(initialEvent.date ? new Date(initialEvent.date) : initialDate);
+                setEndDate(initialEvent.date ? new Date(initialEvent.date) : initialDate);
+                setNote(initialEvent.previewText || initialEvent.content || '');
+                // ... map other fields if available
+            } else {
+                // Reset to defaults for new event
+                setTitle('');
+                const now = new Date();
+                setStartDate(initialDate || now);
+                setEndDate(initialDate || now);
+                setNote('');
+                setIsAllDay(false);
+            }
+        }
+    }, [isOpen, initialEvent, initialDate]);
 
     const colors = [
         { id: 'blue', value: '#135bec' },
@@ -47,6 +73,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
 
     const handleSave = () => {
         onSave({
+            id: initialEvent?.id, // Pass ID if editing
             title,
             isAllDay,
             startDate,

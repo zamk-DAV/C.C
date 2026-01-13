@@ -5,24 +5,168 @@ import { useEventData } from '../context/NotionContext';
 import { EventDetailModal } from '../components/calendar/EventDetailModal';
 import { createDiaryEntry } from '../lib/notion';
 import { AnimatePresence, motion } from 'framer-motion';
+import { useGesture } from '@use-gesture/react';
+import { useHaptics } from '../hooks/useHaptics';
+import { updateDiaryEntry } from '../lib/notion';
+
+// ... (existing imports)
+
+interface DraggableEventProps {
+    event: any;
+    onDrop: (event: any, newDate: string) => void;
+    onClick: (event: any) => void;
+}
+
+const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick }) => {
+    const { heavy, medium } = useHaptics();
+    const [isDragging, setIsDragging] = React.useState(false);
+
+    const bind = useGesture({
+        onDragStart: () => {
+            setIsDragging(true);
+            medium();
+        },
+        onDrag: ({ offset: [x, y], event: e }) => {
+            // Prevent scrolling on mobile while dragging
+            // In a real app we might use a portal or fixed overlay for the dragged item
+            // For simplicity here, we rely on framer motion layout or transform
+        },
+        onDragEnd: ({ xy: [clientX, clientY], cancel, tap }) => {
+            setIsDragging(false);
+            if (tap) {
+                onClick(event);
+                return;
+            }
+
+            // Detect drop target
+            // Hide the dragged element momentarily to find what's underneath
+            // (Note: standard HTML5 Drag & Drop might be easier for this, but use-gesture gives better control on mobile)
+            // A simple hack: elementFromPoint. 
+            // Since we aren't using a Portal, the element is under the finger. 
+            // To find the *Drop Target*, we need to ensure the dragged element doesn't block the point.
+            // However, with framer-motion drag, it usually does.
+            // Alternative: Calculation based on coordinates.
+
+            // Standard Approach with elementFromPoint:
+            const elements = document.elementsFromPoint(clientX, clientY);
+            const dateCell = elements.find(el => el.getAttribute('data-date'));
+
+            if (dateCell) {
+                const newDate = dateCell.getAttribute('data-date');
+                if (newDate && newDate !== event.date) {
+                    heavy();
+                    onDrop(event, newDate);
+                }
+            }
+        },
+        onTap: () => {
+            onClick(event);
+        }
+    }, {
+        drag: {
+            delay: 200, // Long press to drag to distinguish from scroll
+            filterTaps: true
+        }
+    });
+
+    // Framer Motion drag is easier for visual following. 
+    // But mixing useGesture and simple Framer Motion drag is complex.
+    // Let's use Framer Motion's Drag controls directly for the visual part 
+    // and use-gesture logic is implicitly handled or we use useGesture for everything.
+    // Actually, framer motion has onDragEnd which is sufficient.
+
+    return (
+        <motion.div
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={1} // Allow free movement visuals
+            dragSnapToOrigin={true} // Return if not dropped
+            whileDrag={{ scale: 1.05, zIndex: 50, shadow: "0px 10px 20px rgba(0,0,0,0.2)" }}
+            onDragStart={() => {
+                setIsDragging(true);
+                medium();
+            }}
+            onDragEnd={(e, info) => {
+                setIsDragging(false);
+                // elementFromPoint logic
+                const point = info.point;
+                // Framer motion point is relative to page? No, viewport.
+                // We need to temporarily hide this element to see what's under it?
+                // Actually pointer-events: none during drag prevents this issue but strictly capturing events.
+                // Let's rely on the pointer event from onDragEnd.
+
+                // Hack: use the pointer position from the event object
+                const clientX = point.x;
+                const clientY = point.y;
+
+                const elements = document.elementsFromPoint(clientX, clientY);
+                const dateCell = elements.find(el => el.getAttribute('data-date'));
+
+                if (dateCell) {
+                    const newDate = dateCell.getAttribute('data-date');
+                    if (newDate && newDate !== event.date) {
+                        heavy();
+                        onDrop(event, newDate);
+                    }
+                }
+            }}
+            onTap={() => onClick(event)}
+            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2 bg-background relative"
+        >
+            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px] text-primary">
+                {"ALL DAY"}
+            </span>
+            <div className="flex flex-col gap-1 pointer-events-none">
+                <p className="text-lg font-light leading-none text-primary group-hover:text-white transition-colors">{event.title}</p>
+                {event.previewText && (
+                    <p className="text-[13px] text-text-secondary font-light italic">{event.previewText}</p>
+                )}
+            </div>
+            {isDragging && (
+                <div className="absolute inset-0 border-2 border-primary rounded-xl opacity-50 animate-pulse" />
+            )}
+        </motion.div>
+    );
+};
 
 export const CalendarPage: React.FC = () => {
     const { eventData, isLoading, refreshData } = useEventData();
-    const [currentDate, setCurrentDate] = useState(new Date()); // Calendar view date
-    const [selectedDate, setSelectedDate] = useState(new Date()); // Selected specific date
+    const [currentDate, setCurrentDate] = useState(new Date());
+    const [selectedDate, setSelectedDate] = useState(new Date());
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<any>(null); // Track event being edited
+    const { heavy, medium } = useHaptics();
 
     // Calendar Grid Logic
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-
-    // Fill empty slots for start of week
     const startDay = getDay(monthStart);
     const emptyDays = Array.from({ length: startDay });
 
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+
+    // Gesture Logic for Swipe
+    const bind = useGesture(
+        {
+            onDrag: ({ swipe: [swipeX] }) => {
+                if (swipeX === -1) {
+                    heavy();
+                    handleNextMonth();
+                } else if (swipeX === 1) {
+                    heavy();
+                    handlePrevMonth();
+                }
+            },
+        },
+        {
+            drag: {
+                axis: 'x',
+                swipe: { distance: 50, velocity: 0.1 },
+            },
+        }
+    );
 
     // Filter events for selected date
     const selectedDateEvents = eventData.filter(event => {
@@ -36,31 +180,65 @@ export const CalendarPage: React.FC = () => {
 
     const handleSaveEvent = async (data: any) => {
         try {
-            // Using createDiaryEntry as a generic creator for now.
-            // Ideally backend function should support 'title' properly for 'Event' type.
-            // We pass title via options casting/hack if needed, or rely on content.
-            // Assuming the cloud function handles extra fields if passed.
-            await createDiaryEntry(
-                data.note || '', // Content as note
-                [], // No images
-                'Event',
+            if (data.id) {
+                // Update existing event
+                await updateDiaryEntry(
+                    data.id,
+                    data.note || '',
+                    [],
+                    {
+                        date: format(data.startDate, 'yyyy-MM-dd'),
+                        title: data.title,
+                        // Add other options if needed
+                    }
+                );
+            } else {
+                // Create new event
+                await createDiaryEntry(
+                    data.note || '',
+                    [],
+                    'Event',
+                    {
+                        date: format(data.startDate, 'yyyy-MM-dd'),
+                        ...({ title: data.title } as any)
+                    }
+                );
+            }
+            await refreshData();
+            setEditingEvent(null); // Reset editing state
+        } catch (error) {
+            console.error("Failed to save event:", error);
+        }
+    };
+
+    const handleEventDrop = async (event: any, newDate: string) => {
+        // Optimistic update could go here, but for safety:
+        try {
+            medium(); // Feedback before starting
+            await updateDiaryEntry(
+                event.id,
+                event.content || '', // Keep existing content
+                [], // Images?
                 {
-                    date: format(data.startDate, 'yyyy-MM-dd'),
-                    // types workaround: passing title if possible or putting it in content?
-                    // For now, let's put title in the first line of content if title isn't supported,
-                    // or assume the backend uses a property we can't easily see here.
-                    // But actually, looking at types/index.ts, NotionItem has `title`.
-                    // We'll pass it in options as a custom property if the API allows unknown props.
-                    // If strict Type Check fails, we might need to update lib/notion.ts params.
-                    // For this task, we will try to pass it.
-                    ...({ title: data.title } as any)
+                    date: newDate,
+                    title: event.title
                 }
             );
             await refreshData();
+            // Could add a toast "Event moved to ..."
         } catch (error) {
-            console.error("Failed to save event:", error);
-            // Optionally show toast/alert
+            console.error("Failed to move event:", error);
         }
+    };
+
+    const handleEventClick = (event: any) => {
+        setEditingEvent(event);
+        setIsModalOpen(true);
+    };
+
+    const handleOpenNewEvent = () => {
+        setEditingEvent(null);
+        setIsModalOpen(true);
     };
 
     return (
@@ -79,7 +257,10 @@ export const CalendarPage: React.FC = () => {
             </header>
 
             {/* Calendar Grid */}
-            <div className="px-8 mb-10">
+            <div
+                {...bind() as any}
+                className="px-8 mb-10 touch-pan-y"
+            >
                 {/* Days of Week */}
                 <div className="grid grid-cols-7 mb-4 border-b border-border pb-2">
                     {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
@@ -101,17 +282,14 @@ export const CalendarPage: React.FC = () => {
                         const isSelected = isSameDay(day, selectedDate);
                         const hasEvent = eventData.some(e => {
                             if (!e.date) return false;
-                            try {
-                                return isSameDay(parseISO(e.date), day);
-                            } catch {
-                                return false;
-                            }
+                            try { return isSameDay(parseISO(e.date), day); } catch { return false; }
                         });
 
                         return (
                             <button
                                 key={day.toString()}
                                 onClick={() => setSelectedDate(day)}
+                                data-date={format(day, 'yyyy-MM-dd')} // Add identifier for drop target
                                 className="relative h-10 w-full flex flex-col items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
                             >
                                 {isSelected && (
@@ -151,18 +329,12 @@ export const CalendarPage: React.FC = () => {
                         </div>
                     ) : selectedDateEvents.length > 0 ? (
                         selectedDateEvents.map((event: any) => (
-                            <div key={event.id} className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2">
-                                <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px] text-primary">
-                                    {/* Usually we don't have time in current schema but can add or use default */}
-                                    {"ALL DAY"}
-                                </span>
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-lg font-light leading-none text-primary group-hover:text-white transition-colors">{event.title}</p>
-                                    {event.previewText && (
-                                        <p className="text-[13px] text-text-secondary font-light italic">{event.previewText}</p>
-                                    )}
-                                </div>
-                            </div>
+                            <DraggableEvent
+                                key={event.id}
+                                event={event}
+                                onDrop={handleEventDrop}
+                                onClick={handleEventClick}
+                            />
                         ))
                     ) : (
                         <div className="py-10 text-center text-text-secondary font-light italic">
@@ -176,7 +348,7 @@ export const CalendarPage: React.FC = () => {
             <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={() => setIsModalOpen(true)}
+                onClick={handleOpenNewEvent}
                 className="fixed bottom-24 right-6 w-14 h-14 bg-white text-black rounded-full shadow-2xl flex items-center justify-center z-40"
             >
                 <span className="material-symbols-outlined text-3xl">add</span>
@@ -188,6 +360,7 @@ export const CalendarPage: React.FC = () => {
                 onClose={() => setIsModalOpen(false)}
                 onSave={handleSaveEvent}
                 initialDate={selectedDate}
+                initialEvent={editingEvent} // Pass event for editing
             />
 
             {/* Bottom Nav is managed by MainLayout */}

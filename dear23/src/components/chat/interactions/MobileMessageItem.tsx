@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
 import { type PanInfo, motion, useAnimation } from 'framer-motion';
+import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../../../hooks/useHaptics';
 
 interface MobileMessageItemProps {
@@ -15,50 +16,59 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     isMine,
     onReply,
     onReaction,
+    onLongPress,
 }) => {
     const controls = useAnimation();
     const { heavy, success } = useHaptics();
 
-    // Double tap detection
-    const lastTap = useRef<number>(0);
-    const DOUBLE_TAP_DELAY = 300;
+    const bind = useGesture(
+        {
+            onDoubleTap: () => {
+                success();
+                onReaction?.();
+            },
+            onLongPress: ({ cancel }) => {
+                heavy();
+                onLongPress?.();
+                cancel(); // Prevent drag from starting after long press
+            },
+            onDrag: ({ active, movement: [mx], cancel }) => {
+                // Only allow swiping left (negative x) for reply, similar to KakaoTalk
+                const isSwipeLeft = mx < 0;
 
-    const handleTap = () => {
-        const now = Date.now();
-        if (now - lastTap.current < DOUBLE_TAP_DELAY) {
-            // Double tap detected
-            success();
-            onReaction?.();
-            lastTap.current = 0;
-        } else {
-            lastTap.current = now;
+                if (!isSwipeLeft && active) {
+                    cancel();
+                    return;
+                }
+
+                if (active) {
+                    // Apply resistance to the drag
+                    controls.set({ x: mx * 0.5 });
+                } else {
+                    // Trigger reply if swiped far enough
+                    if (mx < -50) {
+                        heavy();
+                        onReply?.();
+                    }
+                    // Reset position
+                    controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
+                }
+            },
+        },
+        {
+            drag: {
+                axis: 'x',
+                filterTaps: true,
+                from: () => [0, 0], // Start from 0
+            },
         }
-    };
-
-    // Drag logic for Swipe to Reply
-    const handleDragEnd = async (_: any, info: PanInfo) => {
-        const threshold = 50; // px to trigger reply
-
-        const dragDistance = isMine ? -info.offset.x : info.offset.x;
-
-        if (dragDistance > threshold) {
-            heavy(); // Vibration feedback
-            onReply?.();
-        }
-
-        // Reset position
-        controls.start({ x: 0 });
-    };
+    );
 
     return (
         <motion.div
             className="relative touch-manipulation"
-            drag="x"
-            dragConstraints={{ left: 0, right: 0 }}
-            dragElastic={{ left: isMine ? 0.5 : 0.05, right: isMine ? 0.05 : 0.5 }}
-            onDragEnd={handleDragEnd}
+            {...bind() as any}
             animate={controls}
-            onTap={handleTap}
             style={{ touchAction: 'pan-y' }} // Allow vertical scroll, handle horizontal in JS
         >
             {children}
