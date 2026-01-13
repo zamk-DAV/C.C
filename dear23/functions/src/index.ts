@@ -237,7 +237,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const { apiKey, databaseId } = userData.notionConfig;
 
             // 3. Prepare Notion Page Properties
-            const { title, content, type } = req.body; // type: 'Diary' | 'Memory' | ...
+            const { title, content, type, date, mood } = req.body; // type: 'Diary' | 'Memory' | ...
 
             let categoryValue = "일기"; // Default
             switch (type) {
@@ -247,8 +247,8 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                 case 'Letter': categoryValue = '편지'; break;
             }
 
-            // Current Date in ISO format (YYYY-MM-DD)
-            const today = new Date().toISOString().split('T')[0];
+            // Use provided date or fallback to today
+            const entryDate = date || new Date().toISOString().split('T')[0];
 
             // 4. Create Page in Notion
             const response = await axios.post(
@@ -272,19 +272,23 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                         },
                         "dear23_날짜": {
                             date: {
-                                start: today
+                                start: entryDate
                             }
                         },
                         "dear23_내용미리보기": {
                             rich_text: [
                                 {
                                     text: {
-                                        content: content ? content.substring(0, 100) : ""
+                                        content: content ? content.substring(0, 500) : ""
                                     }
                                 }
                             ]
                         },
-                        // "작성자": { ... } // Optional: Add author logic later
+                        "dear23_기분": mood ? {
+                            select: {
+                                name: mood
+                            }
+                        } : undefined,
                     },
                     // Optional: Add content blocks if needed
                 },
