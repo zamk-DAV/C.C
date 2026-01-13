@@ -25,7 +25,7 @@ const MOOD_OPTIONS = [
     { icon: 'sentiment_dissatisfied', value: '나쁨' },
     { icon: 'sentiment_satisfied', value: '좋음', fill: true },
     { icon: 'sentiment_very_satisfied', value: '매우 좋음' },
-    { icon: 'favorite', value: '사랑' }, // Changed from bolt to favorite
+    { icon: 'favorite', value: '사랑' },
 ];
 
 const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary' }) => {
@@ -110,7 +110,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: "100%" }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="relative w-full max-w-[430px] h-[100dvh] sm:h-[90vh] bg-background overflow-hidden flex flex-col shadow-2xl sm:rounded-[2.5rem] border-primary border-0 sm:border-[8px]"
+                        className="relative w-full max-w-[430px] h-[100dvh] sm:h-[90vh] bg-background overflow-hidden flex flex-col shadow-2xl sm:rounded-[2.5rem] border-primary border-0 sm:border-[2px]"
                     >
                         {/* Notch Handle */}
                         <div className="flex flex-col items-center bg-background pt-4 pb-2 shrink-0">
@@ -149,21 +149,21 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                             {/* Weather Section */}
                             <section>
                                 <h4 className="text-primary text-[10px] font-extrabold uppercase tracking-[0.2em] mb-4 opacity-40">오늘의 날씨</h4>
-                                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2"> {/* Added negative margins and horizontal padding to prevent cut off */}
+                                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
                                     {WEATHER_OPTIONS.map((w) => (
                                         <div
                                             key={w.value}
                                             onClick={() => setSelectedWeather(w.value)}
                                             className={`flex flex-col items-center justify-center min-w-[62px] h-[74px] rounded-xl transition-all duration-300 cursor-pointer border ${selectedWeather === w.value
-                                                ? 'bg-primary text-background border-primary shadow-md scale-105'
-                                                : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
+                                                    ? 'bg-primary text-background border-primary shadow-md scale-105'
+                                                    : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-2xl">{w.icon}</span>
                                             <p className="text-[8px] font-bold mt-1.5 uppercase tracking-tight">{w.label}</p>
                                         </div>
                                     ))}
-                                    <div className="min-w-[10px] shrink-0"></div> {/* Spacer for horizontal scroll padding */}
+                                    <div className="min-w-[10px] shrink-0"></div>
                                 </div>
                             </section>
 
@@ -176,8 +176,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={m.value}
                                             onClick={() => setSelectedMood(m.value)}
                                             className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${selectedMood === m.value
-                                                ? 'bg-primary text-background shadow-xl transform scale-110'
-                                                : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
+                                                    ? 'bg-primary text-background shadow-xl transform scale-110'
+                                                    : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
                                                 }`}
                                         >
                                             <span
@@ -191,7 +191,54 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                 </div>
                             </section>
 
-                            {/* Text Inputs */}
+                            {/* Image Section - Moved Up & Improved */}
+                            <section className="pb-0">
+                                <h4 className="text-primary text-[10px] font-extrabold uppercase tracking-[0.2em] mb-4 opacity-40">사진 기록</h4>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                />
+
+                                {images.length === 0 ? (
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="group w-full h-32 rounded-3xl border-2 border-dashed border-secondary/30 hover:border-primary flex flex-col items-center justify-center gap-2 hover:bg-secondary/20 transition-all cursor-pointer bg-secondary/10"
+                                    >
+                                        <div className="flex flex-col items-center transition-transform group-hover:scale-105 z-10">
+                                            <span className="material-symbols-outlined text-text-secondary group-hover:text-primary text-3xl transition-colors">add_a_photo</span>
+                                            <p className="text-text-secondary group-hover:text-primary text-xs font-bold tracking-tight transition-colors mt-2">사진 추가하기</p>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
+                                        {images.map((img, idx) => (
+                                            <div key={idx} className="relative h-40 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 shadow-md border border-border group/item">
+                                                <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
+                                                    className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500"
+                                                >
+                                                    <span className="material-symbols-outlined text-[14px]">close</span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <div
+                                            onClick={() => fileInputRef.current?.click()}
+                                            className="h-40 aspect-[3/4] rounded-2xl border-2 border-dashed border-secondary/30 hover:border-primary flex flex-col items-center justify-center shrink-0 hover:bg-secondary/20 transition-all cursor-pointer bg-secondary/10"
+                                        >
+                                            <span className="material-symbols-outlined text-text-secondary text-2xl">add</span>
+                                            <span className="text-[10px] font-bold text-text-secondary mt-1">더 추가</span>
+                                        </div>
+                                        <div className="min-w-[10px] shrink-0"></div>
+                                    </div>
+                                )}
+                            </section>
+
+                            {/* Text Inputs - Moved Down */}
                             <section className="space-y-6 pt-2">
                                 <input
                                     value={title}
@@ -206,48 +253,6 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                     className="w-full bg-transparent border-none p-0 text-xl leading-[1.8] text-primary/80 placeholder-text-secondary/20 focus:ring-0 min-h-[300px] resize-none font-normal outline-none"
                                     placeholder="무슨 일이 있었나요?"
                                 />
-                            </section>
-
-                            {/* Image Section */}
-                            <section className="pb-8">
-                                <div
-                                    onClick={() => fileInputRef.current?.click()}
-                                    className="group relative w-full aspect-video rounded-3xl border-2 border-dashed border-secondary/30 hover:border-primary flex flex-col items-center justify-center gap-2 hover:bg-secondary/20 transition-all cursor-pointer overflow-hidden bg-secondary/10"
-                                >
-                                    {images.length > 0 ? (
-                                        <div className="absolute inset-0 flex gap-2 p-2 overflow-x-auto no-scrollbar">
-                                            {images.map((img, idx) => (
-                                                <div key={idx} className="relative h-full aspect-square rounded-xl overflow-hidden shrink-0 shadow-md">
-                                                    <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
-                                                        className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-1 hover:bg-red-500 transition-colors"
-                                                    >
-                                                        <span className="material-symbols-outlined text-[14px]">close</span>
-                                                    </button>
-                                                </div>
-                                            ))}
-                                            <div className="h-full aspect-square flex flex-col items-center justify-center bg-background/50 border-2 border-dashed border-secondary/30 rounded-xl shrink-0">
-                                                <span className="material-symbols-outlined text-text-secondary">add</span>
-                                            </div>
-                                        </div>
-                                    ) : (
-                                        <div className="flex flex-col items-center transition-transform group-hover:scale-105 z-10">
-                                            <div className="w-16 h-16 rounded-full bg-background shadow-sm flex items-center justify-center mb-4 group-hover:shadow-md transition-all">
-                                                <span className="material-symbols-outlined text-text-secondary group-hover:text-primary text-3xl transition-colors">add_a_photo</span>
-                                            </div>
-                                            <p className="text-text-secondary group-hover:text-primary text-sm font-bold tracking-tight transition-colors">사진 추가</p>
-                                        </div>
-                                    )}
-                                    <input
-                                        type="file"
-                                        ref={fileInputRef}
-                                        className="hidden"
-                                        multiple
-                                        accept="image/*"
-                                        onChange={handleFileChange}
-                                    />
-                                </div>
                             </section>
 
                             <div className="h-20"></div>
