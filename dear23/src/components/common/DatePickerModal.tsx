@@ -18,7 +18,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
     onClose,
     onSelect,
     selectedDate,
-    minDate
+    minDate: _minDate
 }) => {
     const { medium } = useHaptics();
 
