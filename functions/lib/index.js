@@ -6,6 +6,7 @@ const admin = require("firebase-admin");
 const axios_1 = require("axios");
 const cors = require("cors");
 admin.initializeApp();
+// Deploy Timestamp: 2026-01-13 11:20
 const corsHandler = cors({ origin: true });
 exports.getNotionDatabase = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {

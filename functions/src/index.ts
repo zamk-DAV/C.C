@@ -4,6 +4,7 @@ import axios from "axios";
 import * as cors from "cors";
 
 admin.initializeApp();
+// Deploy Timestamp: 2026-01-13 11:20
 
 const corsHandler = cors({ origin: true });
 
