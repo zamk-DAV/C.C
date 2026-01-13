@@ -8,6 +8,26 @@ admin.initializeApp();
 
 const corsHandler = cors({ origin: true });
 
+// Helper to fetch Notion Config (Prioritizes Couple Data)
+const fetchNotionConfig = async (userId: string) => {
+    const userDoc = await admin.firestore().collection("users").doc(userId).get();
+    const userData = userDoc.data();
+    if (!userData) return null;
+
+    let config = userData.notionConfig;
+
+    // Check for couple-level config and prioritize it
+    if (userData.coupleId) {
+        const coupleDoc = await admin.firestore().collection("couples").doc(userData.coupleId).get();
+        const coupleData = coupleDoc.data();
+        if (coupleData?.notionConfig?.apiKey) {
+            config = coupleData.notionConfig;
+            console.log(`[Config] Using shared couple config for user ${userId}`);
+        }
+    }
+    return config;
+};
+
 // Interface for cleaned up memory object
 interface MemoryItem {
     id: string;
@@ -42,16 +62,15 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
             // For now, allow any user to be queried (assuming RLS-like logic here or just open for couple MVP)
             const targetUserId = req.body.targetUserId || uid;
 
-            // 2. Fetch Notion Config from Firestore
-            const userDoc = await admin.firestore().collection("users").doc(targetUserId).get();
-            const userData = userDoc.data();
+            // 2. Fetch Notion Config from Firestore (with fallbacks)
+            const notionConfig = await fetchNotionConfig(targetUserId);
 
-            if (!userData || !userData.notionConfig) {
+            if (!notionConfig) {
                 res.status(404).send({ error: "Notion configuration not found for this user." });
                 return;
             }
 
-            const { apiKey, databaseId } = userData.notionConfig;
+            const { apiKey, databaseId } = notionConfig;
 
             if (!apiKey || !databaseId) {
                 res.status(400).send({ error: "Incomplete Notion configuration." });
@@ -243,15 +262,14 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const uid = decodedToken.uid;
 
             // 2. Fetch Notion Config
-            const userDoc = await admin.firestore().collection("users").doc(uid).get();
-            const userData = userDoc.data();
+            const notionConfig = await fetchNotionConfig(uid);
 
-            if (!userData || !userData.notionConfig) {
+            if (!notionConfig) {
                 res.status(404).send({ error: "Notion configuration not found." });
                 return;
             }
 
-            const { apiKey, databaseId } = userData.notionConfig;
+            const { apiKey, databaseId } = notionConfig;
 
             // 3. Prepare Notion Page Properties
             const { title, content, type, date, mood, weather } = req.body; // type: 'Diary' | 'Memory' | ...
@@ -562,15 +580,14 @@ export const deleteDiaryEntry = functions.https.onRequest((req, res) => {
             const uid = decodedToken.uid;
 
             // 2. Fetch Notion Config
-            const userDoc = await admin.firestore().collection("users").doc(uid).get();
-            const userData = userDoc.data();
+            const notionConfig = await fetchNotionConfig(uid);
 
-            if (!userData || !userData.notionConfig) {
+            if (!notionConfig) {
                 res.status(404).send({ error: "Notion configuration not found." });
                 return;
             }
 
-            const { apiKey } = userData.notionConfig;
+            const { apiKey } = notionConfig;
 
             // 3. Archive Page
             const { pageId } = req.body;
@@ -617,15 +634,14 @@ export const updateDiaryEntry = functions.https.onRequest((req, res) => {
             const uid = decodedToken.uid;
 
             // 2. Fetch Notion Config
-            const userDoc = await admin.firestore().collection("users").doc(uid).get();
-            const userData = userDoc.data();
+            const notionConfig = await fetchNotionConfig(uid);
 
-            if (!userData || !userData.notionConfig) {
+            if (!notionConfig) {
                 res.status(404).send({ error: "Notion configuration not found." });
                 return;
             }
 
-            const { apiKey } = userData.notionConfig;
+            const { apiKey } = notionConfig;
 
             // 3. Prepare Update Data
             const { pageId, title, content, mood, weather, date } = req.body;
