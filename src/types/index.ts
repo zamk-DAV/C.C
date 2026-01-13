@@ -39,6 +39,8 @@ export interface NotionItem {
     id: string;
     title: string;
     date: string;
+    coverImage: string | null;
+    previewText: string;
     type?: 'Diary' | 'Event' | 'Memory' | 'Letter';
     sender?: string;
     isRead?: boolean;
