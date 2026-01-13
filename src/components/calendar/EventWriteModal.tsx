@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
-import { format } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
 import { useHaptics } from '../../hooks/useHaptics';
+import { DatePickerModal } from '../common/DatePickerModal';
+import { TimePickerModal } from '../common/TimePickerModal';
 
 interface EventWriteModalProps {
     isOpen: boolean;
@@ -25,26 +27,30 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);
-    // Simplified Start/End logic. Backend mainly supports 'date' and 'time' string.
-    // We will store 'date' as Start Date. Time as "HH:mm".
+
     const [startDate, setStartDate] = useState(new Date());
     const [startTime, setStartTime] = useState('10:00');
     const [endDate, setEndDate] = useState(new Date());
     const [endTime, setEndTime] = useState('11:00');
 
     const [isImportant, setIsImportant] = useState(false);
-    const [isShared, setIsShared] = useState(true); // Default valid for couple app
+    const [isShared, setIsShared] = useState(true);
     const [selectedColor, setSelectedColor] = useState('#135bec');
     const [note, setNote] = useState('');
 
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // Modal Visibility States
+    const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
+    const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
+    const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
+    const [isEndTimePickerOpen, setIsEndTimePickerOpen] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
             if (editEvent) {
                 setTitle(editEvent.title);
                 setNote(editEvent.note || '');
-                // Try to parse time
                 if (editEvent.time) {
                     setStartTime(editEvent.time);
                     setIsAllDay(false);
@@ -53,8 +59,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 }
                 const evtDate = editEvent.date instanceof Date ? editEvent.date : new Date(editEvent.date);
                 setStartDate(evtDate);
-                // Handle endDate - if not present, default to startDate (which matches original logic), 
-                // but if we have it, use it.
+
                 if (editEvent.endDate) {
                     setEndDate(editEvent.endDate instanceof Date ? editEvent.endDate : new Date(editEvent.endDate));
                 } else {
@@ -87,11 +92,8 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
         try {
             const dateString = format(startDate, 'yyyy-MM-dd');
-            // Construct mood string effectively for now
-            // If we have time, use it.
             const timeString = isAllDay ? undefined : startTime;
             const moodContent = timeString ? `${timeString} ${note}`.trim() : note;
-
             const endDateString = format(endDate, 'yyyy-MM-dd');
 
             if (editEvent) {
@@ -200,16 +202,19 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                 <div className="flex items-center justify-between px-4 py-3 hover:bg-white/5 active:bg-white/10 transition-colors border-b border-gray-700/50">
                                     <span className="text-[16px] pl-[34px]">시작</span>
                                     <div className="flex items-center gap-2">
-                                        <div className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] tex-[#0A84FF]">
+                                        <button
+                                            onClick={() => setIsStartDatePickerOpen(true)}
+                                            className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] text-[#0A84FF] font-medium active:scale-95 transition-transform"
+                                        >
                                             {format(startDate, 'M월 d일 (EEE)', { locale: ko })}
-                                        </div>
+                                        </button>
                                         {!isAllDay && (
-                                            <input
-                                                type="time"
-                                                value={startTime}
-                                                onChange={(e) => setStartTime(e.target.value)}
-                                                className="bg-[#2C2C2E] px-2 py-1.5 rounded-md text-[15px] font-medium border-none focus:ring-0 text-white"
-                                            />
+                                            <button
+                                                onClick={() => setIsStartTimePickerOpen(true)}
+                                                className="bg-[#2C2C2E] px-2 py-1.5 rounded-md text-[15px] font-medium text-white active:scale-95 transition-transform"
+                                            >
+                                                {startTime}
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -218,13 +223,19 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                 <div className="flex items-center justify-between px-4 py-3 hover:bg-white/5 active:bg-white/10 transition-colors">
                                     <span className="text-[16px] pl-[34px]">종료</span>
                                     <div className="flex items-center gap-2">
-                                        <div className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] text-[#8E8E93]">
+                                        <button
+                                            onClick={() => setIsEndDatePickerOpen(true)}
+                                            className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] text-[#8E8E93] font-medium active:scale-95 transition-transform"
+                                        >
                                             {format(endDate, 'M월 d일 (EEE)', { locale: ko })}
-                                        </div>
+                                        </button>
                                         {!isAllDay && (
-                                            <div className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] font-medium text-[#8E8E93]">
+                                            <button
+                                                onClick={() => setIsEndTimePickerOpen(true)}
+                                                className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] font-medium text-[#8E8E93] active:scale-95 transition-transform"
+                                            >
                                                 {endTime}
-                                            </div>
+                                            </button>
                                         )}
                                     </div>
                                 </div>
@@ -274,13 +285,13 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                             <button
                                                 key={color}
                                                 onClick={() => { setSelectedColor(color); simpleClick(); }}
-                                                className={`size-6 rounded-full ring-2 ring-offset-2 ring-offset-[#1C1C1E] transition-all`}
-                                                style={{
-                                                    backgroundColor: color,
-                                                    boxShadow: selectedColor === color ? `0 0 0 2px #fff` : 'none',
-                                                    opacity: selectedColor === color ? 1 : 0.6
-                                                }}
-                                            />
+                                                className={`size-6 rounded-full transition-all relative`}
+                                                style={{ backgroundColor: color }}
+                                            >
+                                                {selectedColor === color && (
+                                                    <div className="absolute inset-0 rounded-full ring-2 ring-white ring-offset-2 ring-offset-[#1C1C1E]" />
+                                                )}
+                                            </button>
                                         ))}
                                     </div>
                                 </div>
@@ -297,13 +308,58 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                 <textarea
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
-                                    className="w-full h-32 bg-transparent text-[16px] text-white p-4 border-none focus:ring-0 resize-none"
+                                    className="w-full h-32 bg-transparent text-[16px] text-white p-4 border-none focus:ring-0 resize-none font-sans"
                                     placeholder="메모를 입력하세요"
                                 />
                             </div>
-                            <div className="h-10" /> {/* Bottom spacer */}
+                            <div className="h-20" /> {/* Bottom spacer for safety */}
                         </div>
                     </motion.div>
+
+                    {/* Modals */}
+                    <DatePickerModal
+                        isOpen={isStartDatePickerOpen}
+                        onClose={() => setIsStartDatePickerOpen(false)}
+                        onSelect={(date) => {
+                            if (date) {
+                                setStartDate(new Date(date));
+                                // Auto-adjust end date if it's before start date
+                                if (new Date(date) > endDate) {
+                                    setEndDate(new Date(date));
+                                }
+                            }
+                            setIsStartDatePickerOpen(false);
+                        }}
+                        selectedDate={startDate}
+                    />
+
+                    <DatePickerModal
+                        isOpen={isEndDatePickerOpen}
+                        onClose={() => setIsEndDatePickerOpen(false)}
+                        onSelect={(date) => {
+                            if (date) setEndDate(new Date(date));
+                            setIsEndDatePickerOpen(false);
+                        }}
+                        selectedDate={endDate}
+                        minDate={startDate} // Prevent end date before start date
+                    />
+
+                    <TimePickerModal
+                        isOpen={isStartTimePickerOpen}
+                        onClose={() => setIsStartTimePickerOpen(false)}
+                        onSelect={(time) => {
+                            setStartTime(time);
+                            // Optional: Auto-adjust end time logic here
+                        }}
+                        initialTime={startTime}
+                    />
+
+                    <TimePickerModal
+                        isOpen={isEndTimePickerOpen}
+                        onClose={() => setIsEndTimePickerOpen(false)}
+                        onSelect={(time) => setEndTime(time)}
+                        initialTime={endTime}
+                    />
                 </>
             )}
         </AnimatePresence>
