@@ -65,15 +65,20 @@ export const DiaryPage: React.FC = () => {
         const groups: { [key: string]: { items: NotionItem[], displayKey: string } } = {};
 
         sorted.forEach(item => {
-            if (!item.date) return;
+            if (!item.date) {
+                console.warn("[DiaryGroup] Missing date for item:", item.id);
+                return;
+            }
             const date = parseISO(item.date);
-            if (!isValid(date)) return;
+            if (!isValid(date)) {
+                console.warn("[DiaryGroup] Invalid date for item:", item.id, item.date);
+                return;
+            }
 
             const year = getYear(date);
-            const month = getMonth(date) + 1; // 0-indexed
+            const month = getMonth(date) + 1;
             const week = getWeek(date, { weekStartsOn: 0 });
 
-            // Calculate week of month (1-4)
             const firstDayOfMonth = new Date(year, month - 1, 1);
             const weekOfMonth = Math.ceil((date.getDate() + firstDayOfMonth.getDay()) / 7);
 
@@ -82,12 +87,14 @@ export const DiaryPage: React.FC = () => {
 
             if (!groups[sortKey]) groups[sortKey] = { items: [], displayKey };
 
-            const isMe = item.author === '나' || item.author === userData?.name; // Simplistic check
+            const isMe = item.author === '나' || item.author === userData?.name;
 
             if (filter === 'all') groups[sortKey].items.push(item);
             else if (filter === 'me' && isMe) groups[sortKey].items.push(item);
             else if (filter === 'partner' && !isMe) groups[sortKey].items.push(item);
         });
+
+        console.log("[DiaryGroup] Final Groups:", Object.keys(groups).length, groups, "filter:", filter);
 
         // Remove empty groups
         Object.keys(groups).forEach(key => {

@@ -329,29 +329,63 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                 if (firstError.response?.status === 400) {
                     console.warn("Retrying with alternative strategies...");
 
-                    // Strategy 1: Remove custom select properties (Author, Weather, Mood)
-                    // Strategy 2: Switch Title Property ("이름" <-> "Name")
+                    const errorDetail = JSON.stringify(firstError.response?.data);
+                    console.warn("Error Detail:", errorDetail);
 
-                    const safeProperties: any = { ...properties };
-                    delete safeProperties["작성자"];
-                    delete safeProperties["dear23_날씨"];
-                    delete safeProperties["dear23_기분"];
+                    // Strategy: Try alternative title keys if 'Name is not a property' or similar error
+                    const possibleTitleKeys = ["Name", "title", "제목", "Title"];
+                    const currentTitleKey = "이름";
 
-                    // Check which title property was used and switch to the other
-                    if (safeProperties["이름"]) {
-                        safeProperties["Name"] = safeProperties["이름"];
-                        delete safeProperties["이름"];
-                    } else if (safeProperties["Name"]) {
-                        safeProperties["이름"] = safeProperties["Name"];
-                        delete safeProperties["Name"];
+                    let lastError = firstError;
+
+                    for (const altKey of possibleTitleKeys) {
+                        try {
+                            console.log(`[Retry] Trying with title key: ${altKey}`);
+                            const retryProps: any = { ...properties };
+                            delete retryProps[currentTitleKey]; // Remove the one that likely failed
+
+                            retryProps[altKey] = properties["이름"]; // Copy value
+
+                            // Also optionally remove potentially problematic select props in second retry if still failing
+                            // But let's try just the key first
+
+                            const retryResponse = await axios.post(
+                                "https://api.notion.com/v1/pages",
+                                {
+                                    parent: { database_id: databaseId },
+                                    properties: retryProps,
+                                },
+                                {
+                                    headers: {
+                                        "Authorization": `Bearer ${apiKey}`,
+                                        "Notion-Version": "2022-06-28",
+                                        "Content-Type": "application/json",
+                                    },
+                                }
+                            );
+                            console.log(`[Retry] Success with key: ${altKey}`);
+                            res.status(200).send({ data: retryResponse.data, warning: `Title key switched to ${altKey}` });
+                            return;
+                        } catch (retryError: any) {
+                            console.warn(`[Retry] Failed with key: ${altKey}`, retryError.message);
+                            lastError = retryError;
+                        }
                     }
 
+                    // Final Strategy: Remove all custom props and try the first property that failed (likely '이름' or 'Name')
+                    // to at least save the core properties
+                    console.warn("Final Attempt: Stripping everything except core Notion fields...");
                     try {
-                        const retryResponse = await axios.post(
+                        const minimalProps: any = { ...properties };
+                        delete minimalProps["작성자"];
+                        delete minimalProps["dear23_날씨"];
+                        delete minimalProps["dear23_기분"];
+
+                        const finalResponse = await axios.post(
                             "https://api.notion.com/v1/pages",
                             {
                                 parent: { database_id: databaseId },
-                                properties: safeProperties,
+                                properties: minimalProps,
                             },
                             {
                                 headers: {
@@ -361,18 +395,17 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                                 },
                             }
                         );
-                        console.log("Retry successful with safe properties.");
-                        res.status(200).send({ data: retryResponse.data, warning: "Some properties were omitted or title key switched due to API restrictions." });
-                    } catch (retryError: any) {
-                        console.error("Retry attempt also failed:", retryError.message);
-                        if (retryError.response) {
-                            console.error("Retry Error Data:", JSON.stringify(retryError.response.data));
-                        }
-                        // Return the ORIGINAL error to helps debug the root cause
-                        res.status(500).send({ error: firstError.message, details: firstError.response?.data });
+                        res.status(200).send({ data: finalResponse.data, warning: "Saved with minimal properties." });
+                    } catch (finalError: any) {
+                        res.status(500).send({
+                            error: "Failed after all retries",
+                            firstError: firstError.message,
+                            finalError: finalError.message,
+                            details: finalError.response?.data
+                        });
                     }
                 } else {
-                    throw firstError;
+                    res.status(500).send({ error: firstError.message, details: firstError.response?.data });
                 }
             }
 

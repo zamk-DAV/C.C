@@ -185,7 +185,7 @@ exports.searchNotionDatabases = functions.https.onRequest((req, res) => {
 });
 exports.createDiaryEntry = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
-        var _a, _b, _c, _d;
+        var _a, _b, _c, _d, _e, _f;
         // 1. Verify Authentication
         const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
         if (!tokenId) {
@@ -286,25 +286,50 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                 console.error("First attempt failed:", firstError.message);
                 if (((_b = firstError.response) === null || _b === void 0 ? void 0 : _b.status) === 400) {
                     console.warn("Retrying with alternative strategies...");
-                    // Strategy 1: Remove custom select properties (Author, Weather, Mood)
-                    // Strategy 2: Switch Title Property ("이름" <-> "Name")
-                    const safeProperties = Object.assign({}, properties);
-                    delete safeProperties["작성자"];
-                    delete safeProperties["dear23_날씨"];
-                    delete safeProperties["dear23_기분"];
-                    // Check which title property was used and switch to the other
-                    if (safeProperties["이름"]) {
-                        safeProperties["Name"] = safeProperties["이름"];
-                        delete safeProperties["이름"];
+                    const errorDetail = JSON.stringify((_c = firstError.response) === null || _c === void 0 ? void 0 : _c.data);
+                    console.warn("Error Detail:", errorDetail);
+                    // Strategy: Try alternative title keys if 'Name is not a property' or similar error
+                    const possibleTitleKeys = ["Name", "title", "제목", "Title"];
+                    const currentTitleKey = "이름";
+                    let lastError = firstError;
+                    for (const altKey of possibleTitleKeys) {
+                        try {
+                            console.log(`[Retry] Trying with title key: ${altKey}`);
+                            const retryProps = Object.assign({}, properties);
+                            delete retryProps[currentTitleKey]; // Remove the one that likely failed
+                            retryProps[altKey] = properties["이름"]; // Copy value
+                            // Also optionally remove potentially problematic select props in second retry if still failing
+                            // But let's try just the key first
+                            const retryResponse = await axios_1.default.post("https://api.notion.com/v1/pages", {
+                                parent: { database_id: databaseId },
+                                properties: retryProps,
+                            }, {
+                                headers: {
+                                    "Authorization": `Bearer ${apiKey}`,
+                                    "Notion-Version": "2022-06-28",
+                                    "Content-Type": "application/json",
+                                },
+                            });
+                            console.log(`[Retry] Success with key: ${altKey}`);
+                            res.status(200).send({ data: retryResponse.data, warning: `Title key switched to ${altKey}` });
+                            return;
+                        }
+                        catch (retryError) {
+                            console.warn(`[Retry] Failed with key: ${altKey}`, retryError.message);
+                            lastError = retryError;
+                        }
                     }
-                    else if (safeProperties["Name"]) {
-                        safeProperties["이름"] = safeProperties["Name"];
-                        delete safeProperties["Name"];
-                    }
+                    // Final Strategy: Remove all custom props and try the first property that failed (likely '이름' or 'Name')
+                    // to at least save the core properties
+                    console.warn("Final Attempt: Stripping everything except core Notion fields...");
                     try {
-                        const retryResponse = await axios_1.default.post("https://api.notion.com/v1/pages", {
+                        const minimalProps = Object.assign({}, properties);
+                        delete minimalProps["작성자"];
+                        delete minimalProps["dear23_날씨"];
+                        delete minimalProps["dear23_기분"];
+                        const finalResponse = await axios_1.default.post("https://api.notion.com/v1/pages", {
                             parent: { database_id: databaseId },
-                            properties: safeProperties,
+                            properties: minimalProps,
                         }, {
                             headers: {
                                 "Authorization": `Bearer ${apiKey}`,
@@ -312,20 +337,19 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
                                 "Content-Type": "application/json",
                             },
                         });
-                        console.log("Retry successful with safe properties.");
-                        res.status(200).send({ data: retryResponse.data, warning: "Some properties were omitted or title key switched due to API restrictions." });
+                        res.status(200).send({ data: finalResponse.data, warning: "Saved with minimal properties." });
                     }
-                    catch (retryError) {
-                        console.error("Retry attempt also failed:", retryError.message);
-                        if (retryError.response) {
-                            console.error("Retry Error Data:", JSON.stringify(retryError.response.data));
-                        }
-                        // Return the ORIGINAL error to helps debug the root cause
-                        res.status(500).send({ error: firstError.message, details: (_c = firstError.response) === null || _c === void 0 ? void 0 : _c.data });
+                    catch (finalError) {
+                        res.status(500).send({
+                            error: "Failed after all retries",
+                            firstError: firstError.message,
+                            finalError: finalError.message,
+                            details: (_d = finalError.response) === null || _d === void 0 ? void 0 : _d.data
+                        });
                     }
                 }
                 else {
-                    throw firstError;
+                    res.status(500).send({ error: firstError.message, details: (_e = firstError.response) === null || _e === void 0 ? void 0 : _e.data });
                 }
             }
         }
@@ -341,7 +365,7 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
             else {
                 console.error("Notion API Request Setup Error:", error.message);
             }
-            res.status(500).send({ error: error.message, details: (_d = error.response) === null || _d === void 0 ? void 0 : _d.data });
+            res.status(500).send({ error: error.message, details: (_f = error.response) === null || _f === void 0 ? void 0 : _f.data });
         }
     });
 });

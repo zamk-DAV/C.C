@@ -190,9 +190,34 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                 disabled={isLoading || (!title && !content && images.length === 0)}
                                 className="bg-primary text-background px-6 py-2.5 rounded-full text-sm font-bold hover:opacity-90 transition-all shadow-md active:scale-95 disabled:opacity-30"
                             >
-                                {isLoading ? '...' : '저장'}
+                                {isLoading ? (
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                                        <span>...</span>
+                                    </div>
+                                ) : '저장'}
                             </button>
                         </div>
+
+                        {/* Loading Overlay */}
+                        <AnimatePresence>
+                            {isLoading && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 z-[100] bg-background/60 backdrop-blur-md flex flex-col items-center justify-center"
+                                >
+                                    <div className="relative">
+                                        <div className="w-20 h-20 border-4 border-secondary/30 border-t-primary rounded-full animate-spin" />
+                                        <div className="absolute inset-0 flex items-center justify-center text-primary">
+                                            <span className="material-symbols-outlined text-3xl animate-pulse">favorite</span>
+                                        </div>
+                                    </div>
+                                    <p className="mt-6 text-primary font-bold tracking-tighter animate-bounce">추억을 기록하는 중...</p>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         {/* Scroll Content */}
                         <div className="flex-1 overflow-y-auto no-scrollbar px-6 py-2 space-y-10 custom-scrollbar">
@@ -206,8 +231,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={w.value}
                                             onClick={() => setSelectedWeather(w.value)}
                                             className={`flex flex-col items-center justify-center min-w-[62px] h-[74px] rounded-xl transition-all duration-300 cursor-pointer border ${selectedWeather === w.value
-                                                    ? 'bg-primary text-background border-primary shadow-md scale-105'
-                                                    : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
+                                                ? 'bg-primary text-background border-primary shadow-md scale-105'
+                                                : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-2xl">{w.icon}</span>
@@ -227,8 +252,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={m.value}
                                             onClick={() => setSelectedMood(m.value)}
                                             className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${selectedMood === m.value
-                                                    ? 'bg-primary text-background shadow-xl transform scale-110'
-                                                    : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
+                                                ? 'bg-primary text-background shadow-xl transform scale-110'
+                                                : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
                                                 }`}
                                         >
                                             <span
