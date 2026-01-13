@@ -4,6 +4,7 @@ import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import FeedWriteModal from '../components/home/FeedWriteModal';
+import { FeedDetailModal } from '../components/home/FeedDetailModal';
 import { useAuth } from '../context/AuthContext';
 import { useNotion } from '../context/NotionContext';
 import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
@@ -19,6 +20,7 @@ export const HomePage: React.FC = () => {
     // Latest Message State
     const [latestMessage, setLatestMessage] = useState<ChatMessage | null>(null);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+    const [selectedFeedItem, setSelectedFeedItem] = useState<MemoryItem | null>(null);
 
     // Transform memoryData for MemoryFeed
     const memories = useMemo<MemoryItem[]>(() => {
@@ -176,6 +178,7 @@ export const HomePage: React.FC = () => {
                         items={memories}
                         hasMore={hasMoreMemory}
                         onLoadMore={handleLoadMore}
+                        onItemClick={(item) => setSelectedFeedItem(item)}
                     />
 
                     {/* Floating Action Button for Adding Feed */}
@@ -191,10 +194,16 @@ export const HomePage: React.FC = () => {
                     <FeedWriteModal
                         isOpen={isWriteModalOpen}
                         onClose={() => setIsWriteModalOpen(false)}
-                        type="Memory" // Explicitly Memory
+                        type="Memory"
                         onSuccess={() => {
                             refreshData();
                         }}
+                    />
+
+                    <FeedDetailModal
+                        isOpen={!!selectedFeedItem}
+                        onClose={() => setSelectedFeedItem(null)}
+                        item={selectedFeedItem}
                     />
                 </div>
             </main>

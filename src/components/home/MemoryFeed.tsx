@@ -6,9 +6,10 @@ export interface MemoryFeedProps {
     items: MemoryItem[];
     onLoadMore?: () => void;
     hasMore?: boolean;
+    onItemClick?: (item: MemoryItem) => void;
 }
 
-export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMore }) => {
+export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMore, onItemClick }) => {
     // Helper to format date as MM.DD
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '';
@@ -17,6 +18,12 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
             return format(d, 'MM.dd');
         } catch {
             return '';
+        }
+    };
+
+    const handleItemClick = (item: MemoryItem) => {
+        if (onItemClick) {
+            onItemClick(item);
         }
     };
 
@@ -39,13 +46,25 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                     if (item.type === 'image' && hasImages) {
                         // Visual Entry Card (Full Width with Grayscale)
                         return (
-                            <div key={item.id} className="py-6 w-full cursor-pointer">
+                            <div
+                                key={item.id}
+                                className="py-6 w-full cursor-pointer"
+                                onClick={() => handleItemClick(item)}
+                            >
                                 <div className="relative w-full aspect-[3/4] rounded-sm overflow-hidden bg-secondary group">
                                     {/* Image with Grayscale Filter */}
                                     <div
                                         className="absolute inset-0 bg-cover bg-center grayscale transition-all duration-300 group-hover:grayscale-0"
                                         style={{ backgroundImage: `url('${displayImages[0]}')` }}
                                     />
+
+                                    {/* Multiple Images Indicator */}
+                                    {displayImages.length > 1 && (
+                                        <div className="absolute top-4 right-4 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                                            <span className="material-symbols-outlined text-sm">photo_library</span>
+                                            {displayImages.length}
+                                        </div>
+                                    )}
 
                                     {/* Gradient Overlay */}
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
@@ -58,14 +77,6 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                                         <h2 className="font-serif text-2xl text-white mt-1 leading-tight italic line-clamp-2">
                                             {item.title || 'No content'}
                                         </h2>
-
-                                        {/* Optional: Like & Comment counts */}
-                                        {/* <div className="flex items-center gap-4 mt-4 opacity-80">
-                                            <div className="flex items-center gap-1">
-                                                <span className="material-symbols-outlined text-[16px] text-white">favorite</span>
-                                                <span className="text-[10px] text-white">0</span>
-                                            </div>
-                                        </div> */}
                                     </div>
                                 </div>
                             </div>
@@ -76,6 +87,7 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                             <div
                                 key={item.id}
                                 className="flex items-baseline justify-between py-5 border-b border-dashed border-border cursor-pointer hover:bg-secondary/30 transition-colors"
+                                onClick={() => handleItemClick(item)}
                             >
                                 <div className="text-xs font-bold text-text-secondary w-12 shrink-0">
                                     {formattedDate}
