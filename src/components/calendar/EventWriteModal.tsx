@@ -1,27 +1,44 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createDiaryEntry } from '../../lib/notion';
+import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
+import type { CalendarEvent } from '../../types';
 
 interface EventWriteModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     selectedDate?: Date;
+    editEvent?: CalendarEvent; // Added editEvent prop
 }
 
 export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     isOpen,
     onClose,
     onSuccess,
-    selectedDate = new Date()
+    selectedDate = new Date(),
+    editEvent
 }) => {
     const [title, setTitle] = useState('');
     const [time, setTime] = useState('');
     const [note, setNote] = useState('');
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    // Populate form when editEvent changes or modal opens
+    useEffect(() => {
+        if (isOpen && editEvent) {
+            setTitle(editEvent.title);
+            setTime(editEvent.time || '');
+            setNote(editEvent.note || '');
+        } else if (isOpen) {
+            // Reset for new event
+            setTitle('');
+            setTime('');
+            setNote('');
+        }
+    }, [isOpen, editEvent]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -35,24 +52,39 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
         try {
             const dateString = format(selectedDate, 'yyyy-MM-dd');
+            // Combine mood/time note logic from create
+            const moodString = time ? `${time} - ${note || ''}`.trim() : note || undefined;
 
-            // Using title as the main content for Event type
-
-            await createDiaryEntry(
-                title.trim(),
-                [], // No images for events
-                'Event',
-                {
-                    date: dateString,
-                    mood: time ? `${time} - ${note || ''}`.trim() : note || undefined
-                }
-            );
+            if (editEvent) {
+                // Update existing event
+                await updateDiaryEntry(
+                    editEvent.id,
+                    title.trim(), // content
+                    [],
+                    {
+                        date: dateString,
+                        mood: moodString,
+                        title: title.trim() // explicit title update if supported
+                    }
+                );
+            } else {
+                // Create new event
+                await createDiaryEntry(
+                    title.trim(),
+                    [], // No images for events
+                    'Event',
+                    {
+                        date: dateString,
+                        mood: moodString
+                    }
+                );
+            }
 
             onSuccess();
             handleClose();
         } catch (err) {
-            console.error('Failed to create event:', err);
-            setError('일정 생성에 실패했습니다.');
+            console.error('Failed to save event:', err);
+            setError('일정 저장에 실패했습니다.');
         } finally {
             setIsSubmitting(false);
         }

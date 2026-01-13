@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, initializeFirestore } from "firebase/firestore";
 import { getAnalytics } from "firebase/analytics";
 import { getStorage } from "firebase/storage";
 import { getMessaging } from "firebase/messaging";
@@ -17,7 +17,10 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Initialize Firestore with long polling to avoid QUIC errors in some environments
+export const db = initializeFirestore(app, {
+    experimentalForceLongPolling: true,
+});
 export const storage = getStorage(app);
 export const messaging = getMessaging(app);
 export const analytics = getAnalytics(app);

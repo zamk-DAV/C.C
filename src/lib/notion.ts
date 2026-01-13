@@ -337,3 +337,30 @@ export const validateNotionSchema = async (apiKey: string, databaseId: string): 
 
     return await response.json();
 };
+
+const PAGE_CONTENT_URL = "https://us-central1-ccdear23.cloudfunctions.net/getNotionPageContent";
+
+export const fetchNotionPageContent = async (pageId: string): Promise<any> => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+
+    await waitForThrottle();
+    lastApiCallTime = Date.now();
+
+    const token = await user.getIdToken();
+
+    const response = await fetch(PAGE_CONTENT_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ pageId })
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to fetch page content: ${response.statusText}`);
+    }
+
+    return await response.json();
+};

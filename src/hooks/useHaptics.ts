@@ -18,6 +18,7 @@ export function useHaptics() {
     }, []);
 
     const simpleClick = useCallback(() => triggerHaptic(10), [triggerHaptic]);
+    const medium = useCallback(() => triggerHaptic(25), [triggerHaptic]); // Added medium
     const success = useCallback(() => triggerHaptic([10, 30, 10]), [triggerHaptic]);
     const warning = useCallback(() => triggerHaptic([50, 50, 50]), [triggerHaptic]);
     const heavy = useCallback(() => triggerHaptic(50), [triggerHaptic]);
@@ -25,6 +26,7 @@ export function useHaptics() {
     return {
         trigger: triggerHaptic,
         simpleClick,
+        medium, // Export medium
         success,
         warning,
         heavy,

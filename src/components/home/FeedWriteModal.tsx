@@ -79,21 +79,29 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
         }
     }, [isOpen, initialData]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    import { compressImage } from '../../utils/imageUtils';
+
+    // ... existing imports
+
+    // ... existing code
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setImages(prev => [...prev, {
-                        base64: reader.result as string,
-                        type: file.type,
-                        size: file.size,
-                        name: file.name
-                    }]);
-                };
-                reader.readAsDataURL(file);
-            });
+            setIsLoading(true); // Show loading state during compression
+
+            try {
+                const compressedImages = await Promise.all(
+                    files.map(file => compressImage(file))
+                );
+
+                setImages(prev => [...prev, ...compressedImages]);
+            } catch (error) {
+                console.error("Image compression failed:", error);
+                alert("이미지 처리 중 오류가 발생했습니다.");
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 

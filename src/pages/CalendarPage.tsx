@@ -1,26 +1,97 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotion } from '../context/NotionContext';
-
 import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import type { CalendarEvent } from '../types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { EventWriteModal } from '../components/calendar/EventWriteModal';
+import { motion } from 'framer-motion';
+import { useGesture } from '@use-gesture/react';
+import { useHaptics } from '../hooks/useHaptics';
+import { updateDiaryEntry } from '../lib/notion';
+
+interface DraggableEventProps {
+    event: CalendarEvent;
+    onDrop: (event: CalendarEvent, newDate: string) => void;
+    onClick: (event: CalendarEvent) => void;
+}
+
+const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick }) => {
+    const { heavy, medium } = useHaptics();
+    const [isDragging, setIsDragging] = React.useState(false);
+
+    return (
+        <motion.div
+            drag
+            dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
+            dragElastic={1}
+            dragSnapToOrigin={true}
+            onTap={() => onClick(event)}
+            whileDrag={{ scale: 1.05, zIndex: 50, shadow: "0px 10px 20px rgba(0,0,0,0.2)" }}
+            onDragStart={() => {
+                setIsDragging(true);
+                medium();
+            }}
+            onDragEnd={(_, info) => {
+                setIsDragging(false);
+                const point = info.point;
+                const clientX = point.x;
+                const clientY = point.y;
+
+                // Hide element logically or just peek underneath
+                const elements = document.elementsFromPoint(clientX, clientY);
+                const dateCell = elements.find(el => el.getAttribute('data-date'));
+
+                if (dateCell) {
+                    const newDate = dateCell.getAttribute('data-date');
+                    // Check if date changed
+                    if (newDate) {
+                        // Compare dates. Events might be Date object or timestamp strings depending on processing
+                        const eventDateStr = event.date instanceof Date
+                            ? format(event.date, 'yyyy-MM-dd')
+                            : format(new Date(event.date), 'yyyy-MM-dd');
+
+                        if (newDate !== eventDateStr) {
+                            heavy();
+                            onDrop(event, newDate);
+                        }
+                    }
+                }
+            }}
+            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2 bg-background relative"
+        >
+            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]">
+                {event.time}
+            </span>
+            <div className="flex flex-col gap-1 pointer-events-none">
+                <p className="text-lg font-light leading-none">{event.title}</p>
+                {event.note && (
+                    <p className="text-[13px] text-text-secondary font-light italic">{event.note}</p>
+                )}
+            </div>
+            {isDragging && (
+                <div className="absolute inset-0 border-2 border-primary rounded-xl opacity-50 animate-pulse" />
+            )}
+        </motion.div>
+    );
+};
 
 export const CalendarPage: React.FC = () => {
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>(undefined);
 
     const { coupleData } = useAuth();
     const { refreshData } = useNotion();
+    const { heavy, medium } = useHaptics();
 
     const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
 
-    // 1. Firestore Events - separate useEffect (real-time)
+    // 1. Firestore Events
     useEffect(() => {
         if (!coupleData?.id) {
             setLoading(false);
@@ -49,7 +120,6 @@ export const CalendarPage: React.FC = () => {
         return () => unsubscribe();
     }, [coupleData?.id]);
 
-    // Merge events (Removed diaryEvents to solve filtering confusion)
     const events = [...firestoreEvents];
 
     // Calendar Grid Logic
@@ -63,6 +133,27 @@ export const CalendarPage: React.FC = () => {
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
+    // Gestures for Month Navigation
+    const bind = useGesture(
+        {
+            onDrag: ({ swipe: [swipeX] }) => {
+                if (swipeX === -1) {
+                    heavy();
+                    handleNextMonth();
+                } else if (swipeX === 1) {
+                    heavy();
+                    handlePrevMonth();
+                }
+            },
+        },
+        {
+            drag: {
+                axis: 'x',
+                swipe: { distance: 50, velocity: 0.1 },
+            },
+        }
+    );
+
     const selectedDateEvents = events.filter(event =>
         isSameDay(event.date, selectedDate)
     );
@@ -70,6 +161,38 @@ export const CalendarPage: React.FC = () => {
     const handleEventSuccess = () => {
         refreshData();
         setIsEventModalOpen(false);
+        setEditingEvent(undefined);
+    };
+
+    const handleEventDrop = async (event: CalendarEvent, newDate: string) => {
+        try {
+            medium();
+            // Call API to update date
+            // Note: firestoreEvents update via snapshot listener when backend processes it
+            await updateDiaryEntry(
+                event.id,
+                event.title, // Keep title/content
+                [],
+                {
+                    date: newDate,
+                    title: event.title,
+                    mood: event.time ? `${event.time} - ${event.note || ''}`.trim() : event.note || undefined
+                }
+            );
+            // Optimistic update not implemented here as we rely on Firestore snapshot
+        } catch (error) {
+            console.error("Failed to move event:", error);
+        }
+    };
+
+    const handleEventClick = (event: CalendarEvent) => {
+        setEditingEvent(event);
+        setIsEventModalOpen(true);
+    };
+
+    const handleOpenNewEvent = () => {
+        setEditingEvent(undefined);
+        setIsEventModalOpen(true);
     };
 
     return (
@@ -88,7 +211,10 @@ export const CalendarPage: React.FC = () => {
             </header>
 
             {/* Calendar Grid */}
-            <div className="px-8 mb-10">
+            <div
+                {...bind() as any}
+                className="px-8 mb-10 touch-pan-y"
+            >
                 {/* Days of Week */}
                 <div className="grid grid-cols-7 mb-4 border-b border-border pb-2">
                     {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
@@ -114,12 +240,16 @@ export const CalendarPage: React.FC = () => {
                             <button
                                 key={day.toString()}
                                 onClick={() => setSelectedDate(day)}
+                                data-date={format(day, 'yyyy-MM-dd')} // Add identifier for drop target
                                 className="relative h-10 w-full flex flex-col items-center justify-center hover:bg-secondary rounded-full transition-colors"
                             >
                                 {isSelected && (
-                                    <div className="absolute size-8 rounded-full border border-primary"></div>
+                                    <motion.div
+                                        layoutId="selected-day"
+                                        className="absolute size-8 rounded-full border border-primary"
+                                    />
                                 )}
-                                <span className={`relative text-base ${isSelected ? 'font-medium' : 'font-light'}`}>
+                                <span className={`relative text-base z-10 ${isSelected ? 'font-medium' : 'font-light'}`}>
                                     {format(day, 'd')}
                                 </span>
                                 {hasEvent && !isSelected && (
@@ -150,17 +280,12 @@ export const CalendarPage: React.FC = () => {
                         </div>
                     ) : selectedDateEvents.length > 0 ? (
                         selectedDateEvents.map(event => (
-                            <div key={event.id} className="py-6 flex items-baseline gap-6">
-                                <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]">
-                                    {event.time}
-                                </span>
-                                <div className="flex flex-col gap-1">
-                                    <p className="text-lg font-light leading-none">{event.title}</p>
-                                    {event.note && (
-                                        <p className="text-[13px] text-text-secondary font-light italic">{event.note}</p>
-                                    )}
-                                </div>
-                            </div>
+                            <DraggableEvent
+                                key={event.id}
+                                event={event}
+                                onDrop={handleEventDrop}
+                                onClick={handleEventClick}
+                            />
                         ))
                     ) : (
                         <div className="py-10 text-center text-text-secondary/50 font-light italic">
@@ -171,12 +296,14 @@ export const CalendarPage: React.FC = () => {
             </div>
 
             {/* Floating Action Button */}
-            <button
-                onClick={() => setIsEventModalOpen(true)}
-                className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-10"
+            <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleOpenNewEvent}
+                className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center z-10"
             >
                 <span className="material-symbols-outlined text-2xl">add</span>
-            </button>
+            </motion.button>
 
             {/* Event Write Modal */}
             <EventWriteModal
@@ -184,6 +311,7 @@ export const CalendarPage: React.FC = () => {
                 onClose={() => setIsEventModalOpen(false)}
                 onSuccess={handleEventSuccess}
                 selectedDate={selectedDate}
+                editEvent={editingEvent}
             />
         </div>
     );
