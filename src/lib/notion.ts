@@ -75,6 +75,7 @@ export interface NotionItem {
     color?: string;
     isImportant?: boolean;
     isShared?: boolean;
+    url?: string;
 }
 
 export interface PaginatedNotionResponse {
@@ -101,7 +102,9 @@ export const createDiaryEntry = async (
         endDate?: string,
         color?: string,
         isImportant?: boolean,
-        isShared?: boolean
+        isShared?: boolean,
+        url?: string,
+        title?: string
     } = {}
 ) => {
     const user = auth.currentUser;
@@ -125,7 +128,9 @@ export const createDiaryEntry = async (
             endDate: options.endDate,
             color: options.color,
             isImportant: options.isImportant,
-            isShared: options.isShared
+            isShared: options.isShared,
+            url: options.url,
+            title: options.title
         })
     });
 
@@ -190,7 +195,8 @@ export const updateDiaryEntry = async (
         endDate?: string,
         color?: string,
         isImportant?: boolean,
-        isShared?: boolean
+        isShared?: boolean,
+        url?: string
     }
 ) => {
     const user = auth.currentUser;
@@ -214,7 +220,8 @@ export const updateDiaryEntry = async (
             endDate: options.endDate,
             color: options.color,
             isImportant: options.isImportant,
-            isShared: options.isShared
+            isShared: options.isShared,
+            url: options.url
         })
     });
 

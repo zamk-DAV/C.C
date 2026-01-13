@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ChatMessage } from '../../types';
+import { LinkPreview } from './LinkPreview';
 
 interface MessageBubbleProps {
     message: ChatMessage;
@@ -11,9 +12,9 @@ interface MessageBubbleProps {
     showProfile?: boolean;
     showTime?: boolean;
     onContextMenu?: (e: React.MouseEvent | React.TouchEvent, message: ChatMessage) => void;
-    // These are now optional as they are handled by wrappers, but we keep them for logic if needed
     onReply?: (message: ChatMessage) => void;
     onReaction?: (message: ChatMessage, emoji: string) => void;
+    onImageClick?: (imageUrl: string) => void;
 }
 
 const ReactionIcons: Record<string, any> = {
@@ -24,10 +25,6 @@ const ReactionIcons: Record<string, any> = {
     wow: { icon: Sparkles, color: 'text-purple-400 fill-purple-400' },
 };
 
-/**
- * Time/Read Status Area
- * Removed Hover Actions to avoid conflict with DesktopMessageItem
- */
 const MessageMeta: React.FC<{
     isMine: boolean;
     isRead: boolean;
@@ -39,7 +36,9 @@ const MessageMeta: React.FC<{
             "flex flex-col gap-0.5 mb-[2px] transition-opacity duration-150",
             isMine ? "items-end" : "items-start"
         )}>
-            {!isRead && <Heart className="w-3 h-3 text-red-400 fill-red-400" />}
+            {!isRead && (
+                <span className="text-[10px] text-yellow-500 font-bold leading-none mb-0.5">1</span>
+            )}
             {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
         </div>
     );
@@ -53,27 +52,24 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     showProfile = true,
     showTime = true,
     onContextMenu,
-    onReaction
+    onReaction,
+    onImageClick
 }) => {
-    // Format timestamp
     const timestamp = msg.createdAt?.toDate ?
         new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: 'numeric', hour12: true }).format(msg.createdAt.toDate())
         : '';
 
-    const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
+    // URL Detection Regex
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const firstUrl = msg.text?.match(urlRegex)?.[0];
+
+    const handleContextMenu = (e: React.MouseEvent) => {
         if (onContextMenu) {
             e.preventDefault();
             onContextMenu(e, msg);
         }
     };
 
-    // Scroll preservation logic (simplistic)
-    // Real fix for scroll jumping often requires a resize observer on the list container
-    // or utilizing 'overflow-anchor: auto' (which is default in modern browsers).
-    // If scroll jumps, it might be because elements are removed entirely from DOM.
-    // Ensure container min-height or similar can help, but here we focus on structural fix.
-
-    // Deleted Message View
     if (msg.isDeleted) {
         return (
             <div className={cn("flex flex-col max-w-[85%] mb-1", isMine ? "items-end ml-auto" : "items-start")}>
@@ -94,34 +90,28 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
         );
     }
 
-    // Normal Message View
     return (
         <div
             className={cn("group flex flex-col max-w-[85%] mb-1 select-none", isMine ? "items-end ml-auto" : "items-start")}
-            onContextMenu={handlePointerDown}
+            onContextMenu={handleContextMenu}
         >
-            {/* Name */}
             {!isMine && showProfile && senderName && (
                 <span className="text-[11px] text-text-secondary ml-10 mb-1">{senderName}</span>
             )}
 
             <div className="flex items-start gap-2">
-                {/* Avatar */}
                 {!isMine && (
                     showProfile ? (
                         <div
-                            className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 grayscale-img self-start"
+                            className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 self-start"
                             style={{ backgroundImage: avatarUrl ? `url(${avatarUrl})` : undefined }}
                         />
                     ) : <div className="w-8 shrink-0" />
                 )}
 
-                {/* Content Column (Message + Reactions) */}
                 <div className={cn("flex flex-col", isMine ? "items-end" : "items-start")}>
 
-                    {/* Message Bubble + Meta Row */}
                     <div className="flex items-end gap-1">
-                        {/* Time/Actions (Mine - Left side) */}
                         {isMine && (
                             <MessageMeta
                                 isMine={true}
@@ -131,11 +121,9 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                             />
                         )}
 
-                        {/* Content */}
                         <div className="flex flex-col gap-1">
-                            {/* Reply Quote */}
                             {msg.replyTo && (
-                                <div className="text-[11px] text-text-secondary/70 bg-primary/5 px-2 py-1 rounded-md mb-0.5 border-l-2 border-primary/50">
+                                <div className="text-[11px] text-text-secondary/70 bg-black/5 px-2 py-1 rounded-md mb-0.5 border-l-2 border-primary/50">
                                     <span className="font-bold mr-1">{msg.replyTo.senderName}:</span>
                                     <span className="line-clamp-1">{msg.replyTo.text}</span>
                                 </div>
@@ -145,8 +133,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 <div className={cn("flex flex-col rounded-2xl overflow-hidden border border-border", isMine ? "rounded-tr-sm" : "rounded-tl-sm")}>
                                     <div className="p-1 bg-background overflow-hidden rounded-t-[14px]">
                                         <div
-                                            className="w-full aspect-square bg-secondary bg-center bg-cover grayscale-img rounded-[12px]"
+                                            className="w-full aspect-square bg-secondary bg-center bg-cover rounded-[12px] cursor-pointer active:opacity-90 transition-opacity"
                                             style={{ backgroundImage: `url("${msg.imageUrl}")` }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (msg.imageUrl && onImageClick) onImageClick(msg.imageUrl);
+                                            }}
                                         />
                                     </div>
                                     {msg.text && (
@@ -156,16 +148,18 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                     )}
                                 </div>
                             ) : (
-                                <div className={cn(
-                                    "px-3.5 py-2.5 rounded-2xl break-all whitespace-pre-wrap text-[14px] leading-normal",
-                                    isMine ? "bg-primary text-background rounded-tr-sm" : "border border-border bg-background text-primary rounded-tl-sm"
-                                )}>
-                                    {msg.text}
+                                <div className="flex flex-col">
+                                    <div className={cn(
+                                        "px-3.5 py-2.5 rounded-2xl break-words whitespace-pre-wrap text-[14px] leading-normal",
+                                        isMine ? "bg-primary text-background rounded-tr-sm" : "border border-border bg-background text-primary rounded-tl-sm"
+                                    )}>
+                                        {msg.text}
+                                    </div>
+                                    {firstUrl && <LinkPreview url={firstUrl} />}
                                 </div>
                             )}
                         </div>
 
-                        {/* Time/Actions (Partner - Right side) */}
                         {!isMine && (
                             <MessageMeta
                                 isMine={false}
@@ -176,9 +170,6 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         )}
                     </div>
 
-                    {/* Reactions Display */}
-                    {/* Fixed: Moved inside flex-col to align naturally with message */}
-                    {/* Fixed: Removed ml-10, used slight margin for spacing */}
                     {msg.reactions && Object.keys(msg.reactions).length > 0 && (
                         <div className={cn(
                             "flex flex-wrap gap-1 mt-0.5 z-10",
@@ -192,7 +183,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 return (
                                     <button
                                         key={emoji}
-                                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
+                                        onClick={(e) => { e.stopPropagation(); onReaction?.(msg, emoji); }}
                                         className="bg-background border border-border rounded-full p-1 flex items-center justify-center shadow-sm hover:bg-secondary/50 transition-colors"
                                     >
                                         <IconConfig.icon className={cn("w-3 h-3", IconConfig.color)} />

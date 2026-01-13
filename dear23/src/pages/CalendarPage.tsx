@@ -20,8 +20,9 @@ interface DraggableEventProps {
 }
 
 const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick, onDrag }) => {
-    const { heavy, medium } = useHaptics();
+    const { heavy, medium, light, success } = useHaptics();
     const [isDragging, setIsDragging] = React.useState(false);
+    const [dropSuccess, setDropSuccess] = React.useState(false);
 
     return (
         <motion.div
@@ -30,7 +31,17 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
             dragElastic={1}
             dragSnapToOrigin={true}
             onTap={() => onClick(event)}
-            whileDrag={{ scale: 1.05, zIndex: 50, shadow: "0px 10px 20px rgba(0,0,0,0.2)" }}
+            initial={{ opacity: 1, scale: 1 }}
+            animate={{
+                scale: dropSuccess ? [1, 1.05, 1] : 1,
+                opacity: dropSuccess ? [1, 0.8, 1] : 1
+            }}
+            whileDrag={{
+                scale: 1.03,
+                zIndex: 100,
+                boxShadow: "0px 15px 30px rgba(0,0,0,0.25)",
+                cursor: "grabbing"
+            }}
             onDragStart={() => {
                 setIsDragging(true);
                 medium();
@@ -59,17 +70,22 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
 
                         if (newDate !== eventDateStr) {
                             heavy();
+                            setDropSuccess(true);
+                            setTimeout(() => setDropSuccess(false), 300);
                             onDrop(event, newDate);
                         }
                     }
                 }
             }}
-            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-4 -mx-2 bg-background relative overflow-hidden"
+            className={`py-6 flex items-baseline gap-6 group cursor-grab hover:bg-white/5 transition-all rounded-xl px-4 -mx-2 bg-background relative overflow-hidden ${isDragging ? 'cursor-grabbing ring-2 ring-primary/30' : ''
+                }`}
         >
             {/* Color Indicator */}
-            <div
-                className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-all group-hover:w-1.5"
+            <motion.div
+                className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full"
                 style={{ backgroundColor: event.color || '#135bec' }}
+                animate={{ width: isDragging ? 3 : 4 }}
+                transition={{ duration: 0.15 }}
             />
 
             <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]" style={{ color: event.color || 'inherit' }}>
@@ -81,8 +97,14 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
                     <p className="text-[13px] text-text-secondary font-light italic">{event.note}</p>
                 )}
             </div>
+
+            {/* Drag indicator overlay */}
             {isDragging && (
-                <div className="absolute inset-0 border-2 border-primary rounded-xl opacity-50 animate-pulse" />
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="absolute inset-0 border-2 border-primary/50 rounded-xl bg-primary/5"
+                />
             )}
 
             {/* Icons for Important/Shared */}
@@ -367,6 +389,7 @@ export const CalendarPage: React.FC = () => {
             >
                 <span className="material-symbols-outlined text-2xl">add</span>
             </motion.button>
+            // ...
 
             {/* Event Write Modal */}
             <EventWriteModal

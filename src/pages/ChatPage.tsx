@@ -35,14 +35,41 @@ export const ChatPage: React.FC = () => {
     const [typingStatus, setTypingStatus] = useState<boolean>(false);
     const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+    const [showNewMessageToast, setShowNewMessageToast] = useState(false);
+    const [isAtBottom, setIsAtBottom] = useState(true);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
     // Auto-scroll to bottom combined with messages and typing status
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const scrollToBottom = (force = false) => {
+        if (force || isAtBottom) {
+            messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+            setShowNewMessageToast(false);
+        } else {
+            setShowNewMessageToast(true);
+        }
     };
 
     useEffect(() => {
-        scrollToBottom();
-    }, [messages, replyTarget, typingStatus]);
+        if (messages.length > 0) {
+            scrollToBottom();
+        }
+    }, [messages.length]);
+
+    useEffect(() => {
+        scrollToBottom(true);
+    }, [replyTarget, typingStatus]);
+
+    // Handle Scroll for New Message Toast
+    const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+        const target = e.currentTarget;
+        const bottomThreshold = 100;
+        const currentIsAtBottom = target.scrollHeight - target.scrollTop - target.clientHeight < bottomThreshold;
+
+        setIsAtBottom(currentIsAtBottom);
+        if (currentIsAtBottom) {
+            setShowNewMessageToast(false);
+        }
+    };
 
     // Fetch Messages & Notice & Typing Status
     useEffect(() => {
@@ -59,7 +86,15 @@ export const ChatPage: React.FC = () => {
                 id: doc.id,
                 ...doc.data()
             })) as ChatMessage[];
-            setMessages(msgs);
+
+            // If new message is from ME, always scroll to bottom
+            const lastMsg = msgs[msgs.length - 1];
+            if (lastMsg?.senderId === user?.uid) {
+                setMessages(msgs);
+                setTimeout(() => scrollToBottom(true), 100);
+            } else {
+                setMessages(msgs);
+            }
         });
 
         // Couple Doc (Notice + Typing)
@@ -87,7 +122,7 @@ export const ChatPage: React.FC = () => {
             unsubscribeMsgs();
             unsubscribeCouple();
         };
-    }, [coupleData?.id, partnerData?.uid]);
+    }, [coupleData?.id, partnerData?.uid, user?.uid]);
 
     // Typing Indicator Handler
     const handleInputChange = (text: string) => {
@@ -163,8 +198,6 @@ export const ChatPage: React.FC = () => {
 
     useFcmToken();
 
-
-
     const sendPushNotification = async (text: string) => {
         if (!partnerData?.uid) return;
 
@@ -182,13 +215,6 @@ export const ChatPage: React.FC = () => {
             if (isSilent) {
                 console.log("[Push] Partner disabled push - sending silent badge update");
             }
-
-            // DO NOT send push if partner is already in the ChatPage
-            // Check removed to force push delivery (handling stuck active states)
-            // if (data.isChatActive === true) {
-            //     console.log("[Push] Partner is active in chat, skipping push");
-            //     return;
-            // }
 
             const tokens = data.fcmTokens || [];
             const badgeCount = data.unreadCount || 0;
@@ -282,8 +308,8 @@ export const ChatPage: React.FC = () => {
         // Determine coordinates
         let x = 0, y = 0;
         if ('touches' in e) {
-            x = e.touches[0].clientX;
-            y = e.touches[0].clientY;
+            x = (e as React.TouchEvent).touches[0].clientX;
+            y = (e as React.TouchEvent).touches[0].clientY;
         } else {
             x = (e as React.MouseEvent).clientX;
             y = (e as React.MouseEvent).clientY;
@@ -384,8 +410,6 @@ export const ChatPage: React.FC = () => {
         setViewingImage(imageUrl);
     };
 
-
-
     // Group messages by date
     const groupedMessages: { [key: string]: ChatMessage[] } = {};
     messages.forEach(msg => {
@@ -455,16 +479,17 @@ export const ChatPage: React.FC = () => {
                 </header >
 
                 {/* Main Chat Area */}
-                < main
-                    className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar scroll-smooth"
+                <main
+                    className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar scroll-smooth relative"
                     style={{ overflowAnchor: 'auto' }}
+                    onScroll={handleScroll}
                 >
                     {
                         Object.keys(groupedMessages).map((dateKey) => (
                             <div key={dateKey}>
                                 <div className="flex items-center gap-4 my-8">
                                     <div className="h-[1px] flex-1 bg-border"></div>
-                                    <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary">{dateKey}</span>
+                                    <span className="text-[10px] font-bold tracking-[0.2em] text-text-secondary uppercase">{dateKey}</span>
                                     <div className="h-[1px] flex-1 bg-border"></div>
                                 </div>
                                 <div className="mb-6">
@@ -501,8 +526,8 @@ export const ChatPage: React.FC = () => {
                                                 key={msg.id}
                                                 isMine={isMine}
                                                 onReply={() => handleDirectReply(msg)}
-                                                onReaction={() => { /* Reaction menu triggered via hold or double tap */ }}
-                                                onLongPress={() => handleContextMenu({ preventDefault: () => { }, touches: [{ clientX: 0, clientY: 0 }] } as any, msg)}
+                                                onReaction={() => handleDirectReaction(msg, 'heart')}
+                                                onLongPress={(e) => handleContextMenu(e, msg)}
                                             >
                                                 {bubble}
                                             </MobileMessageItem>
@@ -532,11 +557,11 @@ export const ChatPage: React.FC = () => {
                                         className="size-8 rounded-[12px] bg-secondary bg-center bg-cover border border-border shrink-0 self-start"
                                         style={{ backgroundImage: partnerData?.photoURL ? `url(${partnerData.photoURL})` : undefined }}
                                     />
-                                    <div className="border border-border px-4 py-3 bg-background bubble-in rounded-2xl rounded-tl-sm">
+                                    <div className="border border-border px-4 py-3 bg-background bubble-in rounded-2xl rounded-tl-sm shadow-sm">
                                         <div className="flex gap-1">
-                                            <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                                            <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                                            <div className="w-1.5 h-1.5 bg-text-secondary/50 rounded-full animate-bounce"></div>
+                                            <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                                            <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                                            <div className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -545,6 +570,19 @@ export const ChatPage: React.FC = () => {
                     }
 
                     <div ref={messagesEndRef} />
+
+                    {/* New Message Toast */}
+                    {showNewMessageToast && (
+                        <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in slide-in-from-bottom-4 duration-300">
+                            <button
+                                onClick={() => scrollToBottom(true)}
+                                className="bg-primary text-background px-4 py-2 rounded-full shadow-lg flex items-center gap-2 hover:opacity-90 transition-opacity"
+                            >
+                                <span className="material-symbols-outlined text-[18px]">arrow_downward</span>
+                                <span className="text-[12px] font-bold">새로운 메시지</span>
+                            </button>
+                        </div>
+                    )}
                 </main >
 
                 {/* Context Menu */}
@@ -568,14 +606,12 @@ export const ChatPage: React.FC = () => {
                 <footer className="fixed bottom-0 max-w-md w-full bg-background px-6 pb-10 pt-4 z-50 transition-colors duration-300">
                     {/* Reply Preview */}
                     {replyTarget && (
-                        <div className="flex items-center justify-between bg-secondary/50 p-2 rounded-t-lg border-b border-primary/20 mb-2">
-                            <div className="flex flex-col text-[12px] border-l-2 border-primary pl-2">
+                        <div className="flex items-center justify-between bg-secondary/80 backdrop-blur-sm p-3 rounded-t-xl border-b border-primary/10 mb-2 animate-in slide-in-from-bottom-2">
+                            <div className="flex flex-col text-[12px] border-l-2 border-primary pl-3">
                                 <span className="font-bold text-primary">{replyTarget.senderId === user?.uid ? '나' : (userData?.partnerNickname || partnerData?.name || 'Partner')}에게 답장</span>
                                 <span className="text-text-secondary truncate max-w-[200px]">{replyTarget.text}</span>
                             </div>
-                            <button onClick={() => setReplyTarget(null)}>
-                                <span className="material-symbols-outlined text-[18px]">close</span>
-                            </button>
+                            <button onClick={() => setReplyTarget(null)} className="material-symbols-outlined text-[18px] text-text-secondary hover:text-primary">close</button>
                         </div>
                     )}
 

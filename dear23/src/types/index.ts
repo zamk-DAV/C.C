@@ -86,10 +86,12 @@ export interface CalendarEvent {
     note?: string;
     author?: string; // 'Me' | 'Partner' for filtering
     // New fields for Premium UI
-    endDate?: string;
+    endDate?: Date;
     color?: string;
     isImportant?: boolean;
     isShared?: boolean;
+    url?: string;
+    images?: string[];
 }
 
 export interface MemoryItem {

@@ -1,13 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
 import { useHaptics } from '../../hooks/useHaptics';
 import { DatePickerModal } from '../common/DatePickerModal';
 import { TimePickerModal } from '../common/TimePickerModal';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { compressImage } from '../../utils/imageUtils';
 
 interface EventWriteModalProps {
     isOpen: boolean;
@@ -39,7 +40,12 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     const [selectedColor, setSelectedColor] = useState('#135bec');
     const [note, setNote] = useState('');
 
+    const [url, setUrl] = useState('');
+    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Modal Visibility States
     const [isStartDatePickerOpen, setIsStartDatePickerOpen] = useState(false);
@@ -70,6 +76,18 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 if (editEvent.color) setSelectedColor(editEvent.color);
                 setIsImportant(editEvent.isImportant ?? false);
                 setIsShared(editEvent.isShared ?? true);
+                setUrl(editEvent.url || '');
+                if (editEvent.images && editEvent.images.length > 0) {
+                    setImages(editEvent.images.map(imgUrl => ({
+                        base64: imgUrl,
+                        type: 'image/jpeg',
+                        size: 0,
+                        name: 'existing-image',
+                        url: imgUrl
+                    })));
+                } else {
+                    setImages([]);
+                }
             } else {
                 setTitle('');
                 setNote('');
@@ -81,9 +99,32 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 setEndTime(format(new Date(now.getTime() + 60 * 60 * 1000), 'HH:mm'));
                 setIsImportant(false);
                 setSelectedColor('#135bec');
+                setUrl('');
+                setImages([]);
             }
         }
     }, [isOpen, editEvent, selectedDate]);
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files) {
+            const files = Array.from(e.target.files);
+            setIsLoading(true);
+            try {
+                const compressedImages = await Promise.all(
+                    files.map(file => compressImage(file))
+                );
+                setImages(prev => [...prev, ...compressedImages]);
+            } catch (error) {
+                console.error("Image compression failed:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+    };
+
+    const handleRemoveImage = (index: number) => {
+        setImages(prev => prev.filter((_, i) => i !== index));
+    };
 
     const handleSave = async () => {
         if (!title.trim()) return;
@@ -92,38 +133,48 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
         medium();
 
         try {
-            const dateString = format(startDate, 'yyyy-MM-dd');
-            const timeString = isAllDay ? undefined : startTime;
-            const moodContent = timeString ? `${timeString} ${note}`.trim() : note;
-            const endDateString = format(endDate, 'yyyy-MM-dd');
+            const buildIsoDate = (date: Date, time: string, isAllDay: boolean) => {
+                if (isAllDay) return format(date, 'yyyy-MM-dd');
+                const [h, m] = time.split(':').map(Number);
+                const d = new Date(date);
+                d.setHours(h, m, 0, 0);
+                return d.toISOString();
+            };
+
+            const dateString = buildIsoDate(startDate, startTime, isAllDay);
+            const endDateString = buildIsoDate(endDate, endTime, isAllDay);
+
+            // Only send new images (base64) to backend
+            const newImages = images.filter(img => img.base64.startsWith('data:'));
 
             if (editEvent) {
                 await updateDiaryEntry(
                     editEvent.id,
-                    title.trim(),
-                    [],
+                    note, // Content goes to page body
+                    newImages,
                     {
                         date: dateString,
-                        mood: moodContent,
-                        title: title.trim(),
+                        title: title.trim(), // Title goes to Title property
                         endDate: endDateString,
                         color: selectedColor,
                         isImportant: isImportant,
-                        isShared: isShared
+                        isShared: isShared,
+                        url: url.trim()
                     }
                 );
             } else {
                 await createDiaryEntry(
-                    title.trim(),
-                    [],
+                    note, // Content goes to page body
+                    images,
                     'Event',
                     {
                         date: dateString,
-                        mood: moodContent,
+                        title: title.trim(), // Title goes to Title property
                         endDate: endDateString,
                         color: selectedColor,
                         isImportant: isImportant,
-                        isShared: isShared
+                        isShared: isShared,
+                        url: url.trim()
                     }
                 );
             }
@@ -300,6 +351,73 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                         ))}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Section 5: URL */}
+                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
+                                <div className="px-4 py-3 flex items-center gap-3">
+                                    <span className="material-symbols-outlined text-[20px] text-accent">link</span>
+                                    <input
+                                        type="text"
+                                        value={url}
+                                        onChange={(e) => setUrl(e.target.value)}
+                                        placeholder="하이퍼링크 (URL)"
+                                        className="flex-1 bg-transparent text-[16px] text-primary border-none focus:ring-0 p-0 placeholder-text-secondary/30 caret-accent"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Section 6: Images */}
+                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5 px-4 py-4">
+                                <h4 className="text-primary text-[11px] font-extrabold uppercase tracking-[0.1em] mb-4 opacity-40">사진 추가</h4>
+                                <input
+                                    type="file"
+                                    ref={fileInputRef}
+                                    className="hidden"
+                                    multiple
+                                    accept="image/*"
+                                    onChange={handleFileChange}
+                                />
+                                {images.length === 0 ? (
+                                    <div
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="w-full h-24 rounded-xl border-2 border-dashed border-border/20 flex flex-col items-center justify-center gap-2 hover:bg-primary/5 transition-all cursor-pointer bg-primary/2"
+                                    >
+                                        {isLoading ? (
+                                            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-accent"></div>
+                                        ) : (
+                                            <>
+                                                <span className="material-symbols-outlined text-text-secondary text-2xl">add_a_photo</span>
+                                                <span className="text-[12px] text-text-secondary font-medium">사진 선택하기</span>
+                                            </>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-3 overflow-x-auto no-scrollbar pb-1">
+                                        {images.map((img, idx) => (
+                                            <div key={idx} className="relative h-20 aspect-square rounded-lg overflow-hidden shrink-0 shadow-sm border border-border/10">
+                                                <img src={img.base64 || img.url} alt="preview" className="w-full h-full object-cover" />
+                                                <button
+                                                    onClick={() => handleRemoveImage(idx)}
+                                                    className="absolute top-1 right-1 bg-black/50 text-white rounded-full p-0.5 hover:bg-red-500 transition-colors"
+                                                >
+                                                    <span className="material-symbols-outlined text-[14px]">close</span>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button
+                                            onClick={() => fileInputRef.current?.click()}
+                                            disabled={isLoading}
+                                            className="h-20 aspect-square rounded-lg border-2 border-dashed border-border/20 flex items-center justify-center shrink-0 hover:bg-primary/5 transition-all bg-primary/2"
+                                        >
+                                            {isLoading ? (
+                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-accent"></div>
+                                            ) : (
+                                                <span className="material-symbols-outlined text-text-secondary">add</span>
+                                            )}
+                                        </button>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Section 5: Notes */}

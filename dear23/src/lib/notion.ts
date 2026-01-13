@@ -58,7 +58,25 @@ export interface NotionDatabase {
     icon?: any;
 }
 
-import { type NotionItem } from '../types';
+export interface NotionItem {
+    id: string;
+    title: string;
+    date: string;
+    coverImage: string | null;
+    previewText: string;
+    type?: string;
+    sender?: string;
+    isRead?: boolean;
+    author?: string;
+    images?: string[];
+    mood?: string;
+    weather?: string;
+    endDate?: string | null;
+    color?: string;
+    isImportant?: boolean;
+    isShared?: boolean;
+    url?: string;
+}
 
 export interface PaginatedNotionResponse {
     data: NotionItem[];
@@ -82,8 +100,10 @@ export const createDiaryEntry = async (
         weather?: string;
         endDate?: string;
         color?: string;
-        isImportant?: boolean;
-        isShared?: boolean;
+        isImportant?: boolean,
+        isShared?: boolean,
+        url?: string,
+        title?: string
     } = {}
 ) => {
     const user = auth.currentUser;
@@ -107,7 +127,9 @@ export const createDiaryEntry = async (
             endDate: options.endDate,
             color: options.color,
             isImportant: options.isImportant,
-            isShared: options.isShared
+            isShared: options.isShared,
+            url: options.url,
+            title: options.title
         })
     });
 
@@ -171,8 +193,9 @@ export const updateDiaryEntry = async (
         title?: string;
         endDate?: string;
         color?: string;
-        isImportant?: boolean;
-        isShared?: boolean;
+        isImportant?: boolean,
+        isShared?: boolean,
+        url?: string
     }
 ) => {
     const user = auth.currentUser;
@@ -196,7 +219,8 @@ export const updateDiaryEntry = async (
             endDate: options.endDate,
             color: options.color,
             isImportant: options.isImportant,
-            isShared: options.isShared
+            isShared: options.isShared,
+            url: options.url
         })
     });
 

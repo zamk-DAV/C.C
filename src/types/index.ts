@@ -83,6 +83,8 @@ export interface CalendarEvent {
     color?: string;
     isImportant?: boolean;
     isShared?: boolean;
+    url?: string;
+    images?: string[];
 }
 
 export interface MemoryItem {

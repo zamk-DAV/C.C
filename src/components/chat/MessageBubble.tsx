@@ -2,6 +2,7 @@ import React from 'react';
 import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import type { ChatMessage } from '../../types';
+import { LinkPreview } from './LinkPreview';
 
 interface MessageBubbleProps {
     message: ChatMessage;
@@ -35,7 +36,9 @@ const MessageMeta: React.FC<{
             "flex flex-col gap-0.5 mb-[2px] transition-opacity duration-150",
             isMine ? "items-end" : "items-start"
         )}>
-            {!isRead && <Heart className="w-3 h-3 text-red-400 fill-red-400" />}
+            {!isRead && (
+                <span className="text-[10px] text-yellow-500 font-bold leading-none mb-0.5">1</span>
+            )}
             {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
         </div>
     );
@@ -55,6 +58,10 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     const timestamp = msg.createdAt?.toDate ?
         new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: 'numeric', hour12: true }).format(msg.createdAt.toDate())
         : '';
+
+    // URL Detection Regex
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const firstUrl = msg.text?.match(urlRegex)?.[0];
 
     const handleContextMenu = (e: React.MouseEvent) => {
         if (onContextMenu) {
@@ -141,11 +148,14 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                     )}
                                 </div>
                             ) : (
-                                <div className={cn(
-                                    "px-3.5 py-2.5 rounded-2xl break-words whitespace-pre-wrap text-[14px] leading-normal",
-                                    isMine ? "bg-primary text-background rounded-tr-sm" : "border border-border bg-background text-primary rounded-tl-sm"
-                                )}>
-                                    {msg.text}
+                                <div className="flex flex-col">
+                                    <div className={cn(
+                                        "px-3.5 py-2.5 rounded-2xl break-words whitespace-pre-wrap text-[14px] leading-normal",
+                                        isMine ? "bg-primary text-background rounded-tr-sm" : "border border-border bg-background text-primary rounded-tl-sm"
+                                    )}>
+                                        {msg.text}
+                                    </div>
+                                    {firstUrl && <LinkPreview url={firstUrl} />}
                                 </div>
                             )}
                         </div>
