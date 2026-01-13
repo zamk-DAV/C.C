@@ -1,154 +1,177 @@
-import React, { useState } from 'react';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useNotion } from '../context/NotionContext';
+import { db } from '../lib/firebase';
+import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
+import type { CalendarEvent } from '../types';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import { useEventData } from '../context/NotionContext';
-import { EventDetailModal } from '../components/calendar/EventDetailModal';
-import { createDiaryEntry } from '../lib/notion';
-import { AnimatePresence, motion } from 'framer-motion';
+import { EventWriteModal } from '../components/calendar/EventWriteModal';
+import { motion } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../hooks/useHaptics';
 import { updateDiaryEntry } from '../lib/notion';
 
-// ... (existing imports)
-
 interface DraggableEventProps {
-    event: any;
-    onDrop: (event: any, newDate: string) => void;
-    onClick: (event: any) => void;
+    event: CalendarEvent;
+    onDrop: (event: CalendarEvent, newDate: string) => void;
+    onClick: (event: CalendarEvent) => void;
+    onDrag?: (y: number) => void;
 }
 
-const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick }) => {
+const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick, onDrag }) => {
     const { heavy, medium } = useHaptics();
     const [isDragging, setIsDragging] = React.useState(false);
-
-    const bind = useGesture({
-        onDragStart: () => {
-            setIsDragging(true);
-            medium();
-        },
-        onDrag: ({ offset: [x, y], event: e }) => {
-            // Prevent scrolling on mobile while dragging
-            // In a real app we might use a portal or fixed overlay for the dragged item
-            // For simplicity here, we rely on framer motion layout or transform
-        },
-        onDragEnd: ({ xy: [clientX, clientY], cancel, tap }) => {
-            setIsDragging(false);
-            if (tap) {
-                onClick(event);
-                return;
-            }
-
-            // Detect drop target
-            // Hide the dragged element momentarily to find what's underneath
-            // (Note: standard HTML5 Drag & Drop might be easier for this, but use-gesture gives better control on mobile)
-            // A simple hack: elementFromPoint. 
-            // Since we aren't using a Portal, the element is under the finger. 
-            // To find the *Drop Target*, we need to ensure the dragged element doesn't block the point.
-            // However, with framer-motion drag, it usually does.
-            // Alternative: Calculation based on coordinates.
-
-            // Standard Approach with elementFromPoint:
-            const elements = document.elementsFromPoint(clientX, clientY);
-            const dateCell = elements.find(el => el.getAttribute('data-date'));
-
-            if (dateCell) {
-                const newDate = dateCell.getAttribute('data-date');
-                if (newDate && newDate !== event.date) {
-                    heavy();
-                    onDrop(event, newDate);
-                }
-            }
-        },
-        onTap: () => {
-            onClick(event);
-        }
-    }, {
-        drag: {
-            delay: 200, // Long press to drag to distinguish from scroll
-            filterTaps: true
-        }
-    });
-
-    // Framer Motion drag is easier for visual following. 
-    // But mixing useGesture and simple Framer Motion drag is complex.
-    // Let's use Framer Motion's Drag controls directly for the visual part 
-    // and use-gesture logic is implicitly handled or we use useGesture for everything.
-    // Actually, framer motion has onDragEnd which is sufficient.
 
     return (
         <motion.div
             drag
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
-            dragElastic={1} // Allow free movement visuals
-            dragSnapToOrigin={true} // Return if not dropped
+            dragElastic={1}
+            dragSnapToOrigin={true}
+            onTap={() => onClick(event)}
             whileDrag={{ scale: 1.05, zIndex: 50, shadow: "0px 10px 20px rgba(0,0,0,0.2)" }}
             onDragStart={() => {
                 setIsDragging(true);
                 medium();
             }}
-            onDragEnd={(e, info) => {
+            onDrag={(_, info) => {
+                onDrag?.(info.point.y);
+            }}
+            onDragEnd={(_, info) => {
                 setIsDragging(false);
-                // elementFromPoint logic
                 const point = info.point;
-                // Framer motion point is relative to page? No, viewport.
-                // We need to temporarily hide this element to see what's under it?
-                // Actually pointer-events: none during drag prevents this issue but strictly capturing events.
-                // Let's rely on the pointer event from onDragEnd.
-
-                // Hack: use the pointer position from the event object
                 const clientX = point.x;
                 const clientY = point.y;
 
+                // Hide element logically or just peek underneath
                 const elements = document.elementsFromPoint(clientX, clientY);
                 const dateCell = elements.find(el => el.getAttribute('data-date'));
 
                 if (dateCell) {
                     const newDate = dateCell.getAttribute('data-date');
-                    if (newDate && newDate !== event.date) {
-                        heavy();
-                        onDrop(event, newDate);
+                    // Check if date changed
+                    if (newDate) {
+                        // Compare dates. Events might be Date object or timestamp strings depending on processing
+                        const eventDateStr = event.date instanceof Date
+                            ? format(event.date, 'yyyy-MM-dd')
+                            : format(new Date(event.date), 'yyyy-MM-dd');
+
+                        if (newDate !== eventDateStr) {
+                            heavy();
+                            onDrop(event, newDate);
+                        }
                     }
                 }
             }}
-            onTap={() => onClick(event)}
-            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2 bg-background relative"
+            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-4 -mx-2 bg-background relative overflow-hidden"
         >
-            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px] text-primary">
-                {"ALL DAY"}
+            {/* Color Indicator */}
+            <div
+                className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-all group-hover:w-1.5"
+                style={{ backgroundColor: event.color || '#135bec' }}
+            />
+
+            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]" style={{ color: event.color || 'inherit' }}>
+                {event.time}
             </span>
             <div className="flex flex-col gap-1 pointer-events-none">
-                <p className="text-lg font-light leading-none text-primary group-hover:text-white transition-colors">{event.title}</p>
-                {event.previewText && (
-                    <p className="text-[13px] text-text-secondary font-light italic">{event.previewText}</p>
+                <p className="text-lg font-light leading-none">{event.title}</p>
+                {event.note && (
+                    <p className="text-[13px] text-text-secondary font-light italic">{event.note}</p>
                 )}
             </div>
             {isDragging && (
                 <div className="absolute inset-0 border-2 border-primary rounded-xl opacity-50 animate-pulse" />
             )}
+
+            {/* Icons for Important/Shared */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+                {event.isImportant && <span className="material-symbols-outlined text-[16px] text-[#FFD60A]">star</span>}
+                {event.isShared && <span className="material-symbols-outlined text-[16px] text-[#FF453A]">favorite</span>}
+            </div>
         </motion.div>
     );
 };
 
 export const CalendarPage: React.FC = () => {
-    const { eventData, isLoading, refreshData } = useEventData();
     const [currentDate, setCurrentDate] = useState(new Date());
     const [selectedDate, setSelectedDate] = useState(new Date());
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [editingEvent, setEditingEvent] = useState<any>(null); // Track event being edited
+    const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+    const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>(undefined);
+
+    const { coupleData } = useAuth();
+    const { refreshData } = useNotion();
     const { heavy, medium } = useHaptics();
+
+    const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    // Auto-scroll logic
+    const lastScrollTime = React.useRef(0);
+    const handleDrag = (y: number) => {
+        const now = Date.now();
+        if (now - lastScrollTime.current < 600) return; // Throttle scroll
+
+        // Define thresholds relative to viewport
+        const topThreshold = 150;
+        const bottomThreshold = window.innerHeight - 150;
+
+        if (y < topThreshold) {
+            handlePrevMonth();
+            lastScrollTime.current = now;
+            heavy();
+        } else if (y > bottomThreshold) {
+            handleNextMonth();
+            lastScrollTime.current = now;
+            heavy();
+        }
+    };
+
+    // 1. Firestore Events
+    useEffect(() => {
+        if (!coupleData?.id) {
+            setLoading(false);
+            return;
+        }
+
+        const eventsQuery = query(
+            collection(db, 'couples', coupleData.id, 'events'),
+            orderBy('date', 'asc')
+        );
+
+        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
+            const events = snapshot.docs.map(doc => {
+                const data = doc.data();
+                return {
+                    id: doc.id,
+                    ...data,
+                    date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+                    type: 'Event'
+                } as CalendarEvent;
+            });
+            setFirestoreEvents(events);
+            setLoading(false);
+        });
+
+        return () => unsubscribe();
+    }, [coupleData?.id]);
+
+    const events = [...firestoreEvents];
 
     // Calendar Grid Logic
     const monthStart = startOfMonth(currentDate);
     const monthEnd = endOfMonth(currentDate);
     const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
     const startDay = getDay(monthStart);
     const emptyDays = Array.from({ length: startDay });
 
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
-    // Gesture Logic for Swipe
-    const bind = useGesture(
+    // Gestures for Month Navigation & Long Press
+    const bindGesture = useGesture(
         {
             onDrag: ({ swipe: [swipeX] }) => {
                 if (swipeX === -1) {
@@ -168,97 +191,89 @@ export const CalendarPage: React.FC = () => {
         }
     );
 
-    // Filter events for selected date
-    const selectedDateEvents = eventData.filter(event => {
-        if (!event.date) return false;
-        try {
-            return isSameDay(parseISO(event.date), selectedDate);
-        } catch (e) {
-            return false;
+    // Bind long press separately to attach to individual dates
+    const bindLongPress = useGesture({
+        onLongPress: (state: any) => {
+            const date = state.args[0];
+            medium();
+            handleOpenNewEvent(date);
         }
-    });
+    } as any);
 
-    const handleSaveEvent = async (data: any) => {
-        try {
-            if (data.id) {
-                // Update existing event
-                await updateDiaryEntry(
-                    data.id,
-                    data.note || '',
-                    [],
-                    {
-                        date: format(data.startDate, 'yyyy-MM-dd'),
-                        title: data.title,
-                        // Add other options if needed
-                    }
-                );
-            } else {
-                // Create new event
-                await createDiaryEntry(
-                    data.note || '',
-                    [],
-                    'Event',
-                    {
-                        date: format(data.startDate, 'yyyy-MM-dd'),
-                        ...({ title: data.title } as any)
-                    }
-                );
-            }
-            await refreshData();
-            setEditingEvent(null); // Reset editing state
-        } catch (error) {
-            console.error("Failed to save event:", error);
-        }
+    const selectedDateEvents = events.filter(event =>
+        isSameDay(event.date, selectedDate)
+    );
+
+    const handleEventSuccess = () => {
+        refreshData();
+        setIsEventModalOpen(false);
+        setEditingEvent(undefined);
     };
 
-    const handleEventDrop = async (event: any, newDate: string) => {
-        // Optimistic update could go here, but for safety:
+    const handleEventDrop = async (event: CalendarEvent, newDate: string) => {
+        // Optimistic Update: Immediately update local state
+        const previousEvents = [...firestoreEvents];
+        const updatedEvents = previousEvents.map(e =>
+            e.id === event.id ? { ...e, date: new Date(newDate) } : e
+        );
+        setFirestoreEvents(updatedEvents);
+
         try {
-            medium(); // Feedback before starting
+            medium();
+            // Call API to update date
+            // Note: firestoreEvents update via snapshot listener when backend processes it
             await updateDiaryEntry(
                 event.id,
-                event.content || '', // Keep existing content
-                [], // Images?
+                event.title, // Keep title/content
+                [],
                 {
                     date: newDate,
-                    title: event.title
+                    title: event.title,
+                    mood: event.time ? `${event.time} - ${event.note || ''}`.trim() : event.note || undefined,
+                    endDate: event.endDate ? format(new Date(event.endDate), 'yyyy-MM-dd') : undefined,
+                    color: event.color,
+                    isImportant: event.isImportant,
+                    isShared: event.isShared
                 }
             );
-            await refreshData();
-            // Could add a toast "Event moved to ..."
+            // No need to do anything else, snapshot will eventually confirm this
         } catch (error) {
             console.error("Failed to move event:", error);
+            // Revert on failure
+            setFirestoreEvents(previousEvents);
+            alert("일정 이동에 실패했습니다.");
         }
     };
 
-    const handleEventClick = (event: any) => {
+    const handleEventClick = (event: CalendarEvent) => {
         setEditingEvent(event);
-        setIsModalOpen(true);
+        setIsEventModalOpen(true);
     };
 
-    const handleOpenNewEvent = () => {
-        setEditingEvent(null);
-        setIsModalOpen(true);
+    const handleOpenNewEvent = (date?: Date) => {
+        setEditingEvent(undefined);
+        if (date) setSelectedDate(date);
+        setIsEventModalOpen(true);
     };
 
     return (
-        <div className="relative flex min-h-[100dvh] w-full flex-col max-w-md mx-auto overflow-x-hidden border-x border-border bg-background text-primary transition-colors duration-300 font-display">
+        <div className="relative flex min-h-[100dvh] w-full flex-col max-w-md mx-auto overflow-x-hidden border-x border-border bg-background text-primary font-display transition-colors duration-300">
             {/* Header */}
             <header className="flex items-center justify-between px-8 pt-16 pb-8">
-                <button onClick={handlePrevMonth} className="flex items-center justify-center text-primary hover:opacity-70 transition-opacity">
+                <button onClick={handlePrevMonth} className="flex items-center justify-center hover:text-primary/70 transition-colors">
                     <span className="material-symbols-outlined text-xl">arrow_back_ios</span>
                 </button>
-                <h2 className="text-2xl font-light tracking-[0.2em] font-display text-primary">
+                <h2 className="text-2xl font-light tracking-[0.2em] font-display">
                     {format(currentDate, 'M월', { locale: ko })}
                 </h2>
-                <button onClick={handleNextMonth} className="flex items-center justify-center text-primary hover:opacity-70 transition-opacity">
+                <button onClick={handleNextMonth} className="flex items-center justify-center hover:text-primary/70 transition-colors">
                     <span className="material-symbols-outlined text-xl">arrow_forward_ios</span>
                 </button>
             </header>
 
             {/* Calendar Grid */}
             <div
-                {...bind() as any}
+                {...bindGesture() as any}
                 className="px-8 mb-10 touch-pan-y"
             >
                 {/* Days of Week */}
@@ -280,17 +295,15 @@ export const CalendarPage: React.FC = () => {
                     {/* Days */}
                     {daysInMonth.map((day) => {
                         const isSelected = isSameDay(day, selectedDate);
-                        const hasEvent = eventData.some(e => {
-                            if (!e.date) return false;
-                            try { return isSameDay(parseISO(e.date), day); } catch { return false; }
-                        });
+                        const hasEvent = events.some(e => isSameDay(e.date, day));
 
                         return (
                             <button
                                 key={day.toString()}
                                 onClick={() => setSelectedDate(day)}
+                                {...bindLongPress(day) as any}
                                 data-date={format(day, 'yyyy-MM-dd')} // Add identifier for drop target
-                                className="relative h-10 w-full flex flex-col items-center justify-center rounded-lg hover:bg-white/5 transition-colors"
+                                className="relative h-10 w-full flex flex-col items-center justify-center hover:bg-secondary rounded-full transition-colors active:scale-90"
                             >
                                 {isSelected && (
                                     <motion.div
@@ -298,7 +311,7 @@ export const CalendarPage: React.FC = () => {
                                         className="absolute size-8 rounded-full border border-primary"
                                     />
                                 )}
-                                <span className={`relative text-base z-10 ${isSelected ? 'font-medium' : 'font-light'} `}>
+                                <span className={`relative text-base z-10 ${isSelected ? 'font-medium' : 'font-light'}`}>
                                     {format(day, 'd')}
                                 </span>
                                 {hasEvent && !isSelected && (
@@ -315,7 +328,7 @@ export const CalendarPage: React.FC = () => {
                 <h3 className="text-xs uppercase tracking-[0.25em] text-text-secondary mb-1">
                     {format(selectedDate, 'EEEE', { locale: ko })}
                 </h3>
-                <p className="text-xl font-display italic tracking-tight text-primary">
+                <p className="text-xl font-display italic tracking-tight">
                     {format(selectedDate, 'M월 d일', { locale: ko })}
                 </p>
             </div>
@@ -323,21 +336,22 @@ export const CalendarPage: React.FC = () => {
             {/* Events List */}
             <div className="px-8 flex-1 pb-32">
                 <div className="divide-y divide-border">
-                    {isLoading ? (
-                        <div className="py-10 text-center text-text-secondary font-light italic">
-                            불러오는 중...
+                    {loading ? (
+                        <div className="py-10 text-center text-text-secondary/50 font-light italic">
+                            로딩 중...
                         </div>
                     ) : selectedDateEvents.length > 0 ? (
-                        selectedDateEvents.map((event: any) => (
+                        selectedDateEvents.map(event => (
                             <DraggableEvent
                                 key={event.id}
                                 event={event}
                                 onDrop={handleEventDrop}
                                 onClick={handleEventClick}
+                                onDrag={handleDrag}
                             />
                         ))
                     ) : (
-                        <div className="py-10 text-center text-text-secondary font-light italic">
+                        <div className="py-10 text-center text-text-secondary/50 font-light italic">
                             일정이 없습니다.
                         </div>
                     )}
@@ -348,22 +362,20 @@ export const CalendarPage: React.FC = () => {
             <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={handleOpenNewEvent}
-                className="fixed bottom-24 right-6 w-14 h-14 bg-white text-black rounded-full shadow-2xl flex items-center justify-center z-40"
+                onClick={() => handleOpenNewEvent()}
+                className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center z-10"
             >
-                <span className="material-symbols-outlined text-3xl">add</span>
+                <span className="material-symbols-outlined text-2xl">add</span>
             </motion.button>
 
-            {/* Event Detail Modal */}
-            <EventDetailModal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                onSave={handleSaveEvent}
-                initialDate={selectedDate}
-                initialEvent={editingEvent} // Pass event for editing
+            {/* Event Write Modal */}
+            <EventWriteModal
+                isOpen={isEventModalOpen}
+                onClose={() => setIsEventModalOpen(false)}
+                onSuccess={handleEventSuccess}
+                selectedDate={selectedDate}
+                editEvent={editingEvent}
             />
-
-            {/* Bottom Nav is managed by MainLayout */}
         </div>
     );
 };

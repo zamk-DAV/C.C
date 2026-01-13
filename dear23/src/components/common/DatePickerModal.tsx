@@ -7,7 +7,7 @@ interface DatePickerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (date: string) => void;
-    selectedDate?: string;
+    selectedDate?: string | Date;
     minDate?: Date;
 }
 
@@ -63,38 +63,40 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
 
                     {/* Modal */}
                     <motion.div
-                        initial={{ opacity: 0, y: 50 }}
+                        initial={{ opacity: 0, y: "100%" }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background rounded-t-2xl shadow-2xl max-w-lg mx-auto overflow-hidden"
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-[#1C1C1E] rounded-t-2xl shadow-2xl max-w-lg mx-auto overflow-hidden pb-8"
                     >
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
-                            <h3 className="text-lg font-bold text-primary">날짜 선택</h3>
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-700/50">
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-secondary rounded-full transition-colors"
+                                className="text-gray-400 font-medium text-[16px]"
                             >
-                                <span className="material-symbols-outlined text-primary">close</span>
+                                취소
                             </button>
+                            <h3 className="text-[17px] font-semibold text-white">날짜 선택</h3>
+                            <div className="w-[30px]" /> {/* Spacer for centering */}
                         </div>
 
                         {/* Month Navigation */}
-                        <div className="flex items-center justify-between px-6 py-4">
+                        <div className="flex items-center justify-between px-6 py-6">
                             <button
                                 onClick={handlePrevMonth}
-                                className="p-2 hover:bg-secondary rounded-full transition-colors"
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
                             >
-                                <span className="material-symbols-outlined text-primary">chevron_left</span>
+                                <span className="material-symbols-outlined">chevron_left</span>
                             </button>
-                            <span className="text-lg font-bold text-primary">
+                            <span className="text-[18px] font-bold text-white">
                                 {format(currentMonth, 'yyyy년 M월', { locale: ko })}
                             </span>
                             <button
                                 onClick={handleNextMonth}
-                                className="p-2 hover:bg-secondary rounded-full transition-colors"
+                                className="p-2 hover:bg-white/10 rounded-full transition-colors text-white"
                             >
-                                <span className="material-symbols-outlined text-primary">chevron_right</span>
+                                <span className="material-symbols-outlined">chevron_right</span>
                             </button>
                         </div>
 
@@ -103,7 +105,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                             {weekDays.map((day, idx) => (
                                 <div
                                     key={day}
-                                    className={`text-center text-xs font-bold py-2 ${idx === 0 ? 'text-red-400' : idx === 6 ? 'text-blue-400' : 'text-text-secondary'
+                                    className={`text-center text-xs font-bold py-2 ${idx === 0 ? 'text-[#FF453A]' : idx === 6 ? 'text-[#0A84FF]' : 'text-gray-400'
                                         }`}
                                 >
                                     {day}
@@ -112,7 +114,7 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                         </div>
 
                         {/* Days Grid */}
-                        <div className="grid grid-cols-7 gap-1 px-4 pb-6">
+                        <div className="grid grid-cols-7 gap-1 px-4 pb-4">
                             {days.map((date, idx) => {
                                 if (!date) {
                                     return <div key={`empty-${idx}`} className="aspect-square" />;
@@ -127,37 +129,24 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
                                     <button
                                         key={date.toISOString()}
                                         onClick={() => handleSelectDate(date)}
-                                        disabled={isDisabled}
-                                        className={`aspect-square flex items-center justify-center rounded-full text-sm font-medium transition-all ${isSelected
-                                            ? 'bg-primary text-background'
+                                        // disabled={isDisabled} // Allow selecting past dates for diary/events usually
+                                        className={`aspect-square flex items-center justify-center rounded-full text-[15px] font-medium transition-all ${isSelected
+                                            ? 'bg-[#0A84FF] text-white'
                                             : isToday
-                                                ? 'border-2 border-primary text-primary'
+                                                ? 'text-[#0A84FF] font-bold'
                                                 : isDisabled
-                                                    ? 'text-text-secondary/30 cursor-not-allowed'
+                                                    ? 'text-gray-600'
                                                     : dayOfWeek === 0
-                                                        ? 'text-red-400 hover:bg-secondary'
+                                                        ? 'text-[#FF453A]'
                                                         : dayOfWeek === 6
-                                                            ? 'text-blue-400 hover:bg-secondary'
-                                                            : 'text-primary hover:bg-secondary'
+                                                            ? 'text-[#0A84FF]'
+                                                            : 'text-white'
                                             }`}
                                     >
                                         {format(date, 'd')}
                                     </button>
                                 );
                             })}
-                        </div>
-
-                        {/* Clear Button */}
-                        <div className="px-4 pb-8">
-                            <button
-                                onClick={() => {
-                                    onSelect('');
-                                    onClose();
-                                }}
-                                className="w-full py-3 text-text-secondary font-medium text-sm hover:bg-secondary transition-colors rounded-lg"
-                            >
-                                취소
-                            </button>
                         </div>
                     </motion.div>
                 </>

@@ -75,7 +75,16 @@ export const createDiaryEntry = async (
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
     type: 'Diary' | 'Memory' | 'Event' | 'Letter' = 'Diary',
-    options: { mood?: string, sender?: string, date?: string, weather?: string } = {}
+    options: {
+        mood?: string;
+        sender?: string;
+        date?: string;
+        weather?: string;
+        endDate?: string;
+        color?: string;
+        isImportant?: boolean;
+        isShared?: boolean;
+    } = {}
 ) => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
@@ -94,7 +103,11 @@ export const createDiaryEntry = async (
             mood: options.mood,
             sender: options.sender,
             date: options.date || new Date().toISOString().split('T')[0],
-            weather: options.weather
+            weather: options.weather,
+            endDate: options.endDate,
+            color: options.color,
+            isImportant: options.isImportant,
+            isShared: options.isShared
         })
     });
 
@@ -151,7 +164,16 @@ export const updateDiaryEntry = async (
     pageId: string,
     content: string,
     images: { base64: string, type: string, size: number, name: string }[],
-    options: { mood?: string, weather?: string, date?: string, title?: string }
+    options: {
+        mood?: string;
+        weather?: string;
+        date?: string;
+        title?: string;
+        endDate?: string;
+        color?: string;
+        isImportant?: boolean;
+        isShared?: boolean;
+    }
 ) => {
     const user = auth.currentUser;
     if (!user) throw new Error("User not authenticated");
@@ -170,7 +192,11 @@ export const updateDiaryEntry = async (
             mood: options.mood,
             weather: options.weather,
             date: options.date,
-            title: options.title
+            title: options.title,
+            endDate: options.endDate,
+            color: options.color,
+            isImportant: options.isImportant,
+            isShared: options.isShared
         })
     });
 

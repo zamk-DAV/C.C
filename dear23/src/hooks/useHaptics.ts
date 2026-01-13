@@ -18,13 +18,17 @@ export function useHaptics() {
     }, []);
 
     const simpleClick = useCallback(() => triggerHaptic(10), [triggerHaptic]);
+    const medium = useCallback(() => triggerHaptic(25), [triggerHaptic]); // Added medium
     const success = useCallback(() => triggerHaptic([10, 30, 10]), [triggerHaptic]);
     const warning = useCallback(() => triggerHaptic([50, 50, 50]), [triggerHaptic]);
     const heavy = useCallback(() => triggerHaptic(50), [triggerHaptic]);
+    const selection = useCallback(() => triggerHaptic(10), [triggerHaptic]); // Added for wheel selection
 
     return {
         trigger: triggerHaptic,
         simpleClick,
+        selection, // Export selection
+        medium,
         success,
         warning,
         heavy,

@@ -1,5 +1,5 @@
-import React, { useRef } from 'react';
-import { type PanInfo, motion, useAnimation } from 'framer-motion';
+import React from 'react';
+import { motion, useAnimation } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../../../hooks/useHaptics';
 
@@ -13,7 +13,7 @@ interface MobileMessageItemProps {
 
 export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     children,
-    isMine,
+    // isMine, // Unused
     onReply,
     onReaction,
     onLongPress,
@@ -21,45 +21,40 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     const controls = useAnimation();
     const { heavy, success } = useHaptics();
 
+    // Cast handlers to any because onDoubleTap is not standard in some useGesture types or custom config
     const bind = useGesture(
         {
             onDoubleTap: () => {
                 success();
                 onReaction?.();
             },
-            onLongPress: ({ cancel }) => {
+            onLongPress: ({ cancel }: any) => {
                 heavy();
                 onLongPress?.();
-                cancel(); // Prevent drag from starting after long press
+                cancel();
             },
-            onDrag: ({ active, movement: [mx], cancel }) => {
-                // Only allow swiping left (negative x) for reply, similar to KakaoTalk
+            onDrag: ({ active, movement: [mx], cancel }: any) => {
                 const isSwipeLeft = mx < 0;
-
                 if (!isSwipeLeft && active) {
                     cancel();
                     return;
                 }
-
                 if (active) {
-                    // Apply resistance to the drag
                     controls.set({ x: mx * 0.5 });
                 } else {
-                    // Trigger reply if swiped far enough
                     if (mx < -50) {
                         heavy();
                         onReply?.();
                     }
-                    // Reset position
                     controls.start({ x: 0, transition: { type: 'spring', stiffness: 400, damping: 25 } });
                 }
             },
-        },
+        } as any,
         {
             drag: {
                 axis: 'x',
                 filterTaps: true,
-                from: () => [0, 0], // Start from 0
+                from: () => [0, 0],
             },
         }
     );

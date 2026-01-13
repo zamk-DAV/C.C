@@ -7,12 +7,9 @@ import { cn } from '../../lib/utils';
 // Previous files used '../context/NotionContext', so likely relative.
 // Let's use relative for safety or check tsconfig in next step if it fails.
 // Actually, 'clsx' and 'tailwind-merge' are likely used.
-import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+// import { twMerge } from 'tailwind-merge'; // Removed unused
+// Local cn removed as it conflicts with import
 
-function cn(...inputs: ClassValue[]) {
-    return twMerge(clsx(inputs));
-}
 
 interface EventDetailModalProps {
     isOpen: boolean;
@@ -33,8 +30,8 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
     const [isAllDay, setIsAllDay] = useState(false);
     const [startDate, setStartDate] = useState<Date>(initialDate);
     const [endDate, setEndDate] = useState<Date>(initialDate);
-    const [startTime, setStartTime] = useState('10:00');
-    const [endTime, setEndTime] = useState('11:00');
+    const [startTime] = useState('10:00'); // setStartTime unused
+    const [endTime] = useState('11:00'); // setEndTime unused
     const [isFavorite, setIsFavorite] = useState(false);
     const [isShared, setIsShared] = useState(false);
     const [selectedColor, setSelectedColor] = useState<string>('blue');
