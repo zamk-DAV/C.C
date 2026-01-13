@@ -41,6 +41,124 @@ interface MemoryItem {
     author?: string;
 }
 
+export const validateNotionSchema = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        // [DEBUG] Log incoming request
+        console.log("[DEBUG] Request Body:", JSON.stringify(req.body));
+
+        // 1. Verify Authentication
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            // 2. Fetch Notion Config from Firestore
+            const notionConfig = await fetchNotionConfig(uid);
+
+            if (!notionConfig) {
+                res.status(404).send({ error: "Notion configuration not found for this user." });
+                return;
+            }
+
+            const { apiKey, databaseId } = notionConfig;
+
+            if (!apiKey || !databaseId) {
+                res.status(400).send({ error: "Incomplete Notion configuration." });
+                return;
+            }
+
+            // 3. Fetch Notion Database Properties
+            const notionResponse = await axios.get(
+                `https://api.notion.com/v1/databases/${databaseId}`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            const properties = notionResponse.data.properties;
+
+            // 4. Validate required properties
+            const requiredProperties = [
+                "Name", // Title property
+                "dear23_날짜", // Date property
+                "dear23_카테고리", // Select property
+                "dear23_대표이미지", // Files & Media property
+                "dear23_내용미리보기", // Rich Text property
+                "작성자", // Select property
+                "dear23_기분", // Select property
+                "dear23_날씨", // Select property
+            ];
+
+            const missingProperties: string[] = [];
+            const incorrectTypes: string[] = [];
+
+            for (const propName of requiredProperties) {
+                if (!properties[propName]) {
+                    missingProperties.push(propName);
+                } else {
+                    // Validate types for specific properties
+                    if (propName === "Name" && properties[propName].type !== "title") {
+                        incorrectTypes.push(`${propName} (expected: title, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_날짜" && properties[propName].type !== "date") {
+                        incorrectTypes.push(`${propName} (expected: date, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_카테고리" && properties[propName].type !== "select") {
+                        incorrectTypes.push(`${propName} (expected: select, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_대표이미지" && properties[propName].type !== "files") {
+                        incorrectTypes.push(`${propName} (expected: files, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_내용미리보기" && properties[propName].type !== "rich_text") {
+                        incorrectTypes.push(`${propName} (expected: rich_text, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "작성자" && properties[propName].type !== "select") {
+                        incorrectTypes.push(`${propName} (expected: select, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_기분" && properties[propName].type !== "select") {
+                        incorrectTypes.push(`${propName} (expected: select, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_날씨" && properties[propName].type !== "select") {
+                        incorrectTypes.push(`${propName} (expected: select, got: ${properties[propName].type})`);
+                    }
+                }
+            }
+
+            if (missingProperties.length > 0 || incorrectTypes.length > 0) {
+                res.status(400).send({
+                    isValid: false,
+                    message: "Notion database schema is invalid.",
+                    details: {
+                        missingProperties,
+                        incorrectTypes,
+                    },
+                });
+            } else {
+                res.status(200).send({
+                    isValid: true,
+                    message: "Notion database schema is valid.",
+                });
+            }
+
+        } catch (error: any) {
+            console.error("Error validating Notion schema:", error);
+            if (error.response) {
+                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
+            }
+            res.status(500).send({ error: error.message });
+        }
+    });
+});
+
 export const getNotionDatabase = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
         // [DEBUG] Log incoming request
@@ -120,7 +238,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
 
                 // Extract Title
                 const titleList = props["Name"]?.title || props["이름"]?.title || props["title"]?.title || [];
-                const title = titleList.length > 0 ? titleList[0].plain_text : "Untitled";
+                let title = titleList.length > 0 ? titleList[0].plain_text : "";
 
                 // Extract Date
                 const dateProp = props["dear23_날짜"]?.date || props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
@@ -135,6 +253,15 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                         coverImage = file.file.url; // Expiring URL
                     } else if (file.type === "external") {
                         coverImage = file.external.url;
+                    }
+                }
+
+                // Fallback Title: If untitled but has image -> "Photo"
+                if (!title || title === "Untitled") {
+                    if (coverImage) {
+                        title = "Photo";
+                    } else {
+                        title = "Untitled";
                     }
                 }
 
@@ -313,15 +440,13 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             if (images && Array.isArray(images) && images.length > 0) {
                 console.log(`[CreateDiary] Uploading ${images.length} images...`);
                 try {
+                    // Use Promise.all for parallel uploads
                     const uploadPromises = images.map((img: any) => uploadImageToStorage(uid, img));
                     const urls = await Promise.all(uploadPromises);
                     imageUrls.push(...urls);
                     console.log(`[CreateDiary] Uploaded images:`, imageUrls);
                 } catch (uploadError: any) {
                     console.error("[CreateDiary] Image upload failed:", uploadError);
-                    // Decide: Fail whole request or continue without images? 
-                    // Let's continue but log error, or maybe fail to let user know.
-                    // For now, let's continue but warn.
                 }
             }
 
@@ -461,6 +586,56 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
 
         } catch (error: any) {
             console.error("Error creating Notion page:", error);
+            res.status(500).send({ error: error.message });
+        }
+    });
+});
+
+export const getNotionPageContent = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        // 1. Verify Authentication
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            // 2. Fetch Notion Config
+            // We need config to get API Key.
+            const notionConfig = await fetchNotionConfig(uid);
+
+            if (!notionConfig || !notionConfig.apiKey) {
+                res.status(404).send({ error: "Notion configuration not found." });
+                return;
+            }
+
+            const { apiKey } = notionConfig;
+            const { pageId } = req.body;
+
+            if (!pageId) {
+                res.status(400).send({ error: "pageId is required" });
+                return;
+            }
+
+            // 3. Fetch Block Children (Page Content)
+            const response = await axios.get(
+                `https://api.notion.com/v1/blocks/${pageId}/children?page_size=100`,
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                    },
+                }
+            );
+
+            res.status(200).send({ data: response.data });
+
+        } catch (error: any) {
+            console.error("Error fetching page content:", error);
             res.status(500).send({ error: error.message });
         }
     });
