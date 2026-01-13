@@ -379,7 +379,101 @@ exports.createDiaryEntry = functions.https.onRequest((req, res) => {
 });
 exports.validateNotionSchema = functions.https.onRequest((req, res) => {
     corsHandler(req, res, async () => {
-        res.status(200).send({ status: "valid", created: [] });
+        var _a, _b;
+        // 1. Verify Authentication
+        const tokenId = (_a = req.headers.authorization) === null || _a === void 0 ? void 0 : _a.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+        try {
+            await admin.auth().verifyIdToken(tokenId);
+            const { apiKey, databaseId } = req.body;
+            if (!apiKey || !databaseId) {
+                res.status(400).send({ error: "API Key and Database ID are required." });
+                return;
+            }
+            // 2. Get current database schema
+            const dbResponse = await axios_1.default.get(`https://api.notion.com/v1/databases/${databaseId}`, {
+                headers: {
+                    "Authorization": `Bearer ${apiKey}`,
+                    "Notion-Version": "2022-06-28",
+                },
+            });
+            const currentProps = dbResponse.data.properties;
+            const created = [];
+            const patchProps = {};
+            // Helper to check and add/update select property
+            const ensureSelect = (name, options) => {
+                const existing = currentProps[name];
+                if (!existing) {
+                    patchProps[name] = {
+                        select: {
+                            options: options.map(opt => ({ name: opt }))
+                        }
+                    };
+                    created.push(name);
+                }
+                else if (existing.type === 'select') {
+                    // Check if options are missing
+                    const existingOptions = existing.select.options.map((o) => o.name);
+                    const missingOptions = options.filter(opt => !existingOptions.includes(opt));
+                    if (missingOptions.length > 0) {
+                        patchProps[name] = {
+                            select: {
+                                options: [
+                                    ...existing.select.options.map((o) => ({ name: o.name, color: o.color })),
+                                    ...missingOptions.map(opt => ({ name: opt }))
+                                ]
+                            }
+                        };
+                        created.push(`${name} (updated)`);
+                    }
+                }
+            };
+            // 3. Define and ensure properties
+            ensureSelect("dear23_카테고리", ["일기", "추억", "일정", "편지"]);
+            ensureSelect("dear23_기분", ["매우 나쁨", "나쁨", "좋음", "매우 좋음", "사랑"]);
+            ensureSelect("dear23_날씨", ["맑음", "구름", "비", "눈", "바람"]);
+            if (!currentProps["dear23_날짜"]) {
+                patchProps["dear23_날짜"] = { date: {} };
+                created.push("dear23_날짜");
+            }
+            if (!currentProps["dear23_내용미리보기"]) {
+                patchProps["dear23_내용미리보기"] = { rich_text: {} };
+                created.push("dear23_내용미리보기");
+            }
+            if (!currentProps["dear23_대표이미지"]) {
+                patchProps["dear23_대표이미지"] = { files: {} };
+                created.push("dear23_대표이미지");
+            }
+            if (!currentProps["작성자"]) {
+                patchProps["작성자"] = { select: {} };
+                created.push("작성자");
+            }
+            // 4. Update Database if needed
+            if (Object.keys(patchProps).length > 0) {
+                console.log("[Schema] Patching properties:", Object.keys(patchProps));
+                await axios_1.default.patch(`https://api.notion.com/v1/databases/${databaseId}`, { properties: patchProps }, {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                });
+            }
+            res.status(200).send({ status: "success", created });
+        }
+        catch (error) {
+            console.error("Schema validation failed:", error);
+            if (error.response) {
+                console.error("Notion API Error:", JSON.stringify(error.response.data));
+            }
+            res.status(500).send({
+                error: error.message,
+                details: (_b = error.response) === null || _b === void 0 ? void 0 : _b.data
+            });
+        }
     });
 });
 exports.deleteDiaryEntry = functions.https.onRequest((req, res) => {

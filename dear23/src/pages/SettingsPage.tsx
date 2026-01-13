@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { auth, db } from '../lib/firebase';
-import { searchNotionDatabases } from '../lib/notion';
+import { searchNotionDatabases, validateNotionSchema } from '../lib/notion';
 import { signOut } from 'firebase/auth';
 import { doc, updateDoc, getDoc, writeBatch } from 'firebase/firestore';
 
@@ -48,18 +48,32 @@ export const SettingsPage: React.FC = () => {
     };
 
     const handleSaveNotion = async () => {
-        if (!user) return;
+        if (!user || !notionKey || !notionDbId) return;
         setIsSaving(true);
         try {
+            // 1. Save Config to Firestore
             await updateDoc(doc(db, 'users', user.uid), {
                 notionConfig: {
                     apiKey: notionKey,
                     databaseId: notionDbId
                 }
             });
-            alert("Notion configuration saved!");
+
+            // 2. Validate and Setup Schema Automically
+            try {
+                const result = await validateNotionSchema(notionKey, notionDbId);
+                if (result.created && result.created.length > 0) {
+                    alert(`Notion configuration saved!\nCreated following properties: ${result.created.join(', ')}`);
+                } else {
+                    alert("Notion configuration saved and verified!");
+                }
+            } catch (schemaErr: any) {
+                console.warn("Schema setup warning:", schemaErr);
+                alert("Config saved, but automatic schema setup failed. Please check if the integration has 'Update' permissions in Notion.");
+            }
         } catch (error) {
             console.error("Failed to save Notion config", error);
+            alert("Failed to save config.");
         } finally {
             setIsSaving(false);
         }
