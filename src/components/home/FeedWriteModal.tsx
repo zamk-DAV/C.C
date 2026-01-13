@@ -107,10 +107,11 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
         setIsLoading(true);
         try {
             if (initialData?.id) {
+                const newImages = images.filter(img => img.base64.startsWith('data:'));
                 await updateDiaryEntry(
                     initialData.id,
                     content,
-                    [],
+                    newImages,
                     {
                         mood: selectedMood,
                         weather: selectedWeather,
@@ -206,8 +207,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={w.value}
                                             onClick={() => setSelectedWeather(w.value)}
                                             className={`flex flex-col items-center justify-center min-w-[62px] h-[74px] rounded-xl transition-all duration-300 cursor-pointer border ${selectedWeather === w.value
-                                                    ? 'bg-primary text-background border-primary shadow-md scale-105'
-                                                    : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
+                                                ? 'bg-primary text-background border-primary shadow-md scale-105'
+                                                : 'bg-secondary/40 text-text-secondary border-transparent hover:border-secondary/50'
                                                 }`}
                                         >
                                             <span className="material-symbols-outlined text-2xl">{w.icon}</span>
@@ -227,8 +228,8 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                             key={m.value}
                                             onClick={() => setSelectedMood(m.value)}
                                             className={`w-12 h-12 flex items-center justify-center rounded-2xl transition-all duration-300 ${selectedMood === m.value
-                                                    ? 'bg-primary text-background shadow-xl transform scale-110'
-                                                    : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
+                                                ? 'bg-primary text-background shadow-xl transform scale-110'
+                                                : 'text-text-secondary/40 hover:text-text-secondary hover:bg-background'
                                                 }`}
                                         >
                                             <span

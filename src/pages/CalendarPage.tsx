@@ -61,8 +61,8 @@ export const CalendarPage: React.FC = () => {
         })) as CalendarEvent[];
     }, [diaryData, userData?.name]);
 
-    // Merge events
-    const events = [...firestoreEvents, ...diaryEvents];
+    // Merge events (Removed diaryEvents to solve filtering confusion)
+    const events = [...firestoreEvents];
 
     // Calendar Grid Logic
     const monthStart = startOfMonth(currentDate);
