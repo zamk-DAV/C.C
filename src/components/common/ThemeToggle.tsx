@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion } from 'framer-motion';
 import { useHaptics } from '../../hooks/useHaptics';
 
 interface ThemeToggleProps {
@@ -10,9 +11,12 @@ interface ThemeToggleProps {
 }
 
 /**
- * A reusable iOS-style toggle switch component that follows the app's theme.
- * - On state: System Green (#34C759)
- * - Off state: Uses theme border color for consistency
+ * A premium iOS-style toggle switch component with animations.
+ * Features:
+ * - Smooth spring animations
+ * - Scale effect on interaction
+ * - System Green for "on" state
+ * - Haptic feedback
  */
 export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     checked,
@@ -30,34 +34,46 @@ export const ThemeToggle: React.FC<ThemeToggleProps> = ({
     };
 
     return (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between w-full">
             {(icon || label) && (
                 <div className="flex items-center gap-3">
                     {icon}
                     {label && <span className="text-[16px] text-primary">{label}</span>}
                 </div>
             )}
-            <button
+            <motion.button
                 type="button"
                 role="switch"
                 aria-checked={checked}
                 disabled={disabled}
                 onClick={handleToggle}
+                whileTap={{ scale: 0.95 }}
                 className={`
-                    w-[51px] h-[31px] rounded-full p-[2px] 
-                    transition-colors duration-200 ease-in-out
+                    relative w-[51px] h-[31px] rounded-full p-[2px] 
+                    transition-colors duration-300 ease-out
                     ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                    ${checked ? 'bg-[#34C759]' : 'bg-border/30'}
+                    ${checked ? 'bg-[#34C759]' : 'bg-border/40'}
                 `}
+                style={{
+                    boxShadow: checked
+                        ? 'inset 0 0 0 1px rgba(52, 199, 89, 0.3)'
+                        : 'inset 0 0 0 1px rgba(0, 0, 0, 0.08)'
+                }}
             >
-                <div
-                    className={`
-                        w-[26px] h-[26px] bg-white rounded-full shadow-md 
-                        transform transition-transform duration-200 ease-in-out
-                        ${checked ? 'translate-x-[20px]' : 'translate-x-0'}
-                    `}
+                <motion.div
+                    layout
+                    transition={{
+                        type: "spring",
+                        stiffness: 500,
+                        damping: 30
+                    }}
+                    className="w-[27px] h-[27px] bg-white rounded-full"
+                    style={{
+                        marginLeft: checked ? '20px' : '0px',
+                        boxShadow: '0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.06)'
+                    }}
                 />
-            </button>
+            </motion.button>
         </div>
     );
 };

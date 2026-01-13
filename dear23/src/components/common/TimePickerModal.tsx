@@ -1,5 +1,6 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { WheelPicker } from './WheelPicker';
 import { useHaptics } from '../../hooks/useHaptics';
 
 interface TimePickerModalProps {
@@ -15,47 +16,22 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
     onSelect,
     initialTime = '10:00'
 }) => {
-    const { medium, selection } = useHaptics();
+    const { medium } = useHaptics();
 
     // Parse initial time
     const [initHour, initMinute] = initialTime.split(':').map(Number);
-    const [ampm, setAmpm] = useState<'AM' | 'PM'>(initHour >= 12 ? 'PM' : 'AM');
+    const [ampm, setAmpm] = useState<'오전' | '오후'>(initHour >= 12 ? '오후' : '오전');
     const [hour, setHour] = useState(initHour > 12 ? initHour - 12 : (initHour === 0 ? 12 : initHour));
     const [minute, setMinute] = useState(initMinute);
 
-    const ampmList = ['AM', 'PM'];
+    const ampmList: ('오전' | '오후')[] = ['오전', '오후'];
     const hourList = Array.from({ length: 12 }, (_, i) => i + 1);
-    const minuteList = Array.from({ length: 12 }, (_, i) => i * 5); // 0, 5, 10... 55
-
-    // Refs for scroll containers
-    const ampmRef = useRef<HTMLDivElement>(null);
-    const hourRef = useRef<HTMLDivElement>(null);
-    const minuteRef = useRef<HTMLDivElement>(null);
-
-    const ITEM_HEIGHT = 40; // Height of each item in px
-
-    useEffect(() => {
-        if (isOpen) {
-            // Scroll to initial positions
-            if (ampmRef.current) {
-                const index = ampmList.indexOf(ampm);
-                ampmRef.current.scrollTop = index * ITEM_HEIGHT;
-            }
-            if (hourRef.current) {
-                const index = hourList.indexOf(hour);
-                hourRef.current.scrollTop = index * ITEM_HEIGHT;
-            }
-            if (minuteRef.current) {
-                const index = minuteList.indexOf(minute);
-                minuteRef.current.scrollTop = index * ITEM_HEIGHT; // Approximate for 5-step
-            }
-        }
-    }, [isOpen]);
+    const minuteList = Array.from({ length: 60 }, (_, i) => i);
 
     const handleConfirm = () => {
         let finalHour = hour;
-        if (ampm === 'PM' && hour !== 12) finalHour += 12;
-        if (ampm === 'AM' && hour === 12) finalHour = 0;
+        if (ampm === '오후' && hour !== 12) finalHour += 12;
+        if (ampm === '오전' && hour === 12) finalHour = 0;
 
         const formattedHour = finalHour.toString().padStart(2, '0');
         const formattedMinute = minute.toString().padStart(2, '0');
@@ -65,49 +41,14 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
         onClose();
     };
 
-    // Helper to render a scrollable wheel
-    const Wheel = ({
-        items,
-        value,
-        onChange,
-        containerRef
-    }: {
-        items: (string | number)[],
-        value: string | number,
-        onChange: (val: any) => void,
-        containerRef: React.RefObject<HTMLDivElement>
-    }) => {
-        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-            const target = e.target as HTMLDivElement;
-            const index = Math.round(target.scrollTop / ITEM_HEIGHT);
-            if (items[index] !== undefined && items[index] !== value) {
-                onChange(items[index]);
-                selection();
-            }
-        };
+    const formatHour = (h: number) => `${h}시`;
+    const formatMinute = (m: number) => `${m.toString().padStart(2, '0')}분`;
 
-        return (
-            <div className="relative h-[200px] w-full overflow-hidden">
-                {/* Selection Highlight */}
-                <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[40px] bg-primary/10 rounded-lg pointer-events-none z-10" />
-
-                <div
-                    ref={containerRef}
-                    className="h-full overflow-y-auto no-scrollbar snap-y snap-mandatory py-[80px]"
-                    onScroll={handleScroll}
-                >
-                    {items.map((item) => (
-                        <div
-                            key={item}
-                            className={`h-[40px] flex items-center justify-center text-[17px] font-medium snap-center transition-colors ${item === value ? 'text-primary' : 'text-text-secondary/50'
-                                }`}
-                        >
-                            {typeof item === 'number' ? item.toString().padStart(2, '0') : item}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
+    // Calculate display time for preview
+    const getDisplayTime = () => {
+        const displayHour = hour.toString().padStart(2, '0');
+        const displayMinute = minute.toString().padStart(2, '0');
+        return `${ampm} ${displayHour}:${displayMinute}`;
     };
 
     return (
@@ -129,60 +70,70 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/95 backdrop-blur-xl rounded-t-2xl overflow-hidden pb-8 border-t border-border/20"
-                        // Prevent scroll propagation
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/95 backdrop-blur-xl rounded-t-3xl overflow-hidden border-t border-border/20"
                         onClick={(e) => e.stopPropagation()}
                     >
+                        {/* Handle bar */}
+                        <div className="flex justify-center pt-3 pb-1">
+                            <div className="w-10 h-1 rounded-full bg-border/40" />
+                        </div>
+
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-border/10">
+                        <div className="flex items-center justify-between px-6 py-3">
                             <button
                                 onClick={onClose}
-                                className="text-text-secondary text-[16px]"
+                                className="text-text-secondary font-medium text-[17px] active:opacity-70 transition-opacity"
                             >
                                 취소
                             </button>
                             <span className="text-primary font-semibold text-[17px]">시간 설정</span>
                             <button
                                 onClick={handleConfirm}
-                                className="text-accent font-semibold text-[16px]"
+                                className="text-accent font-semibold text-[17px] active:opacity-70 transition-opacity"
                             >
                                 완료
                             </button>
                         </div>
 
-                        {/* Wheels Container */}
-                        <div className="flex px-8 py-6 gap-2">
+                        {/* Wheel Pickers */}
+                        <div className="flex px-4 py-6 gap-2">
                             {/* AM/PM */}
                             <div className="flex-1">
-                                <Wheel
+                                <WheelPicker
                                     items={ampmList}
                                     value={ampm}
                                     onChange={setAmpm}
-                                    containerRef={ampmRef as any}
                                 />
                             </div>
 
                             {/* Hour */}
                             <div className="flex-1">
-                                <Wheel
+                                <WheelPicker
                                     items={hourList}
                                     value={hour}
                                     onChange={setHour}
-                                    containerRef={hourRef as any}
+                                    formatItem={formatHour}
                                 />
                             </div>
 
-                            {/* Colon Separator (Optional visuals) */}
-                            <div className="flex items-center justify-center text-primary pb-2">:</div>
-
                             {/* Minute */}
                             <div className="flex-1">
-                                <Wheel
+                                <WheelPicker
                                     items={minuteList}
                                     value={minute}
                                     onChange={setMinute}
-                                    containerRef={minuteRef as any}
+                                    formatItem={formatMinute}
                                 />
+                            </div>
+                        </div>
+
+                        {/* Preview */}
+                        <div className="px-6 pb-8">
+                            <div className="bg-primary/5 rounded-2xl p-4 text-center">
+                                <span className="text-[15px] text-text-secondary">선택된 시간</span>
+                                <p className="text-[24px] font-bold text-primary mt-1 tracking-wider">
+                                    {getDisplayTime()}
+                                </p>
                             </div>
                         </div>
                     </motion.div>
