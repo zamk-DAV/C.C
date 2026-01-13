@@ -7,13 +7,18 @@ export default {
     theme: {
         extend: {
             colors: {
-                "primary": "#000000",
-                "background-light": "#ffffff",
-                "background-dark": "#0a0a0a",
+                primary: 'var(--primary-color)',
+                'text-primary': 'var(--text-primary)',
+                'text-secondary': 'var(--text-secondary)',
+                'background': 'var(--bg-color)',
+                'background-secondary': 'var(--bg-secondary)',
+                'border': 'var(--border-color)',
+                'accent': 'var(--accent-color)',
+                'input-bg': 'var(--input-bg)',
             },
             fontFamily: {
-                "display": ["Inter", "Noto Sans KR", "sans-serif"],
-                "sans": ["Inter", "Noto Sans KR", "sans-serif"],
+                "display": ["Plus Jakarta Sans", "Inter", "sans-serif"],
+                "sans": ["Plus Jakarta Sans", "Inter", "sans-serif"],
                 "serif": ["Noto Serif KR", "serif"],
             },
             borderRadius: {

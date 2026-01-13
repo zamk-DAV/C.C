@@ -95,7 +95,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-[2px] z-50"
                     />
 
                     {/* Modal Content - Slide up from bottom */}
@@ -104,20 +104,20 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: '100%' }}
                         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-                        className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-lg mx-auto bg-black border-t border-white/10 rounded-t-3xl h-[90vh] flex flex-col shadow-2xl overflow-hidden"
+                        className="fixed bottom-0 left-0 right-0 z-50 w-full max-w-lg mx-auto bg-background-secondary border-t border-border/20 rounded-t-3xl h-[90vh] flex flex-col shadow-2xl overflow-hidden"
                     >
                         {/* Header */}
-                        <header className="flex items-center justify-between px-6 h-16 border-b border-white/10 bg-black/50 backdrop-blur-md shrink-0">
+                        <header className="flex items-center justify-between px-6 h-16 border-b border-border/10 bg-background-secondary/80 backdrop-blur-md shrink-0">
                             <button
                                 onClick={onClose}
-                                className="text-white/70 text-base font-normal hover:text-white transition-colors"
+                                className="text-text-secondary text-base font-normal hover:text-primary transition-colors"
                             >
                                 취소
                             </button>
-                            <h1 className="text-base font-bold text-white">새로운 일정</h1>
+                            <h1 className="text-base font-bold text-primary">새로운 일정</h1>
                             <button
                                 onClick={handleSave}
-                                className="text-white text-base font-bold hover:opacity-80 transition-opacity"
+                                className="text-accent text-base font-bold hover:opacity-80 transition-opacity"
                             >
                                 저장
                             </button>
@@ -131,19 +131,19 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                 <input
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    className="w-full bg-transparent text-3xl font-bold text-white placeholder-white/30 border-none focus:ring-0 p-0 leading-tight caret-white"
+                                    className="w-full bg-transparent text-3xl font-bold text-primary placeholder-text-secondary/30 border-none focus:ring-0 p-0 leading-tight caret-accent"
                                     placeholder="제목을 입력하세요"
                                     type="text"
                                 />
                             </div>
 
                             {/* Time Section */}
-                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-[#111] border border-white/10 shadow-lg">
+                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-background-secondary border border-border/10 shadow-lg">
                                 {/* All-day Toggle */}
-                                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-border/10">
                                     <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-white text-[24px]">schedule</span>
-                                        <span className="text-[17px] font-medium text-white">하루 종일</span>
+                                        <span className="material-symbols-outlined text-text-secondary text-[24px]">schedule</span>
+                                        <span className="text-[17px] font-medium text-primary">하루 종일</span>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input
@@ -152,19 +152,19 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                             checked={isAllDay}
                                             onChange={(e) => setIsAllDay(e.target.checked)}
                                         />
-                                        <div className="w-[51px] h-[31px] bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-white after:shadow-lg peer-checked:after:bg-black"></div>
+                                        <div className="w-[51px] h-[31px] bg-border/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-[#34C759] after:shadow-lg peer-checked:after:bg-white"></div>
                                     </label>
                                 </div>
 
                                 {/* Starts */}
-                                <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 hover:bg-white/5 transition-colors cursor-pointer">
-                                    <span className="text-[17px] font-normal text-white/90 pl-[36px]">시작</span>
+                                <div className="flex items-center justify-between px-5 py-4 border-b border-border/10 hover:bg-primary/5 transition-colors cursor-pointer">
+                                    <span className="text-[17px] font-normal text-text-secondary pl-[36px]">시작</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-white bg-white/15 px-3 py-1.5 rounded-lg text-sm font-semibold">
+                                        <span className="text-primary bg-primary/10 px-3 py-1.5 rounded-lg text-sm font-semibold">
                                             {format(startDate, 'MMM d, yyyy', { locale: ko })}
                                         </span>
                                         {!isAllDay && (
-                                            <span className="text-white bg-white/15 px-3 py-1.5 rounded-lg text-sm font-bold">
+                                            <span className="text-primary bg-primary/10 px-3 py-1.5 rounded-lg text-sm font-bold">
                                                 {startTime}
                                             </span>
                                         )}
@@ -172,14 +172,14 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                 </div>
 
                                 {/* Ends */}
-                                <div className="flex items-center justify-between px-5 py-4 hover:bg-white/5 transition-colors cursor-pointer">
-                                    <span className="text-[17px] font-normal text-white/90 pl-[36px]">종료</span>
+                                <div className="flex items-center justify-between px-5 py-4 hover:bg-primary/5 transition-colors cursor-pointer">
+                                    <span className="text-[17px] font-normal text-text-secondary pl-[36px]">종료</span>
                                     <div className="flex items-center gap-2">
-                                        <span className="text-white bg-white/15 px-3 py-1.5 rounded-lg text-sm font-semibold">
+                                        <span className="text-primary bg-primary/10 px-3 py-1.5 rounded-lg text-sm font-semibold">
                                             {format(endDate, 'MMM d, yyyy', { locale: ko })}
                                         </span>
                                         {!isAllDay && (
-                                            <span className="text-white bg-white/15 px-3 py-1.5 rounded-lg text-sm font-bold">
+                                            <span className="text-primary bg-primary/10 px-3 py-1.5 rounded-lg text-sm font-bold">
                                                 {endTime}
                                             </span>
                                         )}
@@ -188,11 +188,11 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                             </div>
 
                             {/* Favorite Toggle */}
-                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-[#111] border border-white/10 shadow-lg">
+                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-background-secondary border border-border/10 shadow-lg">
                                 <div className="flex items-center justify-between px-5 py-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-white text-[24px]">star</span>
-                                        <span className="text-[17px] font-normal text-white">즐겨찾기</span>
+                                        <span className="material-symbols-outlined text-[#FFD60A] text-[24px]">star</span>
+                                        <span className="text-[17px] font-normal text-primary">즐겨찾기</span>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input
@@ -201,17 +201,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                             checked={isFavorite}
                                             onChange={(e) => setIsFavorite(e.target.checked)}
                                         />
-                                        <div className="w-[51px] h-[31px] bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-white after:shadow-lg peer-checked:after:bg-black"></div>
+                                        <div className="w-[51px] h-[31px] bg-border/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-[#34C759] after:shadow-lg peer-checked:after:bg-white"></div>
                                     </label>
                                 </div>
                             </div>
 
                             {/* Shared Event Toggle */}
-                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-[#111] border border-white/10 shadow-lg">
+                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-background-secondary border border-border/10 shadow-lg">
                                 <div className="flex items-center justify-between px-5 py-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-white text-[24px]">favorite</span>
-                                        <span className="text-[17px] font-normal text-white">함께하는 일정</span>
+                                        <span className="material-symbols-outlined text-[#FF453A] text-[24px]">favorite</span>
+                                        <span className="text-[17px] font-normal text-primary">함께하는 일정</span>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input
@@ -220,17 +220,17 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                             checked={isShared}
                                             onChange={(e) => setIsShared(e.target.checked)}
                                         />
-                                        <div className="w-[51px] h-[31px] bg-white/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-white after:shadow-lg peer-checked:after:bg-black"></div>
+                                        <div className="w-[51px] h-[31px] bg-border/20 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-[27px] after:w-[27px] after:transition-all peer-checked:bg-[#34C759] after:shadow-lg peer-checked:after:bg-white"></div>
                                     </label>
                                 </div>
                             </div>
 
                             {/* Color Selection */}
-                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-[#111] border border-white/10 shadow-lg">
+                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-background-secondary border border-border/10 shadow-lg">
                                 <div className="flex items-center justify-between px-5 py-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-white text-[24px]">palette</span>
-                                        <span className="text-[17px] font-normal text-white">색상</span>
+                                        <span className="material-symbols-outlined text-accent text-[24px]">palette</span>
+                                        <span className="text-[17px] font-normal text-primary">색상</span>
                                     </div>
                                     <div className="flex gap-3">
                                         {colors.map((color) => (
@@ -239,7 +239,7 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                                                 onClick={() => setSelectedColor(color.id)}
                                                 className={cn(
                                                     "w-6 h-6 rounded-full transition-all",
-                                                    selectedColor === color.id && "ring-2 ring-offset-2 ring-offset-[#111] ring-white"
+                                                    selectedColor === color.id && "ring-2 ring-offset-2 ring-offset-background-secondary ring-primary"
                                                 )}
                                                 style={{ backgroundColor: color.value }}
                                             />
@@ -249,16 +249,16 @@ export const EventDetailModal: React.FC<EventDetailModalProps> = ({
                             </div>
 
                             {/* Notes */}
-                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-[#111] border border-white/10 shadow-lg">
+                            <div className="mx-5 mb-6 overflow-hidden rounded-2xl bg-background-secondary border border-border/10 shadow-lg">
                                 <div className="px-5 py-4 flex flex-col gap-4">
                                     <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-white text-[24px]">description</span>
-                                        <span className="text-[17px] font-normal text-white">메모</span>
+                                        <span className="material-symbols-outlined text-text-secondary text-[24px]">description</span>
+                                        <span className="text-[17px] font-normal text-primary">메모</span>
                                     </div>
                                     <textarea
                                         value={note}
                                         onChange={(e) => setNote(e.target.value)}
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl focus:ring-1 focus:ring-white focus:border-white p-3 text-[17px] text-white placeholder-white/30 resize-none min-h-[140px] leading-relaxed transition-all"
+                                        className="w-full bg-background border border-border/10 rounded-xl focus:ring-1 focus:ring-accent focus:border-accent p-3 text-[17px] text-primary placeholder-text-secondary/30 resize-none min-h-[140px] leading-relaxed transition-all"
                                         placeholder="설명이나 메모를 입력하세요..."
                                     />
                                 </div>

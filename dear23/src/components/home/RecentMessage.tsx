@@ -23,7 +23,7 @@ export const RecentMessage: React.FC<RecentMessageProps> = ({
 
             // ...
             <Link
-                className="group block border border-neutral-200 p-6 bg-white hover:border-black transition-all"
+                className="group block border border-border/20 p-6 bg-background-secondary hover:border-accent transition-all rounded-2xl shadow-sm"
                 to="/chat"
             >
                 <div className="flex flex-col gap-4">

@@ -135,7 +135,7 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                         <div className="flex flex-col gap-1">
                             {/* Reply Quote */}
                             {msg.replyTo && (
-                                <div className="text-[11px] text-text-secondary/70 bg-black/5 px-2 py-1 rounded-md mb-0.5 border-l-2 border-primary/50">
+                                <div className="text-[11px] text-text-secondary/70 bg-primary/5 px-2 py-1 rounded-md mb-0.5 border-l-2 border-primary/50">
                                     <span className="font-bold mr-1">{msg.replyTo.senderName}:</span>
                                     <span className="line-clamp-1">{msg.replyTo.text}</span>
                                 </div>

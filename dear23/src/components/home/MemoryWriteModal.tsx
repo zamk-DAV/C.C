@@ -79,7 +79,7 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
                     />
 
                     {/* Modal Container - Simpler, lighter design */}
@@ -161,7 +161,7 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
                                                     <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
-                                                        className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500"
+                                                        className="absolute top-1.5 right-1.5 bg-background/60 text-primary rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-accent hover:text-background"
                                                     >
                                                         <span className="material-symbols-outlined text-[12px]">close</span>
                                                     </button>
