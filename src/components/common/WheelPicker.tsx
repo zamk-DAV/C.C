@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback, useState } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { useHaptics } from '../../hooks/useHaptics';
 
 interface WheelPickerProps<T> {
@@ -29,7 +29,7 @@ export function WheelPicker<T>({
     const containerRef = useRef<HTMLDivElement>(null);
     const { selection } = useHaptics();
     const currentIndex = items.indexOf(value);
-    const [isThrottled, setIsThrottled] = useState(false);
+
     const lastScrollTime = useRef(0);
 
     // Scroll to current value on mount and value change
@@ -76,7 +76,7 @@ export function WheelPicker<T>({
     }, [items, itemHeight, value, onChange, selection]);
 
     // Click to select item
-    const handleItemClick = (item: T, index: number) => {
+    const handleItemClick = (item: T) => {
         if (item !== value) {
             onChange(item);
             selection();
