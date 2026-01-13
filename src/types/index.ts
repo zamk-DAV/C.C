@@ -68,6 +68,7 @@ export interface Postcard {
     isRead: boolean;
     type: 'received' | 'sent';
     createdAt?: any; // Timestamp
+    openDate?: string | null; // For scheduled letters (locked until this date)
 }
 
 export interface CalendarEvent {
