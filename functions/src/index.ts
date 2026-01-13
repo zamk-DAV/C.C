@@ -33,12 +33,16 @@ interface MemoryItem {
     id: string;
     title: string;
     date: string;
+    endDate?: string | null; // Added
     coverImage: string | null;
     previewText: string;
     type?: string;
     sender?: string;
     isRead?: boolean;
     author?: string;
+    color?: string;       // Added
+    isImportant?: boolean; // Added
+    isShared?: boolean;    // Added
 }
 
 export const validateNotionSchema = functions.https.onRequest((req, res) => {
@@ -96,6 +100,9 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
                 "작성자", // Select property
                 "dear23_기분", // Select property
                 "dear23_날씨", // Select property
+                "dear23_색상", // Select property (Added)
+                "dear23_중요", // Checkbox property (Added)
+                "dear23_공유", // Checkbox property (Added)
             ];
 
             const missingProperties: string[] = [];
@@ -130,15 +137,69 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
                     if (propName === "dear23_날씨" && properties[propName].type !== "select") {
                         incorrectTypes.push(`${propName} (expected: select, got: ${properties[propName].type})`);
                     }
+                    if (propName === "dear23_색상" && properties[propName].type !== "select") {
+                        incorrectTypes.push(`${propName} (expected: select, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_중요" && properties[propName].type !== "checkbox") {
+                        incorrectTypes.push(`${propName} (expected: checkbox, got: ${properties[propName].type})`);
+                    }
+                    if (propName === "dear23_공유" && properties[propName].type !== "checkbox") {
+                        incorrectTypes.push(`${propName} (expected: checkbox, got: ${properties[propName].type})`);
+                    }
                 }
             }
 
-            if (missingProperties.length > 0 || incorrectTypes.length > 0) {
+            // AUTO-CREATION LOGIC: Attempt to create missing properties
+            const createdProperties: string[] = [];
+            if (missingProperties.length > 0) {
+                console.log("[Schema] Attempting to create missing properties:", missingProperties);
+                const updatePayload: any = { properties: {} };
+
+                if (missingProperties.includes("dear23_색상")) {
+                    updatePayload.properties["dear23_색상"] = { select: {} };
+                    createdProperties.push("dear23_색상");
+                }
+                if (missingProperties.includes("dear23_중요")) {
+                    updatePayload.properties["dear23_중요"] = { checkbox: {} };
+                    createdProperties.push("dear23_중요");
+                }
+                if (missingProperties.includes("dear23_공유")) {
+                    updatePayload.properties["dear23_공유"] = { checkbox: {} };
+                    createdProperties.push("dear23_공유");
+                }
+
+                // Only proceed if we have properties to create (skip core ones if they are missing, user might need manual fix for those or we add logic later)
+                if (Object.keys(updatePayload.properties).length > 0) {
+                    try {
+                        await axios.patch(
+                            `https://api.notion.com/v1/databases/${databaseId}`,
+                            updatePayload,
+                            {
+                                headers: {
+                                    "Authorization": `Bearer ${apiKey}`,
+                                    "Notion-Version": "2022-06-28",
+                                    "Content-Type": "application/json",
+                                },
+                            }
+                        );
+                        console.log("[Schema] Successfully created properties.");
+                        // Remove created ones from missing list effectively
+                        // (We won't re-validate immediately, but return created list)
+                    } catch (createError: any) {
+                        console.error("[Schema] Failed to create properties:", createError.response?.data || createError.message);
+                    }
+                }
+            }
+
+            // Re-evaluate validity after attempt (simple check: if only newly created ones were missing, we are good)
+            const remainingMissing = missingProperties.filter(p => !createdProperties.includes(p));
+
+            if (remainingMissing.length > 0 || incorrectTypes.length > 0) {
                 res.status(400).send({
                     isValid: false,
                     message: "Notion database schema is invalid.",
                     details: {
-                        missingProperties,
+                        missingProperties: remainingMissing,
                         incorrectTypes,
                     },
                 });
@@ -146,6 +207,7 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
                 res.status(200).send({
                     isValid: true,
                     message: "Notion database schema is valid.",
+                    created: createdProperties
                 });
             }
 
@@ -243,6 +305,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 // Extract Date
                 const dateProp = props["dear23_날짜"]?.date || props["Date"]?.date || props["날짜"]?.date || props["date"]?.date;
                 const date = dateProp ? dateProp.start : "";
+                const endDate = dateProp ? (dateProp.end || null) : null;
 
                 // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
                 const fileProp = props["dear23_대표이미지"]?.files || [];
@@ -270,18 +333,10 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const previewText = previewList.length > 0 ? previewList[0].plain_text : "";
 
                 // Extract Author (Select property: '작성자' or Created By)
-                // Priority: '작성자' (Select) > 'Created by'
                 const authorSelect = props["작성자"]?.select;
-                let author = "상대방"; // Default to Korean 'Partner'
+                let author = "상대방";
                 if (authorSelect) {
                     author = authorSelect.name;
-                } else {
-                    const createdBy = props["Created by"]?.created_by;
-                    if (createdBy) {
-                        // We might get an ID or name depending on expansion, but usually it's an object.
-                        // For now, let's leave it as is or default to something safe if '작성자' is missing.
-                        // Ideally '작성자' should be used.
-                    }
                 }
 
                 // Extract Mood (Select property: 'dear23_기분')
@@ -290,15 +345,24 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 // Extract Weather (Select property: 'dear23_날씨')
                 const weather = props["dear23_날씨"]?.select?.name;
 
+                // Extract New Properties
+                const color = props["dear23_색상"]?.select?.name;
+                const isImportant = props["dear23_중요"]?.checkbox;
+                const isShared = props["dear23_공유"]?.checkbox;
+
                 return {
                     id: page.id,
                     title,
                     date,
+                    endDate,
                     coverImage,
                     previewText,
                     author,
                     mood,
-                    weather
+                    weather,
+                    color,
+                    isImportant,
+                    isShared
                 };
             });
 
@@ -423,7 +487,7 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             const { apiKey, databaseId } = notionConfig;
 
             // 3. Prepare Data & Upload Images
-            const { title, content, type, date, mood, weather, images } = req.body;
+            const { title, content, type, date, endDate, mood, weather, images, color, isImportant, isShared } = req.body;
 
             let categoryValue = "일기"; // Default
             switch (type) {
@@ -459,7 +523,10 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
                     select: { name: categoryValue }
                 },
                 "dear23_날짜": {
-                    date: { start: entryDate }
+                    date: {
+                        start: entryDate,
+                        end: endDate || undefined
+                    }
                 },
                 "dear23_내용미리보기": {
                     rich_text: [{ text: { content: content ? content.substring(0, 1000) : "" } }]
@@ -472,6 +539,11 @@ export const createDiaryEntry = functions.https.onRequest((req, res) => {
             // Optional Properties
             if (mood) properties["dear23_기분"] = { select: { name: mood } };
             if (weather) properties["dear23_날씨"] = { select: { name: weather } };
+
+            // New Properties
+            if (color) properties["dear23_색상"] = { select: { name: color } };
+            if (isImportant !== undefined) properties["dear23_중요"] = { checkbox: isImportant };
+            if (isShared !== undefined) properties["dear23_공유"] = { checkbox: isShared };
 
             // Set Cover Image (First uploaded image)
             if (imageUrls.length > 0) {
@@ -721,7 +793,7 @@ export const updateDiaryEntry = functions.https.onRequest((req, res) => {
             const { apiKey } = notionConfig;
 
             // 3. Prepare Update Data
-            const { pageId, title, content, mood, weather, date, images } = req.body;
+            const { pageId, title, content, mood, weather, date, endDate, images, color, isImportant, isShared } = req.body;
 
             if (!pageId) {
                 res.status(400).send({ error: "Page ID is required" });
@@ -740,7 +812,8 @@ export const updateDiaryEntry = functions.https.onRequest((req, res) => {
                 } : undefined,
                 "dear23_날짜": date ? {
                     date: {
-                        start: date
+                        start: date,
+                        end: endDate || undefined
                     }
                 } : undefined,
                 "dear23_내용미리보기": content ? {
@@ -762,6 +835,15 @@ export const updateDiaryEntry = functions.https.onRequest((req, res) => {
                         name: weather
                     }
                 } : undefined,
+                "dear23_색상": color ? {
+                    select: { name: color }
+                } : undefined,
+                "dear23_중요": (isImportant !== undefined) ? {
+                    checkbox: isImportant
+                } : undefined,
+                "dear23_공유": (isShared !== undefined) ? {
+                    checkbox: isShared
+                } : undefined
             };
 
             // Remove undefined keys

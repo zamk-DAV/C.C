@@ -12,6 +12,7 @@ import type { ChatMessage } from '../types';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ContextMenu } from '../components/chat/ContextMenu';
 import useFcmToken from '../hooks/useFcmToken';
+import { ImageViewer } from '../components/common/ImageViewer';
 import { ko } from 'date-fns/locale';
 
 export const ChatPage: React.FC = () => {
@@ -26,6 +27,7 @@ export const ChatPage: React.FC = () => {
     // Context Menu State
     const [menuLocation, setMenuLocation] = useState<{ x: number, y: number } | null>(null);
     const [selectedMsg, setSelectedMsg] = useState<ChatMessage | null>(null);
+    const [viewingImage, setViewingImage] = useState<string | null>(null);
 
     // Reply State
     const [replyTarget, setReplyTarget] = useState<ChatMessage | null>(null);
@@ -378,6 +380,10 @@ export const ChatPage: React.FC = () => {
         await updateDoc(msgRef, { reactions: newReactions });
     };
 
+    const handleImageClick = (imageUrl: string) => {
+        setViewingImage(imageUrl);
+    };
+
 
 
     // Group messages by date
@@ -486,6 +492,7 @@ export const ChatPage: React.FC = () => {
                                                 avatarUrl={isMine ? undefined : partnerData?.photoURL}
                                                 showProfile={!isMine && isFirstInGroup}
                                                 showTime={isLastInGroup}
+                                                onImageClick={handleImageClick}
                                             />
                                         );
 
@@ -597,6 +604,11 @@ export const ChatPage: React.FC = () => {
                         </button>
                     </form>
                 </footer>
+                <ImageViewer
+                    src={viewingImage}
+                    isOpen={!!viewingImage}
+                    onClose={() => setViewingImage(null)}
+                />
             </div >
         </div >
     );

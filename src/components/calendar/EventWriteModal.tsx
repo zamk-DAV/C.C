@@ -4,13 +4,14 @@ import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
+import { useHaptics } from '../../hooks/useHaptics';
 
 interface EventWriteModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
     selectedDate?: Date;
-    editEvent?: CalendarEvent; // Added editEvent prop
+    editEvent?: CalendarEvent;
 }
 
 export const EventWriteModal: React.FC<EventWriteModalProps> = ({
@@ -20,184 +21,284 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     selectedDate = new Date(),
     editEvent
 }) => {
+    const { medium, simpleClick } = useHaptics();
+
     const [title, setTitle] = useState('');
-    const [time, setTime] = useState('');
+    const [isAllDay, setIsAllDay] = useState(false);
+    // Simplified Start/End logic. Backend mainly supports 'date' and 'time' string.
+    // We will store 'date' as Start Date. Time as "HH:mm".
+    const [startDate, setStartDate] = useState(new Date());
+    const [startTime, setStartTime] = useState('10:00');
+    const [endDate, setEndDate] = useState(new Date());
+    const [endTime, setEndTime] = useState('11:00');
+
+    const [isImportant, setIsImportant] = useState(false);
+    const [isShared, setIsShared] = useState(true); // Default valid for couple app
+    const [selectedColor, setSelectedColor] = useState('#135bec');
     const [note, setNote] = useState('');
+
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [error, setError] = useState<string | null>(null);
 
-    // Populate form when editEvent changes or modal opens
     useEffect(() => {
-        if (isOpen && editEvent) {
-            setTitle(editEvent.title);
-            setTime(editEvent.time || '');
-            setNote(editEvent.note || '');
-        } else if (isOpen) {
-            // Reset for new event
-            setTitle('');
-            setTime('');
-            setNote('');
-        }
-    }, [isOpen, editEvent]);
+        if (isOpen) {
+            if (editEvent) {
+                setTitle(editEvent.title);
+                setNote(editEvent.note || '');
+                // Try to parse time
+                if (editEvent.time) {
+                    setStartTime(editEvent.time);
+                    setIsAllDay(false);
+                } else {
+                    setIsAllDay(true);
+                }
+                const evtDate = editEvent.date instanceof Date ? editEvent.date : new Date(editEvent.date);
+                setStartDate(evtDate);
+                // Handle endDate - if not present, default to startDate (which matches original logic), 
+                // but if we have it, use it.
+                if (editEvent.endDate) {
+                    setEndDate(editEvent.endDate instanceof Date ? editEvent.endDate : new Date(editEvent.endDate));
+                } else {
+                    setEndDate(evtDate);
+                }
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!title.trim()) {
-            setError('제목을 입력해주세요.');
-            return;
+                if (editEvent.color) setSelectedColor(editEvent.color);
+                setIsImportant(editEvent.isImportant ?? false);
+                setIsShared(editEvent.isShared ?? true);
+            } else {
+                setTitle('');
+                setNote('');
+                setIsAllDay(false);
+                setStartDate(selectedDate);
+                setEndDate(selectedDate);
+                const now = new Date();
+                setStartTime(format(now, 'HH:mm'));
+                setEndTime(format(new Date(now.getTime() + 60 * 60 * 1000), 'HH:mm'));
+                setIsImportant(false);
+                setSelectedColor('#135bec');
+            }
         }
+    }, [isOpen, editEvent, selectedDate]);
+
+    const handleSave = async () => {
+        if (!title.trim()) return;
 
         setIsSubmitting(true);
-        setError(null);
+        medium();
 
         try {
-            const dateString = format(selectedDate, 'yyyy-MM-dd');
-            // Combine mood/time note logic from create
-            const moodString = time ? `${time} - ${note || ''}`.trim() : note || undefined;
+            const dateString = format(startDate, 'yyyy-MM-dd');
+            // Construct mood string effectively for now
+            // If we have time, use it.
+            const timeString = isAllDay ? undefined : startTime;
+            const moodContent = timeString ? `${timeString} ${note}`.trim() : note;
+
+            const endDateString = format(endDate, 'yyyy-MM-dd');
 
             if (editEvent) {
-                // Update existing event
                 await updateDiaryEntry(
                     editEvent.id,
-                    title.trim(), // content
+                    title.trim(),
                     [],
                     {
                         date: dateString,
-                        mood: moodString,
-                        title: title.trim() // explicit title update if supported
+                        mood: moodContent,
+                        title: title.trim(),
+                        endDate: endDateString,
+                        color: selectedColor,
+                        isImportant: isImportant,
+                        isShared: isShared
                     }
                 );
             } else {
-                // Create new event
                 await createDiaryEntry(
                     title.trim(),
-                    [], // No images for events
+                    [],
                     'Event',
                     {
                         date: dateString,
-                        mood: moodString
+                        mood: moodContent,
+                        endDate: endDateString,
+                        color: selectedColor,
+                        isImportant: isImportant,
+                        isShared: isShared
                     }
                 );
             }
-
             onSuccess();
-            handleClose();
-        } catch (err) {
-            console.error('Failed to save event:', err);
-            setError('일정 저장에 실패했습니다.');
+        } catch (e) {
+            console.error(e);
         } finally {
             setIsSubmitting(false);
         }
     };
 
-    const handleClose = () => {
-        setTitle('');
-        setTime('');
-        setNote('');
-        setError(null);
-        onClose();
-    };
+    const colors = ['#135bec', '#EF4444', '#10B981', '#A855F7'];
 
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
                     {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={handleClose}
-                        className="fixed inset-0 bg-black/50 z-50"
-                    />
+                    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm" onClick={onClose} />
 
-                    {/* Modal - Bottom Sheet */}
+                    {/* Modal Bottom Sheet */}
                     <motion.div
-                        initial={{ y: '100%' }}
+                        initial={{ y: "100%" }}
                         animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                        className="fixed inset-x-0 bottom-0 z-50 bg-background rounded-t-3xl max-h-[80vh] overflow-hidden"
+                        exit={{ y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                        className="fixed inset-x-0 bottom-0 z-50 h-[85vh] rounded-t-3xl bg-[#1C1C1E] text-white flex flex-col overflow-hidden shadow-2xl"
                     >
-                        {/* Handle */}
-                        <div className="flex justify-center py-3">
-                            <div className="w-10 h-1 bg-border rounded-full" />
-                        </div>
-
                         {/* Header */}
-                        <div className="flex items-center justify-between px-6 pb-4 border-b border-border">
-                            <button
-                                onClick={handleClose}
-                                className="text-text-secondary hover:text-primary transition-colors"
-                            >
+                        <div className="flex items-center justify-between px-5 h-16 border-b border-gray-700/50 bg-[#1C1C1E]">
+                            <button onClick={onClose} className="text-[#98989E] font-medium text-[17px] active:opacity-70">
                                 취소
                             </button>
-                            <h2 className="text-lg font-bold">새 일정</h2>
-                            <button
-                                onClick={handleSubmit}
-                                disabled={isSubmitting || !title.trim()}
-                                className="text-primary font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                                {isSubmitting ? '저장 중...' : '저장'}
+                            <h2 className="text-[17px] font-semibold text-white">
+                                {editEvent ? '일정 수정' : '새로운 일정'}
+                            </h2>
+                            <button onClick={handleSave} className="text-[#0A84FF] font-semibold text-[17px] active:opacity-70">
+                                저장
                             </button>
                         </div>
 
-                        {/* Form */}
-                        <form onSubmit={handleSubmit} className="p-6 space-y-6">
-                            {/* Selected Date Display */}
-                            <div className="text-center py-3 bg-secondary rounded-xl">
-                                <p className="text-sm text-text-secondary">
-                                    {format(selectedDate, 'yyyy년 M월 d일 (EEEE)', { locale: ko })}
-                                </p>
-                            </div>
-
-                            {/* Title */}
-                            <div>
-                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
-                                    제목
-                                </label>
+                        {/* Content Scrollable */}
+                        <div className="flex-1 overflow-y-auto no-scrollbar pb-10 bg-black">
+                            {/* Title Input */}
+                            <div className="px-5 mt-8 mb-6">
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="일정 제목을 입력하세요"
-                                    className="w-full px-4 py-3 bg-secondary rounded-xl border border-border focus:border-primary focus:outline-none transition-colors"
+                                    placeholder="제목"
+                                    className="w-full bg-transparent text-3xl font-bold text-white placeholder-gray-600 border-none focus:ring-0 p-0 leading-tight caret-[#0A84FF]"
                                     autoFocus
                                 />
                             </div>
 
-                            {/* Time */}
-                            <div>
-                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
-                                    시간 (선택)
-                                </label>
-                                <input
-                                    type="time"
-                                    value={time}
-                                    onChange={(e) => setTime(e.target.value)}
-                                    className="w-full px-4 py-3 bg-secondary rounded-xl border border-border focus:border-primary focus:outline-none transition-colors"
-                                />
+                            {/* Section 1: Time */}
+                            <div className="mx-4 overflow-hidden rounded-xl bg-[#1C1C1E]">
+                                {/* All-day */}
+                                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700/50">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[20px] text-gray-400">schedule</span>
+                                        <span className="text-[16px]">하루 종일</span>
+                                    </div>
+                                    <button
+                                        onClick={() => { setIsAllDay(!isAllDay); simpleClick(); }}
+                                        className={`w-[50px] h-[30px] rounded-full p-1 transition-colors duration-200 ease-in-out ${isAllDay ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}
+                                    >
+                                        <div className={`w-[26px] h-[26px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isAllDay ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
+
+                                {/* Start Date/Time */}
+                                <div className="flex items-center justify-between px-4 py-3 hover:bg-white/5 active:bg-white/10 transition-colors border-b border-gray-700/50">
+                                    <span className="text-[16px] pl-[34px]">시작</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] tex-[#0A84FF]">
+                                            {format(startDate, 'M월 d일 (EEE)', { locale: ko })}
+                                        </div>
+                                        {!isAllDay && (
+                                            <input
+                                                type="time"
+                                                value={startTime}
+                                                onChange={(e) => setStartTime(e.target.value)}
+                                                className="bg-[#2C2C2E] px-2 py-1.5 rounded-md text-[15px] font-medium border-none focus:ring-0 text-white"
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* End Date/Time */}
+                                <div className="flex items-center justify-between px-4 py-3 hover:bg-white/5 active:bg-white/10 transition-colors">
+                                    <span className="text-[16px] pl-[34px]">종료</span>
+                                    <div className="flex items-center gap-2">
+                                        <div className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] text-[#8E8E93]">
+                                            {format(endDate, 'M월 d일 (EEE)', { locale: ko })}
+                                        </div>
+                                        {!isAllDay && (
+                                            <div className="bg-[#2C2C2E] px-3 py-1.5 rounded-md text-[15px] font-medium text-[#8E8E93]">
+                                                {endTime}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
 
-                            {/* Note */}
-                            <div>
-                                <label className="block text-xs font-bold text-text-secondary uppercase tracking-wider mb-2">
-                                    메모 (선택)
-                                </label>
+                            {/* Section 2: Important */}
+                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-[#1C1C1E]">
+                                <div className="flex items-center justify-between px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[20px] text-[#FFD60A]">star</span>
+                                        <span className="text-[16px]">즐겨찾기</span>
+                                    </div>
+                                    <button
+                                        onClick={() => { setIsImportant(!isImportant); simpleClick(); }}
+                                        className={`w-[50px] h-[30px] rounded-full p-1 transition-colors duration-200 ease-in-out ${isImportant ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}
+                                    >
+                                        <div className={`w-[26px] h-[26px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isImportant ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Section 3: Shared */}
+                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-[#1C1C1E]">
+                                <div className="flex items-center justify-between px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[20px] text-[#FF453A]">favorite</span>
+                                        <span className="text-[16px]">함께 공유</span>
+                                    </div>
+                                    <button
+                                        onClick={() => { setIsShared(!isShared); simpleClick(); }}
+                                        className={`w-[50px] h-[30px] rounded-full p-1 transition-colors duration-200 ease-in-out ${isShared ? 'bg-[#34C759]' : 'bg-[#39393D]'}`}
+                                    >
+                                        <div className={`w-[26px] h-[26px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isShared ? 'translate-x-[20px]' : 'translate-x-0'}`} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Section 4: Color */}
+                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-[#1C1C1E]">
+                                <div className="flex items-center justify-between px-4 py-3">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[20px] text-[#0A84FF]">palette</span>
+                                        <span className="text-[16px]">색상</span>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        {colors.map(color => (
+                                            <button
+                                                key={color}
+                                                onClick={() => { setSelectedColor(color); simpleClick(); }}
+                                                className={`size-6 rounded-full ring-2 ring-offset-2 ring-offset-[#1C1C1E] transition-all`}
+                                                style={{
+                                                    backgroundColor: color,
+                                                    boxShadow: selectedColor === color ? `0 0 0 2px #fff` : 'none',
+                                                    opacity: selectedColor === color ? 1 : 0.6
+                                                }}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Section 5: Notes */}
+                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-[#1C1C1E]">
+                                <div className="px-4 py-3 border-b border-gray-700/50">
+                                    <div className="flex items-center gap-3">
+                                        <span className="material-symbols-outlined text-[20px] text-gray-400">description</span>
+                                        <span className="text-[16px]">메모</span>
+                                    </div>
+                                </div>
                                 <textarea
                                     value={note}
                                     onChange={(e) => setNote(e.target.value)}
-                                    placeholder="추가 메모를 입력하세요"
-                                    rows={3}
-                                    className="w-full px-4 py-3 bg-secondary rounded-xl border border-border focus:border-primary focus:outline-none transition-colors resize-none"
+                                    className="w-full h-32 bg-transparent text-[16px] text-white p-4 border-none focus:ring-0 resize-none"
+                                    placeholder="메모를 입력하세요"
                                 />
                             </div>
-
-                            {/* Error Message */}
-                            {error && (
-                                <p className="text-red-500 text-sm text-center">{error}</p>
-                            )}
-                        </form>
+                            <div className="h-10" /> {/* Bottom spacer */}
+                        </div>
                     </motion.div>
                 </>
             )}

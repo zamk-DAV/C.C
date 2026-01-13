@@ -16,9 +16,10 @@ interface DraggableEventProps {
     event: CalendarEvent;
     onDrop: (event: CalendarEvent, newDate: string) => void;
     onClick: (event: CalendarEvent) => void;
+    onDrag?: (y: number) => void;
 }
 
-const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick }) => {
+const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick, onDrag }) => {
     const { heavy, medium } = useHaptics();
     const [isDragging, setIsDragging] = React.useState(false);
 
@@ -33,6 +34,9 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick 
             onDragStart={() => {
                 setIsDragging(true);
                 medium();
+            }}
+            onDrag={(_, info) => {
+                onDrag?.(info.point.y);
             }}
             onDragEnd={(_, info) => {
                 setIsDragging(false);
@@ -60,9 +64,15 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick 
                     }
                 }
             }}
-            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-2 -mx-2 bg-background relative"
+            className="py-6 flex items-baseline gap-6 group cursor-pointer hover:bg-white/5 transition-colors rounded-xl px-4 -mx-2 bg-background relative overflow-hidden"
         >
-            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]">
+            {/* Color Indicator */}
+            <div
+                className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full transition-all group-hover:w-1.5"
+                style={{ backgroundColor: event.color || '#135bec' }}
+            />
+
+            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]" style={{ color: event.color || 'inherit' }}>
                 {event.time}
             </span>
             <div className="flex flex-col gap-1 pointer-events-none">
@@ -74,6 +84,12 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick 
             {isDragging && (
                 <div className="absolute inset-0 border-2 border-primary rounded-xl opacity-50 animate-pulse" />
             )}
+
+            {/* Icons for Important/Shared */}
+            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
+                {event.isImportant && <span className="material-symbols-outlined text-[16px] text-[#FFD60A]">star</span>}
+                {event.isShared && <span className="material-symbols-outlined text-[16px] text-[#FF453A]">favorite</span>}
+            </div>
         </motion.div>
     );
 };
@@ -90,6 +106,27 @@ export const CalendarPage: React.FC = () => {
 
     const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Auto-scroll logic
+    const lastScrollTime = React.useRef(0);
+    const handleDrag = (y: number) => {
+        const now = Date.now();
+        if (now - lastScrollTime.current < 600) return; // Throttle scroll
+
+        // Define thresholds relative to viewport
+        const topThreshold = 150;
+        const bottomThreshold = window.innerHeight - 150;
+
+        if (y < topThreshold) {
+            handlePrevMonth();
+            lastScrollTime.current = now;
+            heavy();
+        } else if (y > bottomThreshold) {
+            handleNextMonth();
+            lastScrollTime.current = now;
+            heavy();
+        }
+    };
 
     // 1. Firestore Events
     useEffect(() => {
@@ -133,8 +170,8 @@ export const CalendarPage: React.FC = () => {
     const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
     const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
 
-    // Gestures for Month Navigation
-    const bind = useGesture(
+    // Gestures for Month Navigation & Long Press
+    const bindGesture = useGesture(
         {
             onDrag: ({ swipe: [swipeX] }) => {
                 if (swipeX === -1) {
@@ -153,6 +190,15 @@ export const CalendarPage: React.FC = () => {
             },
         }
     );
+
+    // Bind long press separately to attach to individual dates
+    const bindLongPress = useGesture({
+        onLongPress: (state: any) => {
+            const date = state.args[0];
+            medium();
+            handleOpenNewEvent(date);
+        }
+    });
 
     const selectedDateEvents = events.filter(event =>
         isSameDay(event.date, selectedDate)
@@ -176,7 +222,11 @@ export const CalendarPage: React.FC = () => {
                 {
                     date: newDate,
                     title: event.title,
-                    mood: event.time ? `${event.time} - ${event.note || ''}`.trim() : event.note || undefined
+                    mood: event.time ? `${event.time} - ${event.note || ''}`.trim() : event.note || undefined,
+                    endDate: event.endDate ? format(new Date(event.endDate), 'yyyy-MM-dd') : undefined,
+                    color: event.color,
+                    isImportant: event.isImportant,
+                    isShared: event.isShared
                 }
             );
             // Optimistic update not implemented here as we rely on Firestore snapshot
@@ -190,8 +240,9 @@ export const CalendarPage: React.FC = () => {
         setIsEventModalOpen(true);
     };
 
-    const handleOpenNewEvent = () => {
+    const handleOpenNewEvent = (date?: Date) => {
         setEditingEvent(undefined);
+        if (date) setSelectedDate(date);
         setIsEventModalOpen(true);
     };
 
@@ -212,7 +263,7 @@ export const CalendarPage: React.FC = () => {
 
             {/* Calendar Grid */}
             <div
-                {...bind() as any}
+                {...bindGesture() as any}
                 className="px-8 mb-10 touch-pan-y"
             >
                 {/* Days of Week */}
@@ -240,8 +291,9 @@ export const CalendarPage: React.FC = () => {
                             <button
                                 key={day.toString()}
                                 onClick={() => setSelectedDate(day)}
+                                {...bindLongPress(day) as any}
                                 data-date={format(day, 'yyyy-MM-dd')} // Add identifier for drop target
-                                className="relative h-10 w-full flex flex-col items-center justify-center hover:bg-secondary rounded-full transition-colors"
+                                className="relative h-10 w-full flex flex-col items-center justify-center hover:bg-secondary rounded-full transition-colors active:scale-90"
                             >
                                 {isSelected && (
                                     <motion.div
@@ -285,6 +337,7 @@ export const CalendarPage: React.FC = () => {
                                 event={event}
                                 onDrop={handleEventDrop}
                                 onClick={handleEventClick}
+                                onDrag={handleDrag}
                             />
                         ))
                     ) : (
@@ -299,11 +352,12 @@ export const CalendarPage: React.FC = () => {
             <motion.button
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                onClick={handleOpenNewEvent}
+                onClick={() => handleOpenNewEvent()}
                 className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center z-10"
             >
                 <span className="material-symbols-outlined text-2xl">add</span>
             </motion.button>
+            // ...
 
             {/* Event Write Modal */}
             <EventWriteModal

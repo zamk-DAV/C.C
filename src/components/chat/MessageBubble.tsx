@@ -13,6 +13,7 @@ interface MessageBubbleProps {
     onContextMenu?: (e: React.MouseEvent | React.TouchEvent, message: ChatMessage) => void;
     onReply?: (message: ChatMessage) => void;
     onReaction?: (message: ChatMessage, emoji: string) => void;
+    onImageClick?: (imageUrl: string) => void;
 }
 
 const ReactionIcons: Record<string, any> = {
@@ -48,7 +49,8 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
     showProfile = true,
     showTime = true,
     onContextMenu,
-    onReaction
+    onReaction,
+    onImageClick
 }) => {
     const timestamp = msg.createdAt?.toDate ?
         new Intl.DateTimeFormat('ko-KR', { hour: 'numeric', minute: 'numeric', hour12: true }).format(msg.createdAt.toDate())
@@ -124,8 +126,12 @@ export const MessageBubble: React.FC<MessageBubbleProps> = ({
                                 <div className={cn("flex flex-col rounded-2xl overflow-hidden border border-border", isMine ? "rounded-tr-sm" : "rounded-tl-sm")}>
                                     <div className="p-1 bg-background overflow-hidden rounded-t-[14px]">
                                         <div
-                                            className="w-full aspect-square bg-secondary bg-center bg-cover rounded-[12px]"
+                                            className="w-full aspect-square bg-secondary bg-center bg-cover rounded-[12px] cursor-pointer active:opacity-90 transition-opacity"
                                             style={{ backgroundImage: `url("${msg.imageUrl}")` }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (msg.imageUrl && onImageClick) onImageClick(msg.imageUrl);
+                                            }}
                                         />
                                     </div>
                                     {msg.text && (

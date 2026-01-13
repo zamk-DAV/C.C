@@ -4,6 +4,7 @@ import { format } from 'date-fns';
 import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { compressImage } from '../../utils/imageUtils';
 
 interface FeedWriteModalProps {
     isOpen: boolean;
@@ -79,7 +80,6 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
         }
     }, [isOpen, initialData]);
 
-    import { compressImage } from '../../utils/imageUtils';
 
     // ... existing imports
 

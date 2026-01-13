@@ -79,6 +79,10 @@ export interface CalendarEvent {
     type: 'Event' | 'Diary';
     note?: string;
     author?: string; // 'Me' | 'Partner' for filtering
+    endDate?: Date;
+    color?: string;
+    isImportant?: boolean;
+    isShared?: boolean;
 }
 
 export interface MemoryItem {
