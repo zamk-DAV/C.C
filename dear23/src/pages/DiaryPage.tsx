@@ -128,8 +128,8 @@ export const DiaryPage: React.FC = () => {
                                 key={f}
                                 onClick={() => setFilter(f as any)}
                                 className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${filter === f
-                                        ? 'bg-primary text-background shadow-md transform scale-[1.02]'
-                                        : 'text-text-secondary hover:text-primary hover:bg-background/50'
+                                    ? 'bg-primary text-background shadow-md transform scale-[1.02]'
+                                    : 'text-text-secondary hover:text-primary hover:bg-background/50'
                                     }`}
                             >
                                 {f === 'all' ? '전체' : f === 'me' ? '나' : '상대방'}
@@ -165,7 +165,6 @@ export const DiaryPage: React.FC = () => {
                             {/* Diary Grid */}
                             <div className={`grid grid-cols-2 gap-x-4 gap-y-8 transition-all duration-500 overflow-hidden ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
                                 {weekItems.map((item) => {
-                                    const hasImage = (item.images && item.images.length > 0) || !!item.coverImage;
                                     const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
                                     return (
@@ -268,7 +267,7 @@ export const DiaryPage: React.FC = () => {
                 initialData={editingItem ? {
                     id: editingItem.id,
                     title: editingItem.title,
-                    content: editingItem.content || editingItem.previewText, // Use preview if full content unavailable
+                    content: editingItem.previewText, // Use previewText as content
                     images: editingItem.images || (editingItem.coverImage ? [editingItem.coverImage] : []),
                     date: editingItem.date,
                     mood: editingItem.mood,
