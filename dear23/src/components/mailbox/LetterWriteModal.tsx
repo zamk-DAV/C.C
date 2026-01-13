@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { createDiaryEntry } from '../../lib/notion';
 
 interface LetterWriteModalProps {
     isOpen: boolean;
@@ -18,8 +17,6 @@ interface LetterWriteModalProps {
 export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
     isOpen,
     onClose,
-    coupleId,
-    senderId,
     senderName,
     recipientName
 }) => {
@@ -29,18 +26,20 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
     const handleSend = async () => {
-        if (!content.trim() || !coupleId) return;
+        if (!content.trim()) return;
 
         setIsLoading(true);
         try {
-            await addDoc(collection(db, 'couples', coupleId, 'postcards'), {
-                senderId,
-                senderName,
-                content: content.trim(),
-                createdAt: serverTimestamp(),
-                isRead: false,
-                openDate: scheduledDate || null
-            });
+            // Save to Notion using unified category
+            await createDiaryEntry(
+                content.trim(),
+                [], // No images for now
+                'Letter',
+                {
+                    sender: senderName,
+                    date: scheduledDate || new Date().toISOString().split('T')[0]
+                }
+            );
 
             setContent('');
             setScheduledDate('');
@@ -75,7 +74,7 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
     };
 
     return (
-        <AnimatePresence>
+        <AnimatePresence mode="wait">
             {isOpen && (
                 <>
                     {/* Backdrop */}
@@ -84,15 +83,15 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={handleClose}
-                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50"
+                        className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100]"
                     />
 
                     {/* Modal */}
                     <motion.div
-                        initial={{ opacity: 0, y: 100 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 100 }}
-                        className="fixed inset-x-4 bottom-24 top-40 z-50 bg-background rounded-xl shadow-2xl overflow-hidden max-w-lg mx-auto flex flex-col"
+                        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                        className="fixed inset-x-4 bottom-24 top-40 z-[101] bg-background rounded-xl shadow-2xl overflow-hidden max-w-lg mx-auto flex flex-col border border-border"
                     >
                         {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -124,11 +123,11 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                         </div>
 
                         {/* Footer */}
-                        <div className="px-6 py-4 border-t border-border space-y-3">
+                        <div className="px-6 py-4 border-t border-border space-y-3 bg-secondary/10">
                             {/* Scheduled Date Button */}
                             <button
                                 onClick={() => setIsDatePickerOpen(true)}
-                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border hover:bg-secondary/50 transition-colors"
+                                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-background hover:bg-secondary/50 transition-colors"
                             >
                                 <span className="material-symbols-outlined text-text-secondary">
                                     {scheduledDate ? 'event' : 'schedule'}
@@ -150,11 +149,66 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                             <button
                                 onClick={handleSend}
                                 disabled={isLoading || !content.trim()}
-                                className="w-full py-4 bg-primary text-background font-bold text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 active:scale-[0.98]"
+                                className="w-full py-4 bg-primary text-background font-bold text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 active:scale-[0.98] shadow-lg flex items-center justify-center gap-2"
                             >
-                                {isLoading ? '발송 중...' : (scheduledDate ? '예약 발송' : '지금 보내기')}
+                                {isLoading ? (
+                                    <>
+                                        <div className="w-4 h-4 border-2 border-background/30 border-t-background rounded-full animate-spin" />
+                                        <span>발송 중...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span className="material-symbols-outlined text-sm">send</span>
+                                        <span>{scheduledDate ? '예약 발송' : '지금 보내기'}</span>
+                                    </>
+                                )}
                             </button>
                         </div>
+
+                        {/* Loading Overlay Animation */}
+                        <AnimatePresence>
+                            {isLoading && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    className="absolute inset-0 bg-background/80 backdrop-blur-md z-[110] flex flex-col items-center justify-center"
+                                >
+                                    <motion.div
+                                        animate={{
+                                            scale: [1, 1.2, 1],
+                                            opacity: [0.5, 1, 0.5]
+                                        }}
+                                        transition={{
+                                            duration: 2,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                        }}
+                                        className="mb-6"
+                                    >
+                                        <span className="material-symbols-outlined text-6xl text-primary opacity-20">mail</span>
+                                    </motion.div>
+                                    <h2 className="text-xl font-bold text-primary mb-2 italic">마음을 전하는 중...</h2>
+                                    <div className="flex items-center gap-1">
+                                        {[0, 1, 2].map((i) => (
+                                            <motion.div
+                                                key={i}
+                                                animate={{
+                                                    scale: [1, 1.5, 1],
+                                                    opacity: [0.3, 1, 0.3]
+                                                }}
+                                                transition={{
+                                                    duration: 1,
+                                                    repeat: Infinity,
+                                                    delay: i * 0.2
+                                                }}
+                                                className="size-1.5 bg-primary rounded-full"
+                                            />
+                                        ))}
+                                    </div>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
                     </motion.div>
 
                     {/* Date Picker Modal */}

@@ -65,10 +65,14 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 {
                     page_size: 20, // Default to 20
                     start_cursor: (typeof startCursor === 'string' && startCursor.length > 0) ? startCursor : undefined,
-                    filter: req.body.type ? {
+                    filter: req.body.filterType ? {
                         property: "dear23_카테고리",
                         select: {
-                            equals: req.body.type === 'Diary' ? '일기' : '추억'
+                            equals:
+                                req.body.filterType === 'Diary' ? '일기' :
+                                    req.body.filterType === 'Memory' ? '추억' :
+                                        req.body.filterType === 'Event' ? '일정' :
+                                            req.body.filterType === 'Letter' ? '편지' : '일기'
                         }
                     } : undefined,
                     sorts: [

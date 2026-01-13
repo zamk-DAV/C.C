@@ -33,6 +33,16 @@ interface NotionContextType {
     hasMoreMemory: boolean;
     loadMoreMemory: () => Promise<void>;
 
+    // Event Data (Calendar)
+    eventData: NotionItem[];
+    hasMoreEvent: boolean;
+    loadMoreEvent: () => Promise<void>;
+
+    // Letter Data (Mailbox)
+    letterData: NotionItem[];
+    hasMoreLetter: boolean;
+    loadMoreLetter: () => Promise<void>;
+
     // Common
     isLoading: boolean;
     error: string | null;
@@ -54,6 +64,16 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [memoryData, setMemoryData] = useState<NotionItem[]>([]);
     const [hasMoreMemory, setHasMoreMemory] = useState(false);
     const [nextCursorMemory, setNextCursorMemory] = useState<string | null>(null);
+
+    // Event State
+    const [eventData, setEventData] = useState<NotionItem[]>([]);
+    const [hasMoreEvent, setHasMoreEvent] = useState(false);
+    const [nextCursorEvent, setNextCursorEvent] = useState<string | null>(null);
+
+    // Letter State
+    const [letterData, setLetterData] = useState<NotionItem[]>([]);
+    const [hasMoreLetter, setHasMoreLetter] = useState(false);
+    const [nextCursorLetter, setNextCursorLetter] = useState<string | null>(null);
 
     // Common State
     const [isLoading, setIsLoading] = useState(false);
@@ -88,13 +108,14 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.log('[NotionContext] Fetching initial data (Diary & Memory)...');
 
         try {
-            const [diaryResult, memoryResult] = await Promise.all([
+            const [diaryResult, memoryResult, eventResult, letterResult] = await Promise.all([
                 fetchNotionData('Diary', undefined, 20),
-                fetchNotionData('Memory', undefined, 20)
+                fetchNotionData('Memory', undefined, 20),
+                fetchNotionData('Event', undefined, 50), // Fetch more events for calendar
+                fetchNotionData('Letter', undefined, 20)
             ]);
 
-            console.log('[DEBUG] Diary Result Full:', diaryResult);
-            console.log('[DEBUG] Memory Result Full:', memoryResult);
+            console.log('[DEBUG] Notion Results Loaded');
 
             // Set Diary
             setDiaryData(diaryResult.data);
@@ -106,8 +127,18 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             setHasMoreMemory(memoryResult.hasMore);
             setNextCursorMemory(memoryResult.nextCursor);
 
+            // Set Event
+            setEventData(eventResult.data);
+            setHasMoreEvent(eventResult.hasMore);
+            setNextCursorEvent(eventResult.nextCursor);
+
+            // Set Letter
+            setLetterData(letterResult.data);
+            setHasMoreLetter(letterResult.hasMore);
+            setNextCursorLetter(letterResult.nextCursor);
+
             setLastFetched(Date.now());
-            console.log(`[NotionContext] Loaded ${diaryResult.data.length} diaries, ${memoryResult.data.length} memories`);
+            console.log(`[NotionContext] Data loaded: D:${diaryResult.data.length}, M:${memoryResult.data.length}, E:${eventResult.data.length}, L:${letterResult.data.length}`);
         } catch (err: any) {
             console.error('[NotionContext] Failed to load data:', err);
             setError(err.message || 'Failed to load Notion data');
@@ -149,16 +180,54 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
     }, [hasMoreMemory, nextCursorMemory]);
 
+    const loadMoreEvent = useCallback(async () => {
+        if (!hasMoreEvent || !nextCursorEvent || isLoadingRef.current) return;
+        isLoadingRef.current = true;
+
+        try {
+            const result = await fetchNotionData('Event', nextCursorEvent, 50);
+            setEventData(prev => [...prev, ...result.data]);
+            setHasMoreEvent(result.hasMore);
+            setNextCursorEvent(result.nextCursor);
+        } catch (err: any) {
+            console.error('[NotionContext] Failed to load more event:', err);
+        } finally {
+            isLoadingRef.current = false;
+        }
+    }, [hasMoreEvent, nextCursorEvent]);
+
+    const loadMoreLetter = useCallback(async () => {
+        if (!hasMoreLetter || !nextCursorLetter || isLoadingRef.current) return;
+        isLoadingRef.current = true;
+
+        try {
+            const result = await fetchNotionData('Letter', nextCursorLetter, 20);
+            setLetterData(prev => [...prev, ...result.data]);
+            setHasMoreLetter(result.hasMore);
+            setNextCursorLetter(result.nextCursor);
+        } catch (err: any) {
+            console.error('[NotionContext] Failed to load more letter:', err);
+        } finally {
+            isLoadingRef.current = false;
+        }
+    }, [hasMoreLetter, nextCursorLetter]);
+
     const refreshData = useCallback(async () => {
         console.log('[NotionContext] Refreshing data...');
         clearNotionCache();
 
         setDiaryData([]);
         setMemoryData([]);
+        setEventData([]);
+        setLetterData([]);
         setNextCursorDiary(null);
         setNextCursorMemory(null);
+        setNextCursorEvent(null);
+        setNextCursorLetter(null);
         setHasMoreDiary(false);
         setHasMoreMemory(false);
+        setHasMoreEvent(false);
+        setHasMoreLetter(false);
 
         hasInitializedRef.current = false;
         await fetchInitialData();
@@ -171,6 +240,12 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         memoryData,
         hasMoreMemory,
         loadMoreMemory,
+        eventData,
+        hasMoreEvent,
+        loadMoreEvent,
+        letterData,
+        hasMoreLetter,
+        loadMoreLetter,
         isLoading,
         error,
         refreshData,
@@ -201,4 +276,14 @@ export const useDiaryData = () => {
 export const useMemoryData = () => {
     const { memoryData, isLoading, error, hasMoreMemory, loadMoreMemory } = useNotion();
     return { memoryData, isLoading, error, hasMore: hasMoreMemory, loadMore: loadMoreMemory };
+};
+
+export const useEventData = () => {
+    const { eventData, isLoading, error, hasMoreEvent, loadMoreEvent } = useNotion();
+    return { eventData, isLoading, error, hasMore: hasMoreEvent, loadMore: loadMoreEvent };
+};
+
+export const useLetterData = () => {
+    const { letterData, isLoading, error, hasMoreLetter, loadMoreLetter } = useNotion();
+    return { letterData, isLoading, error, hasMore: hasMoreLetter, loadMore: loadMoreLetter };
 };

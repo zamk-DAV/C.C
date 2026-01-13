@@ -1,73 +1,42 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { db } from '../lib/firebase';
-import { collection, query, orderBy, onSnapshot, doc, updateDoc } from 'firebase/firestore';
-import { format } from 'date-fns';
-import type { Postcard } from '../types';
+import { format, parseISO } from 'date-fns';
 import { LetterWriteModal } from '../components/mailbox/LetterWriteModal';
 import { LetterDetailModal } from '../components/mailbox/LetterDetailModal';
+import { useLetterData } from '../context/NotionContext';
 
 export const MailboxPage: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
-
-    // Firestore Integration
     const { user, userData, partnerData, coupleData } = useAuth();
-    const [postcards, setPostcards] = useState<Postcard[]>([]);
+    const { letterData, isLoading } = useLetterData();
 
     // Modal States
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
-    const [selectedLetter, setSelectedLetter] = useState<Postcard | null>(null);
+    const [selectedLetter, setSelectedLetter] = useState<any | null>(null);
 
-    useEffect(() => {
-        if (!coupleData?.id) return;
-
-        const q = query(
-            collection(db, 'couples', coupleData.id, 'postcards'),
-            orderBy('createdAt', 'desc')
-        );
-
-        const unsubscribe = onSnapshot(q, (snapshot) => {
-            const items = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    date: data.createdAt?.toDate ? format(data.createdAt.toDate(), 'yyyy.MM.dd') : data.date
-                } as Postcard;
-            });
-            setPostcards(items);
-        });
-
-        return () => unsubscribe();
-    }, [coupleData?.id]);
-
-    // Local filter for tabs
-    const filteredPostcards = postcards.filter(card => {
-        if (activeTab === 'received') return card.senderId !== user?.uid;
-        if (activeTab === 'sent') return card.senderId === user?.uid;
+    // Filter letters based on active tab and author
+    const filteredLetters = letterData.filter(letter => {
+        const isFromMe = letter.author === userData?.name || letter.author === '나';
+        if (activeTab === 'received') return !isFromMe;
+        if (activeTab === 'sent') return isFromMe;
         return true;
     });
 
-    // Handle open letter - mark as read
-    const handleOpenLetter = async (letter: Postcard) => {
-        setSelectedLetter(letter);
-
-        // Mark as read if not already
-        if (!letter.isRead && letter.senderId !== user?.uid && coupleData?.id) {
-            try {
-                await updateDoc(doc(db, 'couples', coupleData.id, 'postcards', letter.id), {
-                    isRead: true
-                });
-            } catch (error) {
-                console.error("Failed to mark as read:", error);
-            }
-        }
+    const handleOpenLetter = (letter: any) => {
+        // Transform NotionItem to Postcard-like structure for the modal
+        setSelectedLetter({
+            id: letter.id,
+            content: letter.previewText || letter.title, // In Notion, content might be in title or preview
+            senderName: letter.author,
+            date: letter.date,
+            senderId: letter.author === userData?.name ? user?.uid : 'partner' // Mock ID for mapping
+        });
     };
 
     return (
-        <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-background font-display text-primary transition-colors duration-300 border-x border-border">
+        <div className="relative flex min-h-[100dvh] w-full max-w-md mx-auto flex-col bg-background font-display text-primary transition-colors duration-300 border-x border-border font-display">
 
             {/* Header */}
             <header className="sticky top-0 z-10 flex flex-col bg-background/95 backdrop-blur-md transition-colors duration-300">
@@ -78,7 +47,7 @@ export const MailboxPage: React.FC = () => {
                     >
                         <span className="material-symbols-outlined">arrow_back_ios</span>
                     </div>
-                    <h2 className="text-primary text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10">우편함</h2>
+                    <h2 className="text-primary text-xl font-bold leading-tight tracking-tight flex-1 text-center pr-10 italic">우리 우편함</h2>
                 </div>
             </header>
 
@@ -108,44 +77,44 @@ export const MailboxPage: React.FC = () => {
 
             {/* Letter List Container */}
             <main className="flex-1 px-6 space-y-6 pb-32">
-                {filteredPostcards.length === 0 ? (
+                {isLoading ? (
+                    <div className="py-20 text-center text-text-secondary font-light italic">
+                        불러오는 중...
+                    </div>
+                ) : filteredLetters.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-text-secondary">
                         <span className="material-symbols-outlined text-4xl mb-4 opacity-50">mail</span>
                         <p className="text-sm font-medium">
                             {activeTab === 'received' ? '받은 우편이 없습니다' : '보낸 우편이 없습니다'}
                         </p>
-                        <p className="text-xs mt-1 opacity-70">
+                        <p className="text-xs mt-1 opacity-70 italic">
                             {activeTab === 'received' ? '파트너의 편지를 기다려보세요' : '파트너에게 편지를 보내보세요'}
                         </p>
                     </div>
                 ) : (
-                    filteredPostcards.map((card) => {
-                        const isUnread = !card.isRead && card.senderId !== user?.uid;
-                        const isRead = card.isRead || card.senderId === user?.uid;
-                        const isLocked = card.openDate && new Date(card.openDate) > new Date();
+                    filteredLetters.map((letter) => {
+                        const isFromMe = letter.author === userData?.name || letter.author === '나';
+                        // Check if it's a scheduled letter that is not yet openable (simplified for MVP)
+                        const isLocked = letter.date && new Date(letter.date) > new Date();
 
                         return (
                             <div
-                                key={card.id}
+                                key={letter.id}
                                 className={`group relative p-6 border transition-all ${isLocked
-                                        ? 'border-border/30 opacity-50'
-                                        : isRead
-                                            ? 'border-border/50 hover:bg-secondary/20 cursor-pointer'
-                                            : 'border-primary hover:bg-secondary/30 cursor-pointer'
+                                    ? 'border-border/30 opacity-50'
+                                    : 'border-primary hover:bg-secondary/30 cursor-pointer'
                                     }`}
-                                onClick={() => !isLocked && handleOpenLetter(card)}
+                                onClick={() => !isLocked && handleOpenLetter(letter)}
                             >
                                 {/* Content Preview */}
                                 <div className="mb-6">
                                     <p className={`font-serif text-lg leading-relaxed line-clamp-3 ${isLocked
-                                            ? 'text-text-secondary/50 italic'
-                                            : isRead
-                                                ? 'text-text-secondary'
-                                                : 'text-primary'
+                                        ? 'text-text-secondary/50 italic'
+                                        : 'text-primary'
                                         }`}>
                                         {isLocked
                                             ? '아직 열 수 없는 편지입니다...'
-                                            : card.content
+                                            : letter.previewText || letter.title
                                         }
                                     </p>
                                 </div>
@@ -153,26 +122,23 @@ export const MailboxPage: React.FC = () => {
                                 {/* Footer */}
                                 <div className="flex items-end justify-between">
                                     <div className="flex flex-col gap-0.5">
-                                        <span className={`text-[11px] font-bold tracking-wider ${isLocked || isRead ? 'text-text-secondary' : 'text-primary'
+                                        <span className={`text-[11px] font-bold tracking-wider ${isLocked ? 'text-text-secondary' : 'text-primary'
                                             }`}>
-                                            {activeTab === 'received' ? 'FROM.' : 'TO.'} {card.senderName}
+                                            {activeTab === 'received' ? 'FROM.' : 'TO.'} {letter.author}
                                         </span>
-                                        <span className={`text-[10px] uppercase tracking-widest ${isRead ? 'text-text-secondary/60' : 'text-text-secondary'
-                                            }`}>
-                                            {card.date}
+                                        <span className={`text-[10px] uppercase tracking-widest text-text-secondary/60`}>
+                                            {letter.date}
                                         </span>
                                     </div>
 
                                     <button
                                         className={`flex items-center gap-1 transition-transform ${isLocked
-                                                ? 'cursor-not-allowed text-text-secondary/50'
-                                                : isRead
-                                                    ? 'active:scale-95 text-text-secondary'
-                                                    : 'active:scale-95 text-primary'
+                                            ? 'cursor-not-allowed text-text-secondary/50'
+                                            : 'active:scale-95 text-primary'
                                             }`}
                                         disabled={!!isLocked}
                                     >
-                                        <span className={`text-xs font-bold border-b pb-0.5 ${isLocked ? 'border-border/50' : isRead ? 'border-border' : 'border-primary'
+                                        <span className={`text-xs font-bold border-b pb-0.5 ${isLocked ? 'border-border/50' : 'border-primary'
                                             }`}>
                                             {isLocked ? '잠김' : '열기'}
                                         </span>
@@ -181,18 +147,13 @@ export const MailboxPage: React.FC = () => {
                                         </span>
                                     </button>
                                 </div>
-
-                                {/* Unread Indicator */}
-                                {isUnread && !isLocked && (
-                                    <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-primary animate-pulse" />
-                                )}
                             </div>
                         );
                     })
                 )}
 
                 {/* End Marker */}
-                {filteredPostcards.length > 0 && (
+                {!isLoading && filteredLetters.length > 0 && (
                     <div className="py-8 text-center">
                         <span className="text-[10px] text-text-secondary tracking-widest">END OF EDITION</span>
                     </div>
@@ -221,7 +182,7 @@ export const MailboxPage: React.FC = () => {
                 isOpen={!!selectedLetter}
                 onClose={() => setSelectedLetter(null)}
                 letter={selectedLetter}
-                isFromMe={selectedLetter?.senderId === user?.uid}
+                isFromMe={selectedLetter?.author === userData?.name || selectedLetter?.author === '나'}
             />
         </div>
     );

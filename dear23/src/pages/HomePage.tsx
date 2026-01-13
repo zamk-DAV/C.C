@@ -4,9 +4,11 @@ import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import { useAuth } from '../context/AuthContext';
+import { useMemoryData } from '../context/NotionContext';
 
 export const HomePage: React.FC = () => {
-    const { user, userData, loading } = useAuth();
+    const { user, userData, loading, coupleData } = useAuth();
+    const { memoryData, isLoading: isMemoryLoading } = useMemoryData();
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -14,29 +16,39 @@ export const HomePage: React.FC = () => {
             if (!user) {
                 navigate('/login');
             } else if (userData && !userData.coupleId) {
-                // navigate('/connect'); (ToDo: Implement ConnectPage)
-                // For now, let's just log it or maybe show a "Not Connected" state
                 console.log("User needs to connect with partner");
             }
         }
     }, [user, userData, loading, navigate]);
 
-    if (loading) return <div className="min-h-screen flex items-center justify-center bg-white">Loading...</div>;
-    if (!user) return null; // Will redirect
+    if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
+    if (!user) return null;
 
-    // Placeholder data until real data is linked
-    const partnerImage = "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=3087&auto=format&fit=crop";
-    const myImage = userData?.photoURL || "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop";
-    const partnerName = "Partner";
+    // Use partner data if available
+    const partnerName = userData?.partnerNickname || "나의 파트너";
+    const partnerImage = userData?.partnerPhotoURL || "/default-avatar.png";
+    const myImage = user.photoURL || "/default-avatar.png";
 
-    // If not connected, show the splash screen
+    // Calculate days together
+    const startDate = coupleData?.startDate?.toDate?.() || new Date();
+    const daysTogether = Math.floor((new Date().getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
     if (!userData?.coupleId) {
         return (
-            <div className="min-h-screen flex flex-col items-center justify-center bg-white p-8 space-y-4">
-                <h1 className="text-2xl font-bold font-display">DEAR23</h1>
-                <p className="text-gray-500 font-sans">파트너와 연결이 필요합니다.</p>
+            <div className="min-h-screen flex flex-col items-center justify-center bg-background p-8 space-y-6 text-primary">
+                <motion.h1
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="text-3xl font-bold font-display tracking-tighter"
+                >
+                    DEAR23
+                </motion.h1>
+                <div className="text-center space-y-2">
+                    <p className="text-text-secondary font-medium italic">우리의 첫 번째 페이지를 준비해주세요.</p>
+                    <p className="text-[11px] text-text-secondary opacity-50 uppercase tracking-widest">Connect with your partner to start sharing memories.</p>
+                </div>
                 <button
-                    className="bg-primary text-white px-6 py-3 rounded-xl font-sans text-sm font-bold shadow-lg shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all"
+                    className="w-full max-w-[200px] bg-primary text-background px-6 py-4 rounded-full font-bold text-sm tracking-widest shadow-xl shadow-primary/20 hover:opacity-90 active:scale-[0.98] transition-all"
                     onClick={() => navigate('/connect')}
                 >
                     연결하러 가기
@@ -46,46 +58,35 @@ export const HomePage: React.FC = () => {
     }
 
     return (
-        <div className="min-h-screen bg-background-light pb-24">
+        <div className="min-h-screen bg-background pb-24 font-display">
             <Header
                 partnerName={partnerName}
                 partnerImage={partnerImage}
                 myImage={myImage}
                 isOnline={true}
-                daysTogether={1600}
+                daysTogether={daysTogether}
             />
 
             <main className="space-y-2">
                 <RecentMessage
-                    senderName="MINSU"
-                    message="오늘 저녁 같이 먹는 거 기대된다. 나 이제 퇴근해!"
-                    timestamp="방금 전"
+                    senderName={partnerName.toUpperCase()}
+                    message="우리의 특별한 하루를 기록해보세요."
+                    timestamp="TODAY"
                     isNew={true}
                 />
 
-                <MemoryFeed items={[
-                    {
-                        id: '1',
-                        type: 'image',
-                        imageUrl: 'https://images.unsplash.com/photo-1516962080544-eac695c93791?q=80&w=3087&auto=format&fit=crop',
-                        title: '첫 번째 데이트',
-                        subtitle: '2023. 12. 24'
-                    },
-                    {
-                        id: '2',
-                        type: 'quote',
-                        quote: '함께라서 더 행복한 시간들',
-                        title: '소중한 기억',
-                        subtitle: '2024. 01. 01'
-                    },
-                    {
-                        id: '3',
-                        type: 'image',
-                        imageUrl: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=3087&auto=format&fit=crop',
-                        title: '우리 여행',
-                        subtitle: '2024. 03. 15'
-                    }
-                ]} />
+                {isMemoryLoading ? (
+                    <div className="py-20 flex justify-center items-center">
+                        <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
+                    </div>
+                ) : memoryData.length > 0 ? (
+                    <MemoryFeed items={memoryData} />
+                ) : (
+                    <div className="py-20 px-6 text-center text-text-secondary italic font-light opacity-50">
+                        <p className="text-lg">첫 번째 추억을 남겨보세요.</p>
+                        <p className="text-xs uppercase tracking-widest mt-2">No memories shared yet</p>
+                    </div>
+                )}
             </main>
         </div>
     );
