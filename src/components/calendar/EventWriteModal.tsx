@@ -35,7 +35,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
         try {
             const dateString = format(selectedDate, 'yyyy-MM-dd');
-            const dateString = format(selectedDate, 'yyyy-MM-dd');
+
             // Using title as the main content for Event type
 
             await createDiaryEntry(
