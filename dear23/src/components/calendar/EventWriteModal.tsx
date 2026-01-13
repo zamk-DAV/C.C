@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { updateDiaryEntry, createDiaryEntry } from '../../lib/notion'; // Used below
+import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
 import { useHaptics } from '../../hooks/useHaptics';
 import { DatePickerModal } from '../common/DatePickerModal';
 import { TimePickerModal } from '../common/TimePickerModal';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 interface EventWriteModalProps {
     isOpen: boolean;
@@ -57,12 +58,11 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 } else {
                     setIsAllDay(true);
                 }
-                // Cast to any because it might be a Firestore timestamp or string at runtime despite type
-                const evtDate = (editEvent.date as any) instanceof Date ? editEvent.date : new Date(editEvent.date as any);
+                const evtDate = editEvent.date instanceof Date ? editEvent.date : new Date(editEvent.date);
                 setStartDate(evtDate);
 
                 if (editEvent.endDate) {
-                    setEndDate((editEvent.endDate as any) instanceof Date ? (editEvent.endDate as any) : new Date(editEvent.endDate));
+                    setEndDate(editEvent.endDate instanceof Date ? editEvent.endDate : new Date(editEvent.endDate));
                 } else {
                     setEndDate(evtDate);
                 }
@@ -187,16 +187,12 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                             <div className="mx-4 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
                                 {/* All-day */}
                                 <div className="flex items-center justify-between px-4 py-3 border-b border-border/10">
-                                    <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-[20px] text-text-secondary">schedule</span>
-                                        <span className="text-[16px]">하루 종일</span>
-                                    </div>
-                                    <button
-                                        onClick={() => { setIsAllDay(!isAllDay); simpleClick(); }}
-                                        className={`w-[51px] h-[31px] rounded-full p-[2px] transition-colors duration-200 ease-in-out ${isAllDay ? 'bg-[#34C759]' : 'bg-border/20'}`}
-                                    >
-                                        <div className={`w-[26px] h-[26px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isAllDay ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                                    </button>
+                                    <ThemeToggle
+                                        checked={isAllDay}
+                                        onChange={setIsAllDay}
+                                        label="하루 종일"
+                                        icon={<span className="material-symbols-outlined text-[20px] text-text-secondary">schedule</span>}
+                                    />
                                 </div>
 
                                 {/* Start Date/Time */}
@@ -244,33 +240,25 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
                             {/* Section 2: Important */}
                             <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
-                                <div className="flex items-center justify-between px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-[20px] text-[#FFD60A]">star</span>
-                                        <span className="text-[16px]">즐겨찾기</span>
-                                    </div>
-                                    <button
-                                        onClick={() => { setIsImportant(!isImportant); simpleClick(); }}
-                                        className={`w-[51px] h-[31px] rounded-full p-[2px] transition-colors duration-200 ease-in-out ${isImportant ? 'bg-[#34C759]' : 'bg-border/20'}`}
-                                    >
-                                        <div className={`w-[26px] h-[26px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isImportant ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                                    </button>
+                                <div className="px-4 py-3">
+                                    <ThemeToggle
+                                        checked={isImportant}
+                                        onChange={setIsImportant}
+                                        label="즐겨찾기"
+                                        icon={<span className="material-symbols-outlined text-[20px] text-[#FFD60A]">star</span>}
+                                    />
                                 </div>
                             </div>
 
                             {/* Section 3: Shared */}
                             <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
-                                <div className="flex items-center justify-between px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-[20px] text-[#FF453A]">favorite</span>
-                                        <span className="text-[16px]">함께 공유</span>
-                                    </div>
-                                    <button
-                                        onClick={() => { setIsShared(!isShared); simpleClick(); }}
-                                        className={`w-[51px] h-[31px] rounded-full p-[2px] transition-colors duration-200 ease-in-out ${isShared ? 'bg-[#34C759]' : 'bg-border/20'}`}
-                                    >
-                                        <div className={`w-[26px] h-[26px] bg-white rounded-full shadow-md transform transition-transform duration-200 ease-in-out ${isShared ? 'translate-x-[20px]' : 'translate-x-0'}`} />
-                                    </button>
+                                <div className="px-4 py-3">
+                                    <ThemeToggle
+                                        checked={isShared}
+                                        onChange={setIsShared}
+                                        label="함께 공유"
+                                        icon={<span className="material-symbols-outlined text-[20px] text-[#FF453A]">favorite</span>}
+                                    />
                                 </div>
                             </div>
 

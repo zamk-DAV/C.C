@@ -75,7 +75,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
         items: (string | number)[],
         value: string | number,
         onChange: (val: any) => void,
-        containerRef: React.RefObject<HTMLDivElement | null>
+        containerRef: React.RefObject<HTMLDivElement>
     }) => {
         const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
             const target = e.target as HTMLDivElement;
@@ -86,17 +86,8 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
             }
         };
 
-        const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-            if (containerRef.current) {
-                // Invert delta or use as is based on "Down -> Increase"
-                // Standard: deltaY > 0 is scroll down.
-                // Scroll down moves scrollTop up.
-                containerRef.current.scrollTop += e.deltaY;
-            }
-        };
-
         return (
-            <div className="relative h-[200px] w-full overflow-hidden" onWheel={handleWheel}>
+            <div className="relative h-[200px] w-full overflow-hidden">
                 {/* Selection Highlight */}
                 <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[40px] bg-primary/10 rounded-lg pointer-events-none z-10" />
 
@@ -108,7 +99,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                     {items.map((item) => (
                         <div
                             key={item}
-                            className={`h-[40px] flex items-center justify-center text-[17px] font-medium snap-center transition-colors ${item === value ? 'text-primary' : 'text-text-secondary'
+                            className={`h-[40px] flex items-center justify-center text-[17px] font-medium snap-center transition-colors ${item === value ? 'text-primary' : 'text-text-secondary/50'
                                 }`}
                         >
                             {typeof item === 'number' ? item.toString().padStart(2, '0') : item}
@@ -129,7 +120,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-background/80 z-[60] backdrop-blur-[2px]"
+                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]"
                     />
 
                     {/* Modal */}
@@ -138,7 +129,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         animate={{ y: 0 }}
                         exit={{ y: "100%" }}
                         transition={{ type: "spring", damping: 25, stiffness: 300 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/90 backdrop-blur-xl rounded-t-2xl overflow-hidden pb-8 shadow-2xl border-t border-border/20"
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/95 backdrop-blur-xl rounded-t-2xl overflow-hidden pb-8 border-t border-border/20"
                         // Prevent scroll propagation
                         onClick={(e) => e.stopPropagation()}
                     >
@@ -146,14 +137,14 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                         <div className="flex items-center justify-between px-6 py-4 border-b border-border/10">
                             <button
                                 onClick={onClose}
-                                className="text-text-secondary text-[16px] font-medium hover:opacity-70 transition-opacity"
+                                className="text-text-secondary text-[16px]"
                             >
                                 취소
                             </button>
                             <span className="text-primary font-semibold text-[17px]">시간 설정</span>
                             <button
                                 onClick={handleConfirm}
-                                className="text-accent font-semibold text-[16px] hover:opacity-70 transition-opacity"
+                                className="text-accent font-semibold text-[16px]"
                             >
                                 완료
                             </button>
@@ -167,7 +158,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                                     items={ampmList}
                                     value={ampm}
                                     onChange={setAmpm}
-                                    containerRef={ampmRef}
+                                    containerRef={ampmRef as any}
                                 />
                             </div>
 
@@ -177,12 +168,12 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                                     items={hourList}
                                     value={hour}
                                     onChange={setHour}
-                                    containerRef={hourRef}
+                                    containerRef={hourRef as any}
                                 />
                             </div>
 
-                            {/* Colon Separator */}
-                            <div className="flex items-center justify-center text-primary font-bold opacity-30 pb-2 text-xl">:</div>
+                            {/* Colon Separator (Optional visuals) */}
+                            <div className="flex items-center justify-center text-primary pb-2">:</div>
 
                             {/* Minute */}
                             <div className="flex-1">
@@ -190,7 +181,7 @@ export const TimePickerModal: React.FC<TimePickerModalProps> = ({
                                     items={minuteList}
                                     value={minute}
                                     onChange={setMinute}
-                                    containerRef={minuteRef}
+                                    containerRef={minuteRef as any}
                                 />
                             </div>
                         </div>

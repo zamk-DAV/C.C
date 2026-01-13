@@ -1,151 +1,151 @@
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { format, getDaysInMonth, setYear, setMonth, setDate } from 'date-fns';
-import { useHaptics } from '../../hooks/useHaptics';
+import { format, addMonths, subMonths, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isBefore, startOfToday, getDay } from 'date-fns';
+import { ko } from 'date-fns/locale';
 
 interface DatePickerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (date: string) => void;
     selectedDate?: string | Date;
-    minDate?: string | Date;
+    minDate?: Date;
 }
 
 export const DatePickerModal: React.FC<DatePickerModalProps> = ({
     isOpen,
     onClose,
     onSelect,
-    selectedDate = new Date()
+    selectedDate,
+    minDate = startOfToday()
 }) => {
-    const { medium, selection } = useHaptics();
+    const [currentMonth, setCurrentMonth] = useState(new Date());
 
-    const initialDate = typeof selectedDate === 'string' ? new Date(selectedDate) : selectedDate;
-    const [year, setSelectedYear] = useState(initialDate.getFullYear());
-    const [month, setSelectedMonth] = useState(initialDate.getMonth() + 1); // 1-12
-    const [day, setSelectedDay] = useState(initialDate.getDate());
+    const days = useMemo(() => {
+        const start = startOfMonth(currentMonth);
+        const end = endOfMonth(currentMonth);
+        const daysInMonth = eachDayOfInterval({ start, end });
 
-    const years = Array.from({ length: 21 }, (_, i) => new Date().getFullYear() - 10 + i);
-    const months = Array.from({ length: 12 }, (_, i) => i + 1);
-    const [days, setDays] = useState<number[]>([]);
+        // Add padding for the first day of the week
+        const startDay = getDay(start); // 0 = Sunday
+        const padding = Array(startDay).fill(null);
 
-    const yearRef = useRef<HTMLDivElement>(null);
-    const monthRef = useRef<HTMLDivElement>(null);
-    const dayRef = useRef<HTMLDivElement>(null);
+        return [...padding, ...daysInMonth];
+    }, [currentMonth]);
 
-    const ITEM_HEIGHT = 40;
-
-    useEffect(() => {
-        const daysCount = getDaysInMonth(new Date(year, month - 1));
-        const newDays = Array.from({ length: daysCount }, (_, i) => i + 1);
-        setDays(newDays);
-        if (day > daysCount) setSelectedDay(daysCount);
-    }, [year, month]);
-
-    useEffect(() => {
-        if (isOpen) {
-            scrollToValue(yearRef, years.indexOf(year));
-            scrollToValue(monthRef, months.indexOf(month));
-            scrollToValue(dayRef, days.indexOf(day));
-        }
-    }, [isOpen, days.length]); // Re-scroll if days count changes
-
-    const scrollToValue = (ref: React.RefObject<HTMLDivElement | null>, index: number) => {
-        if (ref.current && index !== -1) {
-            ref.current.scrollTop = index * ITEM_HEIGHT;
-        }
+    const handlePrevMonth = () => {
+        setCurrentMonth(subMonths(currentMonth, 1));
     };
 
-    const handleConfirm = () => {
-        const finalDate = setDate(setMonth(setYear(new Date(), year), month - 1), day);
-        onSelect(format(finalDate, 'yyyy-MM-dd'));
-        medium();
+    const handleNextMonth = () => {
+        setCurrentMonth(addMonths(currentMonth, 1));
+    };
+
+    const handleSelectDate = (date: Date) => {
+        if (isBefore(date, minDate)) return;
+        onSelect(format(date, 'yyyy-MM-dd'));
         onClose();
     };
 
-    const Wheel = ({
-        items,
-        value,
-        onChange,
-        containerRef,
-        label = ""
-    }: {
-        items: (string | number)[],
-        value: string | number,
-        onChange: (val: any) => void,
-        containerRef: React.RefObject<HTMLDivElement | null>,
-        label?: string
-    }) => {
-        const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-            const target = e.target as HTMLDivElement;
-            const index = Math.round(target.scrollTop / ITEM_HEIGHT);
-            if (items[index] !== undefined && items[index] !== value) {
-                onChange(items[index]);
-                selection();
-            }
-        };
-
-        const handleWheel = (e: React.WheelEvent<HTMLDivElement>) => {
-            if (containerRef.current) {
-                containerRef.current.scrollTop += e.deltaY;
-            }
-        };
-
-        return (
-            <div className="relative h-[200px] w-full overflow-hidden" onWheel={handleWheel}>
-                <div className="absolute top-1/2 left-0 right-0 -translate-y-1/2 h-[40px] bg-primary/10 rounded-lg pointer-events-none z-10" />
-                <div
-                    ref={containerRef}
-                    className="h-full overflow-y-auto no-scrollbar snap-y snap-mandatory py-[80px]"
-                    onScroll={handleScroll}
-                >
-                    {items.map((item) => (
-                        <div
-                            key={item}
-                            className={`h-[40px] flex items-center justify-center text-[17px] font-medium snap-center transition-colors ${item === value ? 'text-primary' : 'text-text-secondary'
-                                }`}
-                        >
-                            {typeof item === 'number' ? item.toString() : item}{label}
-                        </div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
+    const weekDays = ['일', '월', '화', '수', '목', '금', '토'];
 
     return (
         <AnimatePresence>
             {isOpen && (
                 <>
+                    {/* Backdrop */}
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="fixed inset-0 bg-overlay/60 z-[60] backdrop-blur-[3px]"
+                        className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]"
                     />
+
+                    {/* Modal */}
                     <motion.div
-                        initial={{ y: "100%" }}
-                        animate={{ y: 0 }}
-                        exit={{ y: "100%" }}
-                        transition={{ type: "spring", damping: 30, stiffness: 300 }}
-                        className="fixed bottom-0 left-0 right-0 z-[60] bg-surface/95 backdrop-blur-xl rounded-t-[32px] overflow-hidden pb-8 shadow-2xl border-t border-border/20"
-                        onClick={(e) => e.stopPropagation()}
+                        initial={{ opacity: 0, y: "100%" }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: "100%" }}
+                        transition={{ type: "spring", damping: 25, stiffness: 300 }}
+                        className="fixed bottom-0 left-0 right-0 z-[60] bg-background-secondary/95 backdrop-blur-xl rounded-t-2xl shadow-2xl max-w-lg mx-auto overflow-hidden pb-8 border-t border-border/20"
                     >
+                        {/* Header */}
                         <div className="flex items-center justify-between px-6 py-4 border-b border-border/10">
-                            <button onClick={onClose} className="text-text-secondary text-[16px] font-medium hover:opacity-70 transition-opacity">취소</button>
-                            <span className="text-primary font-semibold text-[17px]">날짜 설정</span>
-                            <button onClick={handleConfirm} className="text-accent font-semibold text-[16px] hover:opacity-70 transition-opacity">완료</button>
+                            <button
+                                onClick={onClose}
+                                className="text-text-secondary font-medium text-[16px]"
+                            >
+                                취소
+                            </button>
+                            <h3 className="text-[17px] font-semibold text-primary">날짜 선택</h3>
+                            <div className="w-[30px]" /> {/* Spacer for centering */}
                         </div>
-                        <div className="flex px-8 py-6 gap-2">
-                            <div className="flex-[1.5]">
-                                <Wheel items={years} value={year} onChange={setSelectedYear} containerRef={yearRef} label="년" />
-                            </div>
-                            <div className="flex-1">
-                                <Wheel items={months} value={month} onChange={setSelectedMonth} containerRef={monthRef} label="월" />
-                            </div>
-                            <div className="flex-1">
-                                <Wheel items={days} value={day} onChange={setSelectedDay} containerRef={dayRef} label="일" />
-                            </div>
+
+                        {/* Month Navigation */}
+                        <div className="flex items-center justify-between px-6 py-6">
+                            <button
+                                onClick={handlePrevMonth}
+                                className="p-2 hover:bg-primary/10 rounded-full transition-colors text-primary"
+                            >
+                                <span className="material-symbols-outlined">chevron_left</span>
+                            </button>
+                            <span className="text-[18px] font-bold text-primary">
+                                {format(currentMonth, 'yyyy년 M월', { locale: ko })}
+                            </span>
+                            <button
+                                onClick={handleNextMonth}
+                                className="p-2 hover:bg-primary/10 rounded-full transition-colors text-primary"
+                            >
+                                <span className="material-symbols-outlined">chevron_right</span>
+                            </button>
+                        </div>
+
+                        {/* Weekday Headers */}
+                        <div className="grid grid-cols-7 gap-1 px-4 pb-2">
+                            {weekDays.map((day, idx) => (
+                                <div
+                                    key={day}
+                                    className={`text-center text-xs font-bold py-2 ${idx === 0 ? 'text-[#FF453A]' : idx === 6 ? 'text-accent' : 'text-text-secondary'
+                                        }`}
+                                >
+                                    {day}
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Days Grid */}
+                        <div className="grid grid-cols-7 gap-1 px-4 pb-4">
+                            {days.map((date, idx) => {
+                                if (!date) {
+                                    return <div key={`empty-${idx}`} className="aspect-square" />;
+                                }
+
+                                const isDisabled = isBefore(date, minDate);
+                                const isSelected = selectedDate && isSameDay(date, new Date(selectedDate));
+                                const isToday = isSameDay(date, new Date());
+                                const dayOfWeek = getDay(date);
+
+                                return (
+                                    <button
+                                        key={date.toISOString()}
+                                        onClick={() => handleSelectDate(date)}
+                                        className={`aspect-square flex items-center justify-center rounded-full text-[15px] font-medium transition-all ${isSelected
+                                            ? 'bg-accent text-white'
+                                            : isToday
+                                                ? 'text-accent font-bold'
+                                                : isDisabled
+                                                    ? 'text-text-secondary/30'
+                                                    : dayOfWeek === 0
+                                                        ? 'text-[#FF453A]'
+                                                        : dayOfWeek === 6
+                                                            ? 'text-accent'
+                                                            : 'text-primary'
+                                            }`}
+                                    >
+                                        {format(date, 'd')}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </motion.div>
                 </>
@@ -153,4 +153,3 @@ export const DatePickerModal: React.FC<DatePickerModalProps> = ({
         </AnimatePresence>
     );
 };
-
