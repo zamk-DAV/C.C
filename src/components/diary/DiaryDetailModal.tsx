@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { NotionItem } from '../../lib/notion';
@@ -36,7 +36,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     })() : '';
 
     // Handle swipe gestures
-    const handleDragEnd = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         const threshold = 50;
         const velocity = 500;
 
@@ -103,7 +103,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
                         drag="y"
                         dragConstraints={{ top: 0, bottom: 0 }}
                         dragElastic={{ top: 0, bottom: 0.5 }}
-                        onDragEnd={(e, info) => {
+                        onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
                         className="fixed inset-0 z-50 flex flex-col bg-black"

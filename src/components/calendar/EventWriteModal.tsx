@@ -35,7 +35,8 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
         try {
             const dateString = format(selectedDate, 'yyyy-MM-dd');
-            const content = time ? `${time} - ${note || ''}`.trim() : note || '';
+            const dateString = format(selectedDate, 'yyyy-MM-dd');
+            // Using title as the main content for Event type
 
             await createDiaryEntry(
                 title.trim(),
@@ -43,7 +44,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 'Event',
                 {
                     date: dateString,
-                    mood: time || undefined // Using mood field for time (optional workaround)
+                    mood: time ? `${time} - ${note || ''}`.trim() : note || undefined
                 }
             );
 

@@ -1,7 +1,6 @@
 import React, { useState, useCallback } from 'react';
-import { motion, AnimatePresence, PanInfo } from 'framer-motion';
+import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import type { MemoryItem } from '../../types';
-import { useAuth } from '../../context/AuthContext';
 import { format, parseISO } from 'date-fns';
 
 interface FeedDetailModalProps {
@@ -11,7 +10,7 @@ interface FeedDetailModalProps {
 }
 
 export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClose, item }) => {
-    const { userData, partnerData } = useAuth();
+    // const { userData, partnerData } = useAuth(); // Unused for now
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const [dragDirection, setDragDirection] = useState<'x' | 'y' | null>(null);
 
@@ -33,7 +32,7 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
     const authorName = "Memory";
 
     // Handle swipe gestures
-    const handleDragEnd = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const handleDragEnd = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         const threshold = 50;
         const velocity = 500;
 
@@ -60,7 +59,7 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
         setDragDirection(null);
     }, [currentImageIndex, images.length, onClose]);
 
-    const handleDrag = useCallback((event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
+    const handleDrag = useCallback((_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
         if (!dragDirection) {
             if (Math.abs(info.offset.x) > Math.abs(info.offset.y)) {
                 setDragDirection('x');
@@ -115,7 +114,7 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
                         drag="y"
                         dragConstraints={{ top: 0, bottom: 0 }}
                         dragElastic={{ top: 0, bottom: 0.5 }}
-                        onDragEnd={(e, info) => {
+                        onDragEnd={(_, info) => {
                             if (info.offset.y > 100) onClose();
                         }}
                         className="fixed inset-0 z-50 flex flex-col bg-black"
