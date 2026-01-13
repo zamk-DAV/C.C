@@ -36,7 +36,8 @@ const MessageMeta: React.FC<{
             "flex flex-col gap-0.5 mb-[2px] transition-opacity duration-150",
             isMine ? "items-end" : "items-start"
         )}>
-            {!isRead && (
+            {/* 하트는 내가 보낸 메시지에서만, 상대방이 읽지 않았을 때만 표시 */}
+            {isMine && !isRead && (
                 <Heart className="size-3 text-red-400 fill-red-400" />
             )}
             {showTime && <span className="text-[10px] text-text-secondary min-w-fit leading-none">{timestamp}</span>}
