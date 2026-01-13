@@ -214,7 +214,7 @@ export const CalendarPage: React.FC = () => {
         // Optimistic Update: Immediately update local state
         const previousEvents = [...firestoreEvents];
         const updatedEvents = previousEvents.map(e =>
-            e.id === event.id ? { ...e, date: newDate } : e
+            e.id === event.id ? { ...e, date: new Date(newDate) } : e
         );
         setFirestoreEvents(updatedEvents);
 
