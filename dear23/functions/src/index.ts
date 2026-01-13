@@ -129,13 +129,21 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     }
                 }
 
+                // Extract Mood (Select property: 'dear23_기분')
+                const mood = props["dear23_기분"]?.select?.name;
+
+                // Extract Weather (Select property: 'dear23_날씨')
+                const weather = props["dear23_날씨"]?.select?.name;
+
                 return {
                     id: page.id,
                     title,
                     date,
                     coverImage,
                     previewText,
-                    author
+                    author,
+                    mood,
+                    weather
                 };
             });
 
@@ -371,6 +379,104 @@ export const deleteDiaryEntry = functions.https.onRequest((req, res) => {
 
         } catch (error: any) {
             console.error("Error deleting Notion page:", error);
+            if (error.response) {
+                console.error("Notion API Error Response:", JSON.stringify(error.response.data));
+            }
+            res.status(500).send({ error: error.message });
+        }
+    });
+});
+
+export const updateDiaryEntry = functions.https.onRequest((req, res) => {
+    corsHandler(req, res, async () => {
+        // 1. Verify Authentication
+        const tokenId = req.headers.authorization?.split("Bearer ")[1];
+        if (!tokenId) {
+            res.status(401).send({ error: "Unauthorized" });
+            return;
+        }
+
+        try {
+            const decodedToken = await admin.auth().verifyIdToken(tokenId);
+            const uid = decodedToken.uid;
+
+            // 2. Fetch Notion Config
+            const userDoc = await admin.firestore().collection("users").doc(uid).get();
+            const userData = userDoc.data();
+
+            if (!userData || !userData.notionConfig) {
+                res.status(404).send({ error: "Notion configuration not found." });
+                return;
+            }
+
+            const { apiKey } = userData.notionConfig;
+
+            // 3. Prepare Update Data
+            const { pageId, title, content, mood, weather, date } = req.body;
+
+            if (!pageId) {
+                res.status(400).send({ error: "Page ID is required" });
+                return;
+            }
+
+            const properties: any = {
+                "Name": title ? {
+                    title: [
+                        {
+                            text: {
+                                content: title
+                            }
+                        }
+                    ]
+                } : undefined,
+                "dear23_날짜": date ? {
+                    date: {
+                        start: date
+                    }
+                } : undefined,
+                "dear23_내용미리보기": content ? {
+                    rich_text: [
+                        {
+                            text: {
+                                content: content.substring(0, 1000)
+                            }
+                        }
+                    ]
+                } : undefined,
+                "dear23_기분": mood ? {
+                    select: {
+                        name: mood
+                    }
+                } : undefined,
+                "dear23_날씨": weather ? {
+                    select: {
+                        name: weather
+                    }
+                } : undefined,
+            };
+
+            // Remove undefined keys
+            Object.keys(properties).forEach(key => properties[key] === undefined && delete properties[key]);
+
+            // 4. Update Page in Notion
+            const response = await axios.patch(
+                `https://api.notion.com/v1/pages/${pageId}`,
+                {
+                    properties: properties
+                },
+                {
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "Notion-Version": "2022-06-28",
+                        "Content-Type": "application/json",
+                    },
+                }
+            );
+
+            res.status(200).send({ data: response.data });
+
+        } catch (error: any) {
+            console.error("Error updating Notion page:", error);
             if (error.response) {
                 console.error("Notion API Error Response:", JSON.stringify(error.response.data));
             }

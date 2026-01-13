@@ -15,6 +15,10 @@ export const DiaryPage: React.FC = () => {
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
+    // Edit & UX States
+    const [editingItem, setEditingItem] = useState<NotionItem | null>(null);
+    const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+
     // Real-time Sync Trigger & Last Checked Update
     useEffect(() => {
         if (user && userData?.coupleId) {
@@ -36,9 +40,23 @@ export const DiaryPage: React.FC = () => {
         }
     };
 
+    const handleEdit = (item: NotionItem, e: React.MouseEvent) => {
+        e.stopPropagation();
+        setEditingItem(item);
+        setIsWriteModalOpen(true);
+    };
+
     const handleCreateSuccess = () => {
         refreshData();
         setIsWriteModalOpen(false);
+        setEditingItem(null);
+    };
+
+    const toggleSection = (key: string) => {
+        setCollapsedSections(prev => ({
+            ...prev,
+            [key]: !prev[key]
+        }));
     };
 
     // Group items by week with month info
@@ -60,11 +78,11 @@ export const DiaryPage: React.FC = () => {
             const weekOfMonth = Math.ceil((date.getDate() + firstDayOfMonth.getDay()) / 7);
 
             const sortKey = `${year}-${String(month).padStart(2, '0')}-W${week}`;
-            const displayKey = `${year}.${String(month).padStart(2, '0')} Week ${weekOfMonth}`;
+            const displayKey = `${year}. ${String(month).padStart(2, '0')} Week ${weekOfMonth}`;
 
             if (!groups[sortKey]) groups[sortKey] = { items: [], displayKey };
 
-            const isMe = item.author === '나' || item.author === userData?.name;
+            const isMe = item.author === '나' || item.author === userData?.name; // Simplistic check
 
             if (filter === 'all') groups[sortKey].items.push(item);
             else if (filter === 'me' && isMe) groups[sortKey].items.push(item);
@@ -102,108 +120,116 @@ export const DiaryPage: React.FC = () => {
                     <h1 className="text-xl font-bold tracking-tight">일기장</h1>
                 </div>
 
-                {/* Filter Tabs */}
+                {/* Filter Tabs - Improved Contrast */}
                 <div className="max-w-md mx-auto px-5 pb-4">
                     <div className="flex space-x-1 p-1 bg-secondary rounded-lg">
-                        <button
-                            onClick={() => setFilter('all')}
-                            className={`flex-1 py-1.5 text-xs font-semibold rounded-md transition-all ${filter === 'all'
-                                    ? 'bg-background text-primary shadow-sm'
-                                    : 'text-text-secondary hover:text-primary'
-                                }`}
-                        >
-                            전체
-                        </button>
-                        <button
-                            onClick={() => setFilter('me')}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'me'
-                                    ? 'bg-background text-primary shadow-sm'
-                                    : 'text-text-secondary hover:text-primary'
-                                }`}
-                        >
-                            나
-                        </button>
-                        <button
-                            onClick={() => setFilter('partner')}
-                            className={`flex-1 py-1.5 text-xs font-medium rounded-md transition-all ${filter === 'partner'
-                                    ? 'bg-background text-primary shadow-sm'
-                                    : 'text-text-secondary hover:text-primary'
-                                }`}
-                        >
-                            상대방
-                        </button>
+                        {['all', 'me', 'partner'].map((f) => (
+                            <button
+                                key={f}
+                                onClick={() => setFilter(f as any)}
+                                className={`flex-1 py-1.5 text-xs font-bold rounded-md transition-all duration-200 ${filter === f
+                                        ? 'bg-primary text-background shadow-md transform scale-[1.02]'
+                                        : 'text-text-secondary hover:text-primary hover:bg-background/50'
+                                    }`}
+                            >
+                                {f === 'all' ? '전체' : f === 'me' ? '나' : '상대방'}
+                            </button>
+                        ))}
                     </div>
                 </div>
             </header>
 
             {/* Main Content */}
             <main className="max-w-md mx-auto px-5 pt-6 space-y-10">
-                {Object.entries(groupedItems).map(([sortKey, { items: weekItems, displayKey }]) => (
-                    <section key={sortKey}>
-                        {/* Week Header */}
-                        <div className="flex items-center space-x-2 mb-4 group cursor-pointer select-none">
-                            <div className="w-5 h-5 flex items-center justify-center rounded hover:bg-secondary transition-colors">
-                                <span className="material-symbols-outlined text-text-secondary text-sm transform transition-transform group-hover:text-primary rotate-90">
-                                    play_arrow
-                                </span>
+                {Object.entries(groupedItems).map(([sortKey, { items: weekItems, displayKey }]) => {
+                    const isCollapsed = collapsedSections[sortKey];
+
+                    return (
+                        <section key={sortKey}>
+                            {/* Week Header - Collapsible Trigger */}
+                            <div
+                                onClick={() => toggleSection(sortKey)}
+                                className="flex items-center space-x-2 mb-4 group cursor-pointer select-none"
+                            >
+                                <div className={`w-5 h-5 flex items-center justify-center rounded hover:bg-secondary transition-all duration-300 ${isCollapsed ? 'rotate-0' : 'rotate-90'}`}>
+                                    <span className="material-symbols-outlined text-text-secondary text-sm group-hover:text-primary transition-colors">
+                                        play_arrow
+                                    </span>
+                                </div>
+                                <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-widest group-hover:text-primary transition-colors">
+                                    {displayKey}
+                                </h2>
+                                <div className="h-px bg-border flex-grow ml-2 opacity-50"></div>
                             </div>
-                            <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-widest">
-                                {displayKey}
-                            </h2>
-                            <div className="h-px bg-border flex-grow ml-2"></div>
-                        </div>
 
-                        {/* Diary Grid */}
-                        <div className="grid grid-cols-2 gap-x-4 gap-y-8">
-                            {weekItems.map((item) => {
-                                const hasImage = item.images && item.images.length > 0;
-                                const coverImage = hasImage ? item.images![0] : null;
+                            {/* Diary Grid */}
+                            <div className={`grid grid-cols-2 gap-x-4 gap-y-8 transition-all duration-500 overflow-hidden ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
+                                {weekItems.map((item) => {
+                                    const hasImage = (item.images && item.images.length > 0) || !!item.coverImage;
+                                    const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
-                                return (
-                                    <article key={item.id} className="flex flex-col group cursor-pointer relative">
-                                        {/* Image */}
-                                        <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-secondary border border-border">
-                                            {coverImage ? (
-                                                <div
-                                                    className="w-full h-full bg-cover bg-center transition-all duration-500 grayscale group-hover:grayscale-0 group-active:grayscale-0"
-                                                    style={{ backgroundImage: `url('${coverImage}')` }}
-                                                />
-                                            ) : (
-                                                <div className="w-full h-full flex items-center justify-center text-text-secondary">
-                                                    <span className="material-symbols-outlined text-4xl">image</span>
+                                    return (
+                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => handleEdit(item, {} as any)}>
+                                            {/* Image area */}
+                                            <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-secondary border border-border">
+                                                {coverImage ? (
+                                                    <div
+                                                        className="w-full h-full bg-cover bg-center transition-all duration-500 grayscale group-hover:grayscale-0 group-active:grayscale-0"
+                                                        style={{ backgroundImage: `url('${coverImage}')` }}
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full flex items-center justify-center text-text-secondary/30">
+                                                        <span className="material-symbols-outlined text-4xl">image</span>
+                                                    </div>
+                                                )}
+
+                                                {/* Actions Overlay */}
+                                                <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={(e) => handleEdit(item, e)}
+                                                        className="bg-black/50 p-1.5 rounded-full text-white hover:bg-primary transition-colors backdrop-blur-sm"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">edit</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={(e) => handleDelete(item.id, e)}
+                                                        className="bg-black/50 p-1.5 rounded-full text-white hover:bg-red-500 transition-colors backdrop-blur-sm"
+                                                    >
+                                                        <span className="material-symbols-outlined text-[14px]">delete</span>
+                                                    </button>
                                                 </div>
-                                            )}
+                                            </div>
 
-                                            {/* Delete Button */}
-                                            <button
-                                                onClick={(e) => handleDelete(item.id, e)}
-                                                className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
-                                            >
-                                                <span className="material-symbols-outlined text-[14px]">delete</span>
-                                            </button>
-                                        </div>
+                                            {/* Info */}
+                                            <div className="space-y-2 px-0.5">
+                                                <div className="flex items-center justify-between">
+                                                    <time className="text-[10px] font-bold text-primary uppercase tracking-wide">
+                                                        {formatDateWithDay(item.date)}
+                                                    </time>
+                                                </div>
 
-                                        {/* Info */}
-                                        <div className="space-y-1.5 px-0.5">
-                                            <div className="flex items-center justify-between">
-                                                <time className="text-[10px] font-bold text-primary uppercase tracking-wide">
-                                                    {formatDateWithDay(item.date)}
-                                                </time>
-                                                <span className={`w-1.5 h-1.5 rounded-full opacity-50 ${item.author === '나' || item.author === userData?.name
+                                                {/* Author & Status */}
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name
                                                         ? 'bg-blue-500'
                                                         : 'bg-red-500'
-                                                    }`}></span>
+                                                        }`}></span>
+                                                    <span className="text-[10px] font-medium text-text-secondary">
+                                                        {item.author || "익명"}
+                                                    </span>
+                                                </div>
+
+                                                <p className="text-[13px] text-text-secondary font-serif leading-snug line-clamp-2">
+                                                    {item.title || item.previewText}
+                                                </p>
                                             </div>
-                                            <p className="text-[13px] text-text-secondary font-serif leading-snug line-clamp-2">
-                                                {item.title || item.previewText}
-                                            </p>
-                                        </div>
-                                    </article>
-                                );
-                            })}
-                        </div>
-                    </section>
-                ))}
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    );
+                })}
 
                 {/* Load More */}
                 {hasMoreDiary && (
@@ -221,7 +247,10 @@ export const DiaryPage: React.FC = () => {
 
             {/* Floating Action Button */}
             <button
-                onClick={() => setIsWriteModalOpen(true)}
+                onClick={() => {
+                    setEditingItem(null); // Clear editing state for new entry
+                    setIsWriteModalOpen(true);
+                }}
                 className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-10"
             >
                 <span className="material-symbols-outlined text-2xl">add</span>
@@ -230,9 +259,21 @@ export const DiaryPage: React.FC = () => {
             {/* Write Modal */}
             <FeedWriteModal
                 isOpen={isWriteModalOpen}
-                onClose={() => setIsWriteModalOpen(false)}
+                onClose={() => {
+                    setIsWriteModalOpen(false);
+                    setEditingItem(null);
+                }}
                 type="Diary"
                 onSuccess={handleCreateSuccess}
+                initialData={editingItem ? {
+                    id: editingItem.id,
+                    title: editingItem.title,
+                    content: editingItem.content || editingItem.previewText, // Use preview if full content unavailable
+                    images: editingItem.images || (editingItem.coverImage ? [editingItem.coverImage] : []),
+                    date: editingItem.date,
+                    mood: editingItem.mood,
+                    weather: editingItem.weather
+                } : null}
             />
         </div>
     );

@@ -1,7 +1,7 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { createDiaryEntry } from '../../lib/notion';
+import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
 import { DatePickerModal } from '../common/DatePickerModal';
 
@@ -10,6 +10,15 @@ interface FeedWriteModalProps {
     onClose: () => void;
     onSuccess: () => void;
     type?: 'Diary' | 'Memory';
+    initialData?: {
+        id: string;
+        title: string;
+        content: string;
+        images: string[];
+        date: string;
+        mood?: string;
+        weather?: string;
+    } | null;
 }
 
 const WEATHER_OPTIONS = [
@@ -28,11 +37,11 @@ const MOOD_OPTIONS = [
     { icon: 'favorite', value: '사랑' },
 ];
 
-const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary' }) => {
+const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary', initialData }) => {
     const { user, userData } = useAuth();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
+    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedMood, setSelectedMood] = useState('좋음');
     const [selectedWeather, setSelectedWeather] = useState('맑음');
@@ -40,6 +49,35 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        if (isOpen && initialData) {
+            setTitle(initialData.title || '');
+            setContent(initialData.content || '');
+            setSelectedDate(initialData.date || format(new Date(), 'yyyy-MM-dd'));
+            if (initialData.mood) setSelectedMood(initialData.mood);
+            if (initialData.weather) setSelectedWeather(initialData.weather);
+
+            if (initialData.images && initialData.images.length > 0) {
+                setImages(initialData.images.map(url => ({
+                    base64: url,
+                    type: 'image/jpeg',
+                    size: 0,
+                    name: 'existing-image',
+                    url: url
+                })));
+            } else {
+                setImages([]);
+            }
+        } else if (isOpen) {
+            setTitle('');
+            setContent('');
+            setImages([]);
+            setSelectedMood('좋음');
+            setSelectedWeather('맑음');
+            setSelectedDate(format(new Date(), 'yyyy-MM-dd'));
+        }
+    }, [isOpen, initialData]);
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -68,14 +106,27 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
 
         setIsLoading(true);
         try {
-            await createDiaryEntry(content, images, type, {
-                mood: selectedMood,
-                weather: selectedWeather,
-                sender: userData?.name || user?.displayName || "나",
-                date: selectedDate
-            });
+            if (initialData?.id) {
+                await updateDiaryEntry(
+                    initialData.id,
+                    content,
+                    [],
+                    {
+                        mood: selectedMood,
+                        weather: selectedWeather,
+                        date: selectedDate,
+                        title: title
+                    }
+                );
+            } else {
+                await createDiaryEntry(content, images, type, {
+                    mood: selectedMood,
+                    weather: selectedWeather,
+                    sender: userData?.name || user?.displayName || "나",
+                    date: selectedDate
+                });
+            }
 
-            // Success reset
             setTitle('');
             setContent('');
             setImages([]);
@@ -83,7 +134,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
             onClose();
         } catch (error) {
             console.error(error);
-            alert('업로드에 실패했습니다.');
+            alert('저장에 실패했습니다.');
         } finally {
             setIsLoading(false);
         }
@@ -217,7 +268,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                                     <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 -mx-2 px-2">
                                         {images.map((img, idx) => (
                                             <div key={idx} className="relative h-40 aspect-[3/4] rounded-2xl overflow-hidden shrink-0 shadow-md border border-border group/item">
-                                                <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
+                                                <img src={img.base64 || img.url} alt="preview" className="w-full h-full object-cover" />
                                                 <button
                                                     onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
                                                     className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500"

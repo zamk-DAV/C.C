@@ -69,6 +69,8 @@ export interface NotionItem {
     isRead?: boolean;
     author?: string;
     images?: string[];
+    mood?: string;
+    weather?: string;
 }
 
 export interface PaginatedNotionResponse {
@@ -152,6 +154,45 @@ export const deleteDiaryEntry = async (pageId: string) => {
     }
 
     // Clear cache after deleting entry
+    clearNotionCache();
+    return await response.json();
+};
+
+const UPDATE_DIARY_URL = "https://us-central1-ccdear23.cloudfunctions.net/updateDiaryEntry";
+
+export const updateDiaryEntry = async (
+    pageId: string,
+    content: string,
+    images: { base64: string, type: string, size: number, name: string }[],
+    options: { mood?: string, weather?: string, date?: string, title?: string }
+) => {
+    const user = auth.currentUser;
+    if (!user) throw new Error("User not authenticated");
+    const token = await user.getIdToken();
+
+    const response = await fetch(UPDATE_DIARY_URL, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+            pageId,
+            content,
+            images,
+            mood: options.mood,
+            weather: options.weather,
+            date: options.date,
+            title: options.title
+        })
+    });
+
+    if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `Failed to update entry: ${response.statusText}`);
+    }
+
+    // Clear cache after updating entry
     clearNotionCache();
     return await response.json();
 };
