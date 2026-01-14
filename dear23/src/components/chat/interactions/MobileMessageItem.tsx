@@ -54,7 +54,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     };
 
     const handleDrag = (_: any, info: PanInfo) => {
-        const threshold = 60;
+        const threshold = 100;
         const dragDistance = isMine ? -info.offset.x : info.offset.x;
 
         if (dragDistance > threshold && !hasTriggeredHaptic.current) {
@@ -67,7 +67,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
 
     const handleDragEnd = async (_: any, info: PanInfo) => {
         setIsDragging(false);
-        const threshold = 60;
+        const threshold = 100;
         const dragDistance = isMine ? -info.offset.x : info.offset.x;
 
         if (dragDistance > threshold) {
@@ -120,7 +120,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
 
     return (
         <div
-            className="relative group touch-none active:z-50"
+            className="relative group touch-pan-y active:z-50"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
