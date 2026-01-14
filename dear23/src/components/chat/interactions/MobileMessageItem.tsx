@@ -42,26 +42,18 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
 
     const SWIPE_THRESHOLD = 100;
 
-    // @use-gesture/react - useDrag with axis lock
+    // @use-gesture/react - useDrag configuration
     const bind = useDrag(
-        ({ down, movement: [mx], cancel, direction: [dx], first, last }) => {
-            // Swipe direction check (isMine = right-aligned, swipe left / !isMine = left-aligned, swipe right)
+        ({ down, movement: [mx], last }) => {
             const dragDistance = isMine ? -mx : mx;
-            const validDirection = isMine ? dx < 0 : dx > 0;
 
-            // If first movement and wrong direction, cancel immediately
-            if (first && !validDirection && Math.abs(mx) > 5) {
-                cancel();
-                return;
-            }
-
-            // Update motion value for visual feedback
             if (down) {
                 setIsDragging(true);
-                // Clamp movement
+                // Clamp movement: Only allow swipe in the intended direction
+                // isMine: Only allow negative mx (left swipe), !isMine: Only allow positive mx (right swipe)
                 const clampedX = isMine
-                    ? Math.max(mx, -100) // For isMine: allow left swipe (negative), clamp at -100
-                    : Math.min(mx, 100);  // For !isMine: allow right swipe (positive), clamp at 100
+                    ? Math.min(0, Math.max(mx, -100))
+                    : Math.max(0, Math.min(mx, 100));
                 x.set(clampedX);
 
                 // Haptic feedback when threshold reached
@@ -73,7 +65,6 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
                 }
             }
 
-            // On release
             if (last) {
                 setIsDragging(false);
                 hasTriggeredHaptic.current = false;
@@ -89,16 +80,17 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
             }
         },
         {
-            axis: 'x', // Only detect horizontal drags
-            filterTaps: true, // Ignore taps
-            from: () => [x.get(), 0], // Start from current position
+            axis: 'x',
+            threshold: 10, // 10px threshold helps distinguish between deliberate swipe and slight horizontal movement during scroll
+            filterTaps: true,
+            from: () => [x.get(), 0],
+            pointer: { touch: true },
+            eventOptions: { passive: true }, // Crucial for allowing native scroll to continue
         }
     );
 
     const handleTap = () => {
-        // Ignore tap if we just finished dragging
         if (isDragging) return;
-
         const now = Date.now();
         if (now - lastTap.current < DOUBLE_TAP_DELAY) {
             success();
@@ -124,12 +116,10 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
 
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStartPos.current || !longPressTimer.current) return;
-
         const touch = e.touches[0];
         const dx = Math.abs(touch.clientX - touchStartPos.current.x);
         const dy = Math.abs(touch.clientY - touchStartPos.current.y);
 
-        // Cancel long press if finger moved too much
         if (dx > MOVE_THRESHOLD || dy > MOVE_THRESHOLD) {
             clearTimeout(longPressTimer.current);
             longPressTimer.current = null;
