@@ -22,6 +22,10 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
     const [isDragging, setIsDragging] = React.useState(false);
     const [dropSuccess, setDropSuccess] = React.useState(false);
 
+    // Color Logic: Use primary if default/undefined, otherwise use custom color
+    const isCustomColor = event.color && event.color !== 'default';
+    const eventColor = isCustomColor ? event.color : undefined;
+
     return (
         <motion.div
             drag
@@ -53,15 +57,12 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
                 const clientX = point.x;
                 const clientY = point.y;
 
-                // Hide element logically or just peek underneath
                 const elements = document.elementsFromPoint(clientX, clientY);
                 const dateCell = elements.find(el => el.getAttribute('data-date'));
 
                 if (dateCell) {
                     const newDate = dateCell.getAttribute('data-date');
-                    // Check if date changed
                     if (newDate) {
-                        // Compare dates. Events might be Date object or timestamp strings depending on processing
                         const eventDateStr = event.date instanceof Date
                             ? format(event.date, 'yyyy-MM-dd')
                             : format(new Date(event.date), 'yyyy-MM-dd');
@@ -75,25 +76,50 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
                     }
                 }
             }}
-            className={`py-6 flex items-baseline gap-6 group cursor-grab hover:bg-white/5 transition-all rounded-xl px-4 -mx-2 bg-background relative overflow-hidden ${isDragging ? 'cursor-grabbing ring-2 ring-primary/30' : ''
+            className={`py-5 flex items-center gap-5 group cursor-grab hover:bg-secondary/40 transition-all rounded-2xl px-4 -mx-2 bg-background relative overflow-hidden ${isDragging ? 'cursor-grabbing ring-2 ring-primary/30' : ''
                 }`}
         >
             {/* Color Indicator */}
             <motion.div
-                className="absolute left-0 top-4 bottom-4 w-1 rounded-r-full"
-                style={{ backgroundColor: event.color || '#135bec' }}
-                animate={{ width: isDragging ? 3 : 4 }}
+                className={`absolute left-0 top-3 bottom-3 w-1.5 rounded-r-full ${!eventColor ? 'bg-primary' : ''}`}
+                style={{ backgroundColor: eventColor }}
+                animate={{ width: isDragging ? 4 : 5 }}
                 transition={{ duration: 0.15 }}
             />
 
-            <span className="text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[60px]" style={{ color: event.color || 'inherit' }}>
+            {/* Time */}
+            <span
+                className={`text-lg font-bold tabular-nums tracking-tighter shrink-0 min-w-[50px] ${!eventColor ? 'text-primary' : ''}`}
+                style={{ color: eventColor }}
+            >
                 {event.time}
             </span>
-            <div className="flex flex-col gap-1 pointer-events-none">
-                <p className="text-lg font-light leading-none">{event.title}</p>
-                {event.note && (
-                    <p className="text-[13px] text-text-secondary font-light italic">{event.note}</p>
-                )}
+
+            {/* Content Container */}
+            <div className="flex flex-col gap-0.5 flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                    <p className="text-[17px] font-normal leading-tight truncate text-text-primary">
+                        {event.title}
+                    </p>
+                    {/* Icons Row */}
+                    <div className="flex items-center gap-1 shrink-0">
+                        {event.isShared && <span className="material-symbols-outlined text-[15px] text-[#FF453A]">favorite</span>}
+                        {event.isImportant && <span className="material-symbols-outlined text-[16px] text-[#FFD60A]">star</span>}
+                    </div>
+                </div>
+
+                <div className="flex items-center gap-2 text-[13px] text-text-secondary font-light">
+                    {/* Author Badge */}
+                    {event.author && (
+                        <span className="text-[10px] px-1.5 py-px rounded-md bg-secondary text-text-secondary font-medium tracking-tight">
+                            {event.author}
+                        </span>
+                    )}
+                    {/* Note */}
+                    {event.note && (
+                        <span className="italic truncate opacity-80">{event.note}</span>
+                    )}
+                </div>
             </div>
 
             {/* Drag indicator overlay */}
@@ -101,15 +127,9 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="absolute inset-0 border-2 border-primary/50 rounded-xl bg-primary/5"
+                    className="absolute inset-0 border-2 border-primary/50 rounded-2xl bg-primary/5 pointer-events-none"
                 />
             )}
-
-            {/* Icons for Important/Shared */}
-            <div className="absolute right-4 top-1/2 -translate-y-1/2 flex gap-2">
-                {event.isImportant && <span className="material-symbols-outlined text-[16px] text-[#FFD60A]">star</span>}
-                {event.isShared && <span className="material-symbols-outlined text-[16px] text-[#FF453A]">favorite</span>}
-            </div>
         </motion.div>
     );
 };
