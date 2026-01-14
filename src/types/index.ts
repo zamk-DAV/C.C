@@ -44,13 +44,18 @@ export interface NotionItem {
     type?: 'Diary' | 'Event' | 'Memory' | 'Letter';
     sender?: string;
     isRead?: boolean;
-    author?: string;
+    author?: string; // Query-result provided author 'Me' | 'Partner' etc.
     authorId?: string; // Added for UID based filtering
     images?: string[];
     tags?: string[];
     content?: string;
     mood?: string;
     weather?: string;
+    // Enhanced Properties for Calendar & Rich Features
+    color?: string;
+    isImportant?: boolean;
+    isShared?: boolean;
+    endDate?: string;
 }
 export interface ChatMessage {
     id: string;

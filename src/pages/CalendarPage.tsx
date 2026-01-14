@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
-import { db } from '../lib/firebase';
-import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
-import type { CalendarEvent } from '../types';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay } from 'date-fns';
+import { useEventData } from '../context/NotionContext';
+import { updateDiaryEntry } from '../lib/notion';
+import type { CalendarEvent, NotionItem } from '../types';
+import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { EventWriteModal } from '../components/calendar/EventWriteModal';
 import { motion } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../hooks/useHaptics';
-import { updateDiaryEntry } from '../lib/notion';
 
 interface DraggableEventProps {
     event: CalendarEvent;
@@ -123,11 +121,35 @@ export const CalendarPage: React.FC = () => {
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>(undefined);
 
     const { coupleData } = useAuth();
-    const { refreshData } = useNotion();
+    // Use Notion Data instead of Firestore
+    const { eventData, isLoading: isNotionLoading, refreshData } = useEventData();
     const { heavy, medium } = useHaptics();
 
-    const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
-    const [loading, setLoading] = useState(true);
+    // Map Notion Items to Calendar Events
+    const calendarEvents = useMemo(() => {
+        return eventData.map((item: NotionItem): CalendarEvent => {
+            // Parse date safely (handling undefined or different formats)
+            const eventDate = item.date ? parseISO(item.date) : new Date();
+
+            return {
+                id: item.id,
+                title: item.title,
+                date: eventDate,
+                time: item.date ? format(parseISO(item.date), 'HH:mm') : '00:00', // Extract time if available in ISO
+                type: 'Event',
+                note: item.previewText || '',
+                author: item.author,
+                color: item.color,
+                isImportant: item.isImportant,
+                isShared: item.isShared,
+                endDate: item.endDate ? parseISO(item.endDate) : undefined
+                // Add images if needed mapping
+            };
+        });
+    }, [eventData]);
+
+    // Use derived state for loading to avoid flicker if cache is present
+    const loading = isNotionLoading && calendarEvents.length === 0;
 
     // Auto-scroll logic
     const lastScrollTime = React.useRef(0);
@@ -150,36 +172,10 @@ export const CalendarPage: React.FC = () => {
         }
     };
 
-    // 1. Firestore Events
-    useEffect(() => {
-        if (!coupleData?.id) {
-            setLoading(false);
-            return;
-        }
+    // 1. Notion Events (Derived from Context)
+    // No need for separate useEffect, calendarEvents is already memoized above.
 
-        const eventsQuery = query(
-            collection(db, 'couples', coupleData.id, 'events'),
-            orderBy('date', 'asc')
-        );
-
-        const unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
-            const events = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    ...data,
-                    date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
-                    type: 'Event'
-                } as CalendarEvent;
-            });
-            setFirestoreEvents(events);
-            setLoading(false);
-        });
-
-        return () => unsubscribe();
-    }, [coupleData?.id]);
-
-    const events = [...firestoreEvents];
+    const events = calendarEvents;
 
     // Calendar Grid Logic
     const monthStart = startOfMonth(currentDate);
@@ -233,17 +229,9 @@ export const CalendarPage: React.FC = () => {
     };
 
     const handleEventDrop = async (event: CalendarEvent, newDate: string) => {
-        // Optimistic Update: Immediately update local state
-        const previousEvents = [...firestoreEvents];
-        const updatedEvents = previousEvents.map(e =>
-            e.id === event.id ? { ...e, date: new Date(newDate) } : e
-        );
-        setFirestoreEvents(updatedEvents);
-
         try {
             medium();
             // Call API to update date
-            // Note: firestoreEvents update via snapshot listener when backend processes it
             await updateDiaryEntry(
                 event.id,
                 event.title, // Keep title/content
@@ -258,11 +246,9 @@ export const CalendarPage: React.FC = () => {
                     isShared: event.isShared
                 }
             );
-            // No need to do anything else, snapshot will eventually confirm this
+            await refreshData(); // Force refresh to update UI
         } catch (error) {
             console.error("Failed to move event:", error);
-            // Revert on failure
-            setFirestoreEvents(previousEvents);
             alert("일정 이동에 실패했습니다.");
         }
     };

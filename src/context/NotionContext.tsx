@@ -59,9 +59,37 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const [nextCursorLetter, setNextCursorLetter] = useState<string | null>(null);
 
     // Common State
-    const [isLoading, setIsLoading] = useState(false);
+    // Common State
+    // isLoading starts true, but if cache exists, we flip it to false immediately in fetchInitialData
+    const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [lastFetched, setLastFetched] = useState<number | null>(null);
+
+    // Cache Keys
+    const CACHE_KEY_DIARY = 'dear23_cache_diary';
+    const CACHE_KEY_MEMORY = 'dear23_cache_memory';
+    const CACHE_KEY_EVENT = 'dear23_cache_event';
+    const CACHE_KEY_LETTER = 'dear23_cache_letter';
+
+    // Helper: Load from LocalStorage
+    const loadFromStorage = <T,>(key: string): T | null => {
+        try {
+            const item = localStorage.getItem(key);
+            return item ? JSON.parse(item) : null;
+        } catch (e) {
+            console.error('Failed to load from storage', e);
+            return null;
+        }
+    };
+
+    // Helper: Save to LocalStorage
+    const saveToStorage = (key: string, data: any) => {
+        try {
+            localStorage.setItem(key, JSON.stringify(data));
+        } catch (e) {
+            console.error('Failed to save to storage', e);
+        }
+    };
 
     const hasInitializedRef = useRef(false);
     const isLoadingRef = useRef(false);
@@ -76,10 +104,30 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const fetchInitialData = useCallback(async () => {
         if (isLoadingRef.current) return;
         isLoadingRef.current = true;
-        setIsLoading(true);
-        setError(null);
 
-        console.log('[NotionContext] Fetching initial data...');
+        // 1. Load from Cache immediately (Instant Load)
+        const cachedDiary = loadFromStorage<NotionItem[]>(CACHE_KEY_DIARY);
+        const cachedMemory = loadFromStorage<NotionItem[]>(CACHE_KEY_MEMORY);
+        const cachedEvent = loadFromStorage<NotionItem[]>(CACHE_KEY_EVENT);
+        const cachedLetter = loadFromStorage<NotionItem[]>(CACHE_KEY_LETTER);
+
+        if (cachedDiary) setDiaryData(cachedDiary);
+        if (cachedMemory) setMemoryData(cachedMemory);
+        if (cachedEvent) setEventData(cachedEvent);
+        if (cachedLetter) setLetterData(cachedLetter);
+
+        // If we have cached data, we can stop the overall "loading" spinner 
+        // effectively immediately, allowing the UI to render.
+        // We still fetch in background.
+        if (cachedDiary || cachedMemory || cachedEvent) {
+            console.log('[NotionContext] Loaded from cache. Fetching fresh data in background...');
+            setIsLoading(false);
+        } else {
+            setIsLoading(true);
+        }
+
+        setError(null);
+        console.log('[NotionContext] Fetching fresh data from API...');
 
         try {
             const [diaryResult, memoryResult, eventResult, letterResult] = await Promise.all([
@@ -89,26 +137,34 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 fetchNotionData('Letter', undefined, 20)
             ]);
 
+            // 2. Update State & Cache
             setDiaryData(diaryResult.data);
+            saveToStorage(CACHE_KEY_DIARY, diaryResult.data);
             setHasMoreDiary(diaryResult.hasMore);
             setNextCursorDiary(diaryResult.nextCursor);
 
             setMemoryData(memoryResult.data);
+            saveToStorage(CACHE_KEY_MEMORY, memoryResult.data);
             setHasMoreMemory(memoryResult.hasMore);
             setNextCursorMemory(memoryResult.nextCursor);
 
             setEventData(eventResult.data);
+            saveToStorage(CACHE_KEY_EVENT, eventResult.data);
             setHasMoreEvent(eventResult.hasMore);
             setNextCursorEvent(eventResult.nextCursor);
 
             setLetterData(letterResult.data);
+            saveToStorage(CACHE_KEY_LETTER, letterResult.data);
             setHasMoreLetter(letterResult.hasMore);
             setNextCursorLetter(letterResult.nextCursor);
 
             setLastFetched(Date.now());
         } catch (err: any) {
             console.error('[NotionContext] Failed to load data:', err);
-            setError(err.message || 'Failed to load Notion data');
+            // Only set error if we have NO data to show
+            if (!cachedDiary && !cachedMemory) {
+                setError(err.message || 'Failed to load Notion data');
+            }
         } finally {
             setIsLoading(false);
             isLoadingRef.current = false;
