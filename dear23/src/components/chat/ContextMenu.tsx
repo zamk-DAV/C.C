@@ -19,31 +19,67 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
     x, y, onClose, onReply, onCopy, onNotice, onDelete, onReaction, isMine
 }) => {
     const menuRef = useRef<HTMLDivElement>(null);
+    const [style, setStyle] = React.useState<React.CSSProperties>({
+        opacity: 0,
+        pointerEvents: 'none',
+        position: 'fixed'
+    });
 
-    // Edge Detection: If click is near right edge (assuming menu width ~220px), shift left
-    const isRightEdge = typeof window !== 'undefined' && (x + 220 > window.innerWidth);
-    const transformStyle = isRightEdge ? 'translate(-95%, -10%)' : 'translate(-10%, -10%)';
+    React.useLayoutEffect(() => {
+        if (!menuRef.current) return;
 
-    useEffect(() => {
+        const menu = menuRef.current;
+        const rect = menu.getBoundingClientRect();
+        const winW = window.innerWidth;
+        const winH = window.innerHeight;
+
+        let top = y;
+        let left = x;
+
+        // Bottom Edge Detection: If menu goes below screen, flip it up
+        if (y + rect.height > winH - 20) { // 20px padding
+            top = y - rect.height;
+        }
+
+        // Right Edge Detection: If menu goes past right edge, shift left
+        if (x + rect.width > winW - 20) {
+            left = winW - rect.width - 20;
+        }
+
+        // Ensure it doesn't go off the top or left
+        if (top < 20) top = 20;
+        if (left < 20) left = 20;
+
+        setStyle({
+            top,
+            left,
+            opacity: 1,
+            pointerEvents: 'auto'
+        });
+
         const handleClickOutside = (event: MouseEvent) => {
             if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
                 onClose();
             }
         };
+
+        const handleScroll = () => onClose();
+
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, [onClose]);
+        window.addEventListener('scroll', handleScroll, { capture: true }); // Close on scroll
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            window.removeEventListener('scroll', handleScroll, { capture: true });
+        };
+    }, [x, y, onClose]); // Recalculate if coordinates change
 
     // Portal to render on top of everything
     return createPortal(
         <div
             ref={menuRef}
-            className="fixed z-[9999] bg-background/90 backdrop-blur-md border border-border rounded-xl shadow-2xl p-2 min-w-[200px] animate-in fade-in zoom-in-95 duration-200"
-            style={{
-                top: y,
-                left: x,
-                transform: transformStyle
-            }}
+            className="fixed z-[9999] bg-background/90 backdrop-blur-md border border-border rounded-xl shadow-2xl p-2 min-w-[200px] transition-opacity duration-200"
+            style={style}
         >
             {/* Emoji Reactions */}
             <div className="flex items-center justify-between gap-1 mb-2 bg-secondary/30 p-1.5 rounded-lg">

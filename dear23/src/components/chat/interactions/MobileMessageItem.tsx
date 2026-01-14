@@ -114,6 +114,10 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
         touchStartPos.current = null;
     };
 
+    const handleContextMenu = (e: React.MouseEvent) => {
+        e.preventDefault();
+    };
+
     return (
         <div
             className="relative group touch-none active:z-50"
@@ -121,6 +125,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
             onTouchCancel={handleTouchEnd}
+            onContextMenu={handleContextMenu}
         >
             {/* Reply Icon Overlay (Behind) */}
             <div className={`absolute inset-y-0 flex items-center px-4 ${isMine ? 'right-0 justify-end' : 'left-0 justify-start'}`}>
