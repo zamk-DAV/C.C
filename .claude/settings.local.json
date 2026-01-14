@@ -15,7 +15,8 @@
       "Bash(npm install:*)",
       "Bash(vercel deploy:*)",
       "Bash(npm run build:*)",
-      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Resolve build errors by restoring missing imports and cleaning up unused variables\n\n- Restore React hooks imports (useState, useEffect, useRef) in ProfileEditModal, LoginPage, SignUpPage\n- Restore Firebase imports (auth, db, doc, updateDoc, setDoc) in auth pages and settings\n- Fix NotionContext integration by adding refreshData to destructured properties\n- Add missing ThemeToggle import in EventWriteModal\n- Remove unused variables and imports (refreshData, retryRef, useLocation, useEffect)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")"
+      "Bash(git commit -m \"$(cat <<''EOF''\nFix: Resolve build errors by restoring missing imports and cleaning up unused variables\n\n- Restore React hooks imports (useState, useEffect, useRef) in ProfileEditModal, LoginPage, SignUpPage\n- Restore Firebase imports (auth, db, doc, updateDoc, setDoc) in auth pages and settings\n- Fix NotionContext integration by adding refreshData to destructured properties\n- Add missing ThemeToggle import in EventWriteModal\n- Remove unused variables and imports (refreshData, retryRef, useLocation, useEffect)\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push)"
     ]
   }
 }

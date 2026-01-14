@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import type { MemoryItem } from '../../types';
 
@@ -10,9 +10,6 @@ export interface MemoryFeedProps {
 }
 
 const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: MemoryItem) => void }) => {
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const scrollRef = useRef<HTMLDivElement>(null);
-
     // Filter valid images. Fallback to imageUrl if images array is empty.
     const displayImages = item.images && item.images.length > 0
         ? item.images
@@ -27,69 +24,156 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
         }
     })() : '';
 
-    const handleScroll = () => {
-        if (scrollRef.current) {
-            const index = Math.round(scrollRef.current.scrollLeft / scrollRef.current.clientWidth);
-            setCurrentIndex(index);
-        }
-    };
+    const imageCount = displayImages.length;
+    const remainingCount = imageCount > 4 ? imageCount - 4 : 0;
 
+    // Single image layout (3:4 ratio)
+    if (imageCount === 1) {
+        return (
+            <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
+                <div className="relative w-full aspect-[3/4] rounded-sm overflow-hidden bg-secondary group">
+                    <div
+                        className="w-full h-full bg-cover bg-center transition-all duration-300"
+                        style={{ backgroundImage: `url('${displayImages[0]}')` }}
+                    />
+                    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+
+                    {/* Gradient & Content */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 p-6 w-full pointer-events-none">
+                        <span className="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase">
+                            {formattedDate}
+                        </span>
+                        <h2 className="font-serif text-2xl text-white mt-1 leading-tight italic line-clamp-2">
+                            {item.title || 'No content'}
+                        </h2>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Two images layout (1 row, 2 columns - square)
+    if (imageCount === 2) {
+        return (
+            <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
+                <div className="relative w-full aspect-square rounded-sm overflow-hidden bg-secondary">
+                    <div className="grid grid-cols-2 gap-1.5 h-full">
+                        {displayImages.slice(0, 2).map((img, idx) => (
+                            <div key={idx} className="relative overflow-hidden group">
+                                <div
+                                    className="w-full h-full bg-cover bg-center transition-all duration-300"
+                                    style={{ backgroundImage: `url('${img}')` }}
+                                />
+                                <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+
+                                {/* Content overlay only on first image */}
+                                {idx === 0 && (
+                                    <>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                                        <div className="absolute bottom-0 left-0 p-4 w-full pointer-events-none">
+                                            <span className="text-[9px] font-bold tracking-[0.2em] text-white/70 uppercase">
+                                                {formattedDate}
+                                            </span>
+                                            <h2 className="font-serif text-lg text-white mt-0.5 leading-tight italic line-clamp-1">
+                                                {item.title || 'No content'}
+                                            </h2>
+                                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Three images layout (2 top, 1 bottom wide)
+    if (imageCount === 3) {
+        return (
+            <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
+                <div className="relative w-full rounded-sm overflow-hidden bg-secondary">
+                    <div className="grid grid-rows-2 gap-1.5">
+                        {/* Top row: 2 images */}
+                        <div className="grid grid-cols-2 gap-1.5 aspect-[2/1]">
+                            {displayImages.slice(0, 2).map((img, idx) => (
+                                <div key={idx} className="relative overflow-hidden group">
+                                    <div
+                                        className="w-full h-full bg-cover bg-center transition-all duration-300"
+                                        style={{ backgroundImage: `url('${img}')` }}
+                                    />
+                                    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+
+                                    {/* Content overlay only on first image */}
+                                    {idx === 0 && (
+                                        <>
+                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                                            <div className="absolute bottom-0 left-0 p-4 w-full pointer-events-none">
+                                                <span className="text-[9px] font-bold tracking-[0.2em] text-white/70 uppercase">
+                                                    {formattedDate}
+                                                </span>
+                                                <h2 className="font-serif text-lg text-white mt-0.5 leading-tight italic line-clamp-1">
+                                                    {item.title || 'No content'}
+                                                </h2>
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                        {/* Bottom row: 1 wide image */}
+                        <div className="relative overflow-hidden group aspect-[2/1]">
+                            <div
+                                className="w-full h-full bg-cover bg-center transition-all duration-300"
+                                style={{ backgroundImage: `url('${displayImages[2]}')` }}
+                            />
+                            <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Four or more images layout (2x2 grid)
     return (
         <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
-            <div className="relative w-full aspect-[3/4] rounded-sm overflow-hidden bg-secondary group">
-                {/* Horizontal Scroll Container */}
-                <div
-                    ref={scrollRef}
-                    className="flex overflow-x-auto snap-x snap-mandatory w-full h-full"
-                    style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }} // Hide scrollbar
-                    onScroll={handleScroll}
-                >
-                    {displayImages.map((img, idx) => (
-                        <div key={idx} className="w-full h-full flex-shrink-0 snap-center relative">
+            <div className="relative w-full aspect-square rounded-sm overflow-hidden bg-secondary">
+                <div className="grid grid-cols-2 grid-rows-2 gap-1.5 h-full">
+                    {displayImages.slice(0, 4).map((img, idx) => (
+                        <div key={idx} className="relative overflow-hidden group">
                             <div
                                 className="w-full h-full bg-cover bg-center transition-all duration-300"
                                 style={{ backgroundImage: `url('${img}')` }}
                             />
-                            {/* Optional: Grayscale effect on hover could be added here if desired, keeping it clean for now */}
                             <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
+
+                            {/* Content overlay only on first image */}
+                            {idx === 0 && (
+                                <>
+                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
+                                    <div className="absolute bottom-0 left-0 p-3 w-full pointer-events-none">
+                                        <span className="text-[8px] font-bold tracking-[0.2em] text-white/70 uppercase">
+                                            {formattedDate}
+                                        </span>
+                                        <h2 className="font-serif text-base text-white mt-0.5 leading-tight italic line-clamp-1">
+                                            {item.title || 'No content'}
+                                        </h2>
+                                    </div>
+                                </>
+                            )}
+
+                            {/* +N badge on 4th image if more images exist */}
+                            {idx === 3 && remainingCount > 0 && (
+                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
+                                    <span className="text-3xl font-bold text-white">
+                                        +{remainingCount}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     ))}
-                </div>
-
-                {/* Image Count Badge (Item 2) */}
-                {displayImages.length > 1 && (
-                    <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 z-10 pointer-events-none">
-                        <span className="text-[10px] font-bold text-white tracking-widest">
-                            {currentIndex + 1} / {displayImages.length}
-                        </span>
-                    </div>
-                )}
-
-                {/* Indicators (Dots) - Moved to bottom (Item 2) */}
-                {displayImages.length > 1 && (
-                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
-                        {displayImages.map((_, idx) => (
-                            <div
-                                key={idx}
-                                className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${idx === currentIndex
-                                    ? 'bg-white scale-110'
-                                    : 'bg-white/40'
-                                    }`}
-                            />
-                        ))}
-                    </div>
-                )}
-
-                {/* Gradient & Content */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-
-                <div className="absolute bottom-0 left-0 p-6 w-full pointer-events-none">
-                    <span className="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase">
-                        {formattedDate}
-                    </span>
-                    <h2 className="font-serif text-2xl text-white mt-1 leading-tight italic line-clamp-2">
-                        {item.title || 'No content'}
-                    </h2>
                 </div>
             </div>
         </div>
