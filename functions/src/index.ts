@@ -35,6 +35,7 @@ interface MemoryItem {
     date: string;
     endDate?: string | null; // Added
     coverImage: string | null;
+    images?: string[]; // Added: All images array
     previewText: string;
     type?: string;
     sender?: string;
@@ -312,16 +313,27 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                 const date = dateProp ? dateProp.start : "";
                 const endDate = dateProp ? (dateProp.end || null) : null;
 
-                // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
+                // Extract Cover Image and All Images (Files & Media property: 'dear23_대표이미지')
                 const fileProp = props["dear23_대표이미지"]?.files || [];
                 let coverImage = null;
-                if (fileProp.length > 0) {
-                    const file = fileProp[0];
+                const images: string[] = [];
+
+                // Extract all images from the files property
+                fileProp.forEach((file: any) => {
+                    let url = null;
                     if (file.type === "file") {
-                        coverImage = file.file.url; // Expiring URL
+                        url = file.file.url; // Expiring URL
                     } else if (file.type === "external") {
-                        coverImage = file.external.url;
+                        url = file.external.url;
                     }
+                    if (url) {
+                        images.push(url);
+                    }
+                });
+
+                // Set coverImage to the first image
+                if (images.length > 0) {
+                    coverImage = images[0];
                 }
 
                 // Fallback Title: If untitled but has image -> "Photo"
@@ -361,6 +373,7 @@ export const getNotionDatabase = functions.https.onRequest((req, res) => {
                     date,
                     endDate,
                     coverImage,
+                    images,  // All images array
                     previewText,
                     author,
                     mood,
