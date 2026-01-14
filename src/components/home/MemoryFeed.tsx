@@ -15,6 +15,9 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
         ? item.images
         : (item.imageUrl ? [item.imageUrl] : []);
 
+    // FORCE TEST: Always show grid for debugging
+    console.warn('[GRID DEBUG]', { title: item.title, imageCount: displayImages.length, images: displayImages });
+
     // Helper to extract date
     const formattedDate = item.date ? (() => {
         try {
