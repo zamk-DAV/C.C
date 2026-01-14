@@ -92,7 +92,7 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
 
             // 4. Validate required properties
             const requiredProperties = [
-                "Name", // Title property
+                // "Name", // Validated dynamically below
                 "dear23_날짜", // Date property
                 "dear23_카테고리", // Select property
                 "dear23_대표이미지", // Files & Media property
@@ -108,14 +108,19 @@ export const validateNotionSchema = functions.https.onRequest((req, res) => {
             const missingProperties: string[] = [];
             const incorrectTypes: string[] = [];
 
+            // Check for Title property (allow any name)
+            const titleProperty = Object.values(properties).find((prop: any) => prop.type === 'title');
+            if (!titleProperty) {
+                missingProperties.push("Title (Primary Key)");
+            }
+
             for (const propName of requiredProperties) {
                 if (!properties[propName]) {
                     missingProperties.push(propName);
                 } else {
                     // Validate types for specific properties
-                    if (propName === "Name" && properties[propName].type !== "title") {
-                        incorrectTypes.push(`${propName} (expected: title, got: ${properties[propName].type})`);
-                    }
+                    // if (propName === "Name" && properties[propName].type !== "title") { ... } // Removed
+
                     if (propName === "dear23_날짜" && properties[propName].type !== "date") {
                         incorrectTypes.push(`${propName} (expected: date, got: ${properties[propName].type})`);
                     }
