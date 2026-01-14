@@ -26,8 +26,8 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     selectedDate = new Date(),
     editEvent
 }) => {
-    const { medium, simpleClick } = useHaptics();
-    const { user } = useAuth();
+    const { medium } = useHaptics();
+    const { user, userData } = useAuth();
 
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);
@@ -39,11 +39,9 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
     const [isImportant, setIsImportant] = useState(false);
     const [isShared, setIsShared] = useState(true);
-    const [selectedColor, setSelectedColor] = useState('#135bec');
     const [note, setNote] = useState('');
 
-    const [url, setUrl] = useState('');
-    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
+    const [images, setImages] = useState<{ url?: string; base64?: string; file?: File }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -75,10 +73,10 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                     setEndDate(evtDate);
                 }
 
-                if (editEvent.color) setSelectedColor(editEvent.color);
-                setIsImportant(editEvent.isImportant ?? false);
+                setEndTime(format(editEvent.endDate || editEvent.date, 'HH:mm'));
+                setIsImportant(editEvent.isImportant || false);
                 setIsShared(editEvent.isShared ?? true);
-                setUrl(editEvent.url || '');
+                setNote(editEvent.note || '');
                 if (editEvent.images && editEvent.images.length > 0) {
                     setImages(editEvent.images.map(imgUrl => ({
                         base64: imgUrl,
@@ -100,8 +98,8 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 setStartTime(format(now, 'HH:mm'));
                 setEndTime(format(new Date(now.getTime() + 60 * 60 * 1000), 'HH:mm'));
                 setIsImportant(false);
-                setSelectedColor('#135bec');
-                setUrl('');
+                setIsShared(true);
+                setNote('');
                 setImages([]);
             }
         }
@@ -147,7 +145,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
             const endDateString = buildIsoDate(endDate, endTime, isAllDay);
 
             // Only send new images (base64) to backend
-            const newImages = images.filter(img => img.base64.startsWith('data:'));
+            const newImages = images.filter(img => img.base64?.startsWith('data:'));
 
             if (user?.email?.startsWith('test_gesture')) {
                 const newEvent: CalendarEvent = {
@@ -159,8 +157,8 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                     type: 'Event',
                     isImportant,
                     isShared,
-                    color: selectedColor,
-                    url,
+                    color: userData?.theme || '#135bec',
+                    url: '',
                     note,
                     author: user.displayName || 'Test User'
                 };
@@ -174,30 +172,42 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 await updateDiaryEntry(
                     editEvent.id,
                     note, // Content goes to page body
-                    newImages,
+                    newImages.map(img => ({
+                        base64: img.base64 || img.url || '',
+                        type: img.file?.type || 'image/jpeg',
+                        size: img.file?.size || 0,
+                        name: img.file?.name || 'image.jpg'
+                    })),
                     {
                         date: dateString,
                         title: title.trim(), // Title goes to Title property
                         endDate: endDateString,
-                        color: selectedColor,
                         isImportant: isImportant,
                         isShared: isShared,
-                        url: url.trim()
+                        // Defaults
+                        color: userData?.theme || '#135bec',
+                        url: ''
                     }
                 );
             } else {
                 await createDiaryEntry(
                     note, // Content goes to page body
-                    images,
+                    images.map(img => ({
+                        base64: img.base64 || img.url || '',
+                        type: img.file?.type || 'image/jpeg',
+                        size: img.file?.size || 0,
+                        name: img.file?.name || 'image.jpg'
+                    })),
                     'Event',
                     {
                         date: dateString,
                         title: title.trim(), // Title goes to Title property
                         endDate: endDateString,
-                        color: selectedColor,
                         isImportant: isImportant,
                         isShared: isShared,
-                        url: url.trim()
+                        // Defaults
+                        color: userData?.theme || '#135bec',
+                        url: ''
                     }
                 );
             }
@@ -208,8 +218,6 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
             setIsSubmitting(false);
         }
     };
-
-    const colors = ['#135bec', '#EF4444', '#10B981', '#A855F7'];
 
     return (
         <AnimatePresence>
@@ -312,6 +320,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                 </div>
                             </div>
 
+
                             {/* Section 2: Important */}
                             <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
                                 <div className="px-4 py-3">
@@ -352,45 +361,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                 </div>
                             </div>
 
-                            {/* Section 4: Color */}
-                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
-                                <div className="flex items-center justify-between px-4 py-3">
-                                    <div className="flex items-center gap-3">
-                                        <span className="material-symbols-outlined text-[20px] text-accent">palette</span>
-                                        <span className="text-[16px]">색상</span>
-                                    </div>
-                                    <div className="flex gap-3">
-                                        {colors.map(color => (
-                                            <button
-                                                key={color}
-                                                onClick={() => { setSelectedColor(color); simpleClick(); }}
-                                                className={`size-6 rounded-full transition-all relative`}
-                                                style={{ backgroundColor: color }}
-                                            >
-                                                {selectedColor === color && (
-                                                    <div className="absolute inset-0 rounded-full ring-2 ring-primary ring-offset-2 ring-offset-background-secondary" />
-                                                )}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Section 5: URL */}
-                            <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5">
-                                <div className="px-4 py-3 flex items-center gap-3">
-                                    <span className="material-symbols-outlined text-[20px] text-accent">link</span>
-                                    <input
-                                        type="text"
-                                        value={url}
-                                        onChange={(e) => setUrl(e.target.value)}
-                                        placeholder="하이퍼링크 (URL)"
-                                        className="flex-1 bg-transparent text-[16px] text-primary border-none focus:ring-0 p-0 placeholder-text-secondary/30 caret-accent"
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Section 6: Images */}
+                            {/* Images Section */}
                             <div className="mx-4 mt-6 overflow-hidden rounded-xl bg-background-secondary border border-border/5 px-4 py-4">
                                 <h4 className="text-primary text-[11px] font-extrabold uppercase tracking-[0.1em] mb-4 opacity-40">사진 추가</h4>
                                 <input
