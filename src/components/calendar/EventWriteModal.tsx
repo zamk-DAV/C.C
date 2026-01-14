@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
+import { createDiaryEntry, updateDiaryEntry, deleteDiaryEntry } from '../../lib/notion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
@@ -43,6 +43,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
     const [images, setImages] = useState<{ url?: string; base64?: string; file?: File }[]>([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -52,6 +53,24 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     const [isEndDatePickerOpen, setIsEndDatePickerOpen] = useState(false);
     const [isStartTimePickerOpen, setIsStartTimePickerOpen] = useState(false);
     const [isEndTimePickerOpen, setIsEndTimePickerOpen] = useState(false);
+
+    const handleDelete = async () => {
+        if (!editEvent || !window.confirm('정말 이 일정을 삭제하시겠습니까?')) return;
+
+        setIsDeleting(true);
+        medium();
+
+        try {
+            await deleteDiaryEntry(editEvent.id);
+            onSuccess(); // Trigger refresh
+            onClose();
+        } catch (error) {
+            console.error("Failed to delete event:", error);
+            alert("일정 삭제에 실패했습니다.");
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     useEffect(() => {
         if (isOpen) {
@@ -429,6 +448,27 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                                     placeholder="메모를 입력하세요"
                                 />
                             </div>
+
+                            {/* Delete Button (Only for Edit Mode) */}
+                            {editEvent && (
+                                <div className="mx-4 mt-8">
+                                    <button
+                                        onClick={handleDelete}
+                                        disabled={isDeleting || isSubmitting}
+                                        className="w-full py-3.5 rounded-xl bg-red-500/5 text-red-500 font-medium hover:bg-red-500/10 active:scale-[0.98] transition-all flex items-center justify-center gap-2 border border-red-500/20"
+                                    >
+                                        {isDeleting ? (
+                                            <span className="text-sm">삭제 중...</span>
+                                        ) : (
+                                            <>
+                                                <span className="material-symbols-outlined text-[20px]">delete</span>
+                                                <span className="text-[15px]">일정 삭제</span>
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
+                            )}
+
                             <div className="h-20" /> {/* Bottom spacer for safety */}
                         </div>
                     </motion.div>
