@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Heart, ThumbsUp, Smile, Frown, Sparkles } from 'lucide-react';
 import { cn } from '../../lib/utils';

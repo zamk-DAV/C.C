@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
-import { motion, type PanInfo, useAnimation, useMotionValue, useTransform } from 'framer-motion';
+import { motion, useAnimation, useMotionValue, useTransform } from 'framer-motion';
+import { useDrag } from '@use-gesture/react';
 import { useHaptics } from '../../../hooks/useHaptics';
 import { CornerUpLeft } from 'lucide-react';
 
@@ -39,6 +40,61 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
     const lastTap = useRef<number>(0);
     const DOUBLE_TAP_DELAY = 300;
 
+    const SWIPE_THRESHOLD = 100;
+
+    // @use-gesture/react - useDrag with axis lock
+    const bind = useDrag(
+        ({ down, movement: [mx], cancel, direction: [dx], first, last }) => {
+            // Swipe direction check (isMine = right-aligned, swipe left / !isMine = left-aligned, swipe right)
+            const dragDistance = isMine ? -mx : mx;
+            const validDirection = isMine ? dx < 0 : dx > 0;
+
+            // If first movement and wrong direction, cancel immediately
+            if (first && !validDirection && Math.abs(mx) > 5) {
+                cancel();
+                return;
+            }
+
+            // Update motion value for visual feedback
+            if (down) {
+                setIsDragging(true);
+                // Clamp movement
+                const clampedX = isMine
+                    ? Math.max(mx, -100) // For isMine: allow left swipe (negative), clamp at -100
+                    : Math.min(mx, 100);  // For !isMine: allow right swipe (positive), clamp at 100
+                x.set(clampedX);
+
+                // Haptic feedback when threshold reached
+                if (dragDistance > SWIPE_THRESHOLD && !hasTriggeredHaptic.current) {
+                    light();
+                    hasTriggeredHaptic.current = true;
+                } else if (dragDistance <= SWIPE_THRESHOLD) {
+                    hasTriggeredHaptic.current = false;
+                }
+            }
+
+            // On release
+            if (last) {
+                setIsDragging(false);
+                hasTriggeredHaptic.current = false;
+
+                if (dragDistance > SWIPE_THRESHOLD) {
+                    heavy();
+                    onReply?.();
+                }
+
+                // Animate back to origin
+                controls.start({ x: 0, transition: { type: 'spring', stiffness: 500, damping: 30 } });
+                x.set(0);
+            }
+        },
+        {
+            axis: 'x', // Only detect horizontal drags
+            filterTaps: true, // Ignore taps
+            from: () => [x.get(), 0], // Start from current position
+        }
+    );
+
     const handleTap = () => {
         // Ignore tap if we just finished dragging
         if (isDragging) return;
@@ -51,32 +107,6 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
         } else {
             lastTap.current = now;
         }
-    };
-
-    const handleDrag = (_: any, info: PanInfo) => {
-        const threshold = 100;
-        const dragDistance = isMine ? -info.offset.x : info.offset.x;
-
-        if (dragDistance > threshold && !hasTriggeredHaptic.current) {
-            light(); // Gentle feedback when threshold reached
-            hasTriggeredHaptic.current = true;
-        } else if (dragDistance <= threshold) {
-            hasTriggeredHaptic.current = false;
-        }
-    };
-
-    const handleDragEnd = async (_: any, info: PanInfo) => {
-        setIsDragging(false);
-        const threshold = 100;
-        const dragDistance = isMine ? -info.offset.x : info.offset.x;
-
-        if (dragDistance > threshold) {
-            heavy();
-            onReply?.();
-        }
-
-        hasTriggeredHaptic.current = false;
-        controls.start({ x: 0, transition: { type: 'spring', stiffness: 500, damping: 30 } });
     };
 
     // Touch handlers for long press
@@ -143,23 +173,10 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
             </div>
 
             <motion.div
-                className="relative z-10"
-                drag="x"
-                dragDirectionLock={true}
-                dragConstraints={{ left: isMine ? -100 : 0, right: isMine ? 0 : 100 }}
-                dragElastic={0.15}
-                onDragStart={() => {
-                    setIsDragging(true);
-                    // Cancel long press when drag starts
-                    if (longPressTimer.current) {
-                        clearTimeout(longPressTimer.current);
-                        longPressTimer.current = null;
-                    }
-                }}
-                onDrag={handleDrag}
-                onDragEnd={handleDragEnd}
+                {...(bind() as any)}
+                className="relative z-10 touch-pan-y"
                 animate={controls}
-                onTap={handleTap}
+                onClick={handleTap}
                 style={{ x }}
             >
                 {children}
