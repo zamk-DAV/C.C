@@ -22,7 +22,7 @@ export const LockScreen: React.FC = () => {
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background text-primary pb-20 transition-colors duration-300">
+        <div className="fixed inset-0 z-50 flex flex-col items-center bg-background text-primary pt-32 transition-colors duration-300">
             <div className="mb-12 flex flex-col items-center gap-4">
                 <span className="material-symbols-outlined text-4xl text-text-secondary">lock</span>
                 <p className="text-sm font-medium tracking-widest uppercase text-text-secondary/70">암호 입력</p>
