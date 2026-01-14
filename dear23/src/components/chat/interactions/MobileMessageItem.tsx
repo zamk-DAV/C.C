@@ -145,6 +145,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
             <motion.div
                 className="relative z-10"
                 drag="x"
+                dragDirectionLock={true}
                 dragConstraints={{ left: isMine ? -100 : 0, right: isMine ? 0 : 100 }}
                 dragElastic={0.15}
                 onDragStart={() => {
