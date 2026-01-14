@@ -1,3 +1,7 @@
+html {
+  scrollbar-gutter: stable;
+}
+
 :root {
   /* Light Theme - Modern Charcoal/Minimalist */
   --background: 0 0% 100%;
