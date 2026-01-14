@@ -3,13 +3,12 @@ import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from
 import { useGesture } from '@use-gesture/react';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import type { NotionItem } from '../../lib/notion';
-import { useNotion } from '../../context/NotionContext';
+// import { useNotion } from '../../context/NotionContext'; // Removed
 
 interface DiaryDetailModalProps {
     isOpen: boolean;
     onClose: () => void;
-    item: NotionItem | null;
+    item: any | null; // Changed from NotionItem to any to handle Firestore data
     authorName: string;
 }
 
@@ -19,7 +18,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     item,
     authorName
 }) => {
-    const { refreshData } = useNotion();
+    // const { refreshData } = useNotion(); // Removed
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
     const retryRef = useRef(false);
 
@@ -36,9 +35,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     const dragDistance = useTransform(y, [-200, 0, 200], [0.5, 1, 0.5]);
 
     // Safe derivation of values
-    const images = item
-        ? (item.images && item.images.length > 0 ? item.images : (item.coverImage ? [item.coverImage] : []))
-        : [];
+    const images = item?.images || []; // Firestore structure: images array
     const hasMultipleImages = images.length > 1;
 
     // Reset state when opening or changing images
@@ -232,9 +229,9 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
                                         }}
                                         onError={() => {
                                             if (!retryRef.current) {
-                                                console.log("[DiaryDetail] Image load failed. Refreshing...");
+                                                console.log("[DiaryDetail] Image load failed.");
                                                 retryRef.current = true;
-                                                refreshData();
+                                                // refreshData(); // Removed Notion dependency
                                             }
                                         }}
                                     />
@@ -265,7 +262,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
                         {/* Dot Indicators */}
                         {hasMultipleImages && (
                             <div className="absolute bottom-24 left-0 right-0 flex justify-center gap-1.5 pointer-events-auto">
-                                {images.map((_, idx) => (
+                                {images.map((_: any, idx: number) => (
                                     <button
                                         key={idx}
                                         onClick={() => setCurrentImageIndex(idx)}

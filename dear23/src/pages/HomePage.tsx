@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 import { Header } from '../components/home/Header';
 import { RecentMessage } from '../components/home/RecentMessage';
 import { MemoryFeed } from '../components/home/MemoryFeed';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
+import { useData } from '../context/DataContext';
 import MemoryWriteModal from '../components/home/MemoryWriteModal';
 
 export const HomePage: React.FC = () => {
     const { user, userData, loading, coupleData, partnerData } = useAuth();
-    const { memoryData, isLoading: isMemoryLoading, refreshData } = useNotion();
+    const { memories, loading: isDataLoading, refreshData } = useData();
     const navigate = useNavigate();
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
+    const [lastMessage, setLastMessage] = useState<{ text: string, sender: string, createdAt: any } | null>(null);
 
     useEffect(() => {
         if (!loading) {
@@ -23,6 +26,33 @@ export const HomePage: React.FC = () => {
             }
         }
     }, [user, userData, loading, navigate]);
+
+    // Subscribe to Last Message
+    useEffect(() => {
+        if (!userData?.coupleId) return;
+
+        const q = query(
+            collection(db, 'couples', userData.coupleId, 'messages'),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            if (!snapshot.empty) {
+                const data = snapshot.docs[0].data();
+                setLastMessage({
+                    text: data.text,
+                    sender: data.senderId === user?.uid ? '나' : (partnerData?.name || '파트너'),
+                    createdAt: data.createdAt
+                });
+            } else {
+                setLastMessage(null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [userData?.coupleId, user, partnerData]);
+
 
     if (loading) return <div className="min-h-screen flex items-center justify-center bg-background text-primary">Loading...</div>;
     if (!user) return null;
@@ -64,6 +94,8 @@ export const HomePage: React.FC = () => {
     }
 
     const handleCreateSuccess = () => {
+        // useData handles realtime updates, no manual refresh needed usually
+        // But if we want to force re-fetch or sync, verify DataContext exposes refreshData
         refreshData();
         setIsWriteModalOpen(false);
     };
@@ -80,18 +112,18 @@ export const HomePage: React.FC = () => {
 
             <main className="space-y-2">
                 <RecentMessage
-                    senderName={partnerName.toUpperCase()}
-                    message="우리의 특별한 하루를 기록해보세요."
-                    timestamp="TODAY"
-                    isNew={true}
+                    senderName={lastMessage ? lastMessage.sender.toUpperCase() : partnerName.toUpperCase()}
+                    message={lastMessage ? lastMessage.text : "우리의 특별한 하루를 기록해보세요."}
+                    timestamp={lastMessage ? "TODAY" : "NOW"} // Could format timestamp properly
+                    isNew={true} // Logic for unread could be added here
                 />
 
-                {isMemoryLoading ? (
+                {isDataLoading && memories.length === 0 ? (
                     <div className="py-20 flex justify-center items-center">
                         <div className="w-8 h-8 border-2 border-primary/20 border-t-primary rounded-full animate-spin" />
                     </div>
-                ) : memoryData.length > 0 ? (
-                    <MemoryFeed items={memoryData} />
+                ) : memories.length > 0 ? (
+                    <MemoryFeed items={memories} />
                 ) : (
                     <div className="py-20 px-6 text-center text-text-secondary italic font-light opacity-50">
                         <p className="text-lg">첫 번째 추억을 남겨보세요.</p>

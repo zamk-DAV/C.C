@@ -1,9 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { DiaryService, MemoryService, uploadImages } from '../../lib/firebase/services';
 
 interface FeedWriteModalProps {
     isOpen: boolean;
@@ -41,7 +41,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
     const { user, userData } = useAuth();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
-    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
+    const [images, setImages] = useState<{ base64?: string, type: string, size: number, name: string, url?: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [selectedMood, setSelectedMood] = useState('좋음');
     const [selectedWeather, setSelectedWeather] = useState('맑음');
@@ -70,8 +70,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
 
             if (initialData.images && initialData.images.length > 0) {
                 setImages(initialData.images.map(url => ({
-                    base64: url,
-                    type: 'image/jpeg',
+                    type: 'image/jpeg', // Placeholder type
                     size: 0,
                     name: 'existing-image',
                     url: url
@@ -112,29 +111,54 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
     };
 
     const handleSubmit = async () => {
-        if (!content && images.length === 0 && !title) return;
+        if ((!content && images.length === 0 && !title) || !userData?.coupleId || !user) return;
 
         setIsLoading(true);
         try {
-            if (initialData?.id) {
-                await updateDiaryEntry(
-                    initialData.id,
-                    content,
-                    [],
-                    {
+            const coupleId = userData.coupleId;
+
+            // Separate new base64 images from existing URLs
+            const existingUrls = images.filter(img => img.url).map(img => img.url!);
+            const newImages = images.filter(img => img.base64 && !img.url).map(img => ({ base64: img.base64! }));
+
+            if (type === 'Diary') {
+                if (initialData?.id) {
+                    // Update
+                    let newUploadedUrls: string[] = [];
+                    if (newImages.length > 0) {
+                        newUploadedUrls = await uploadImages(coupleId, newImages);
+                    }
+
+                    await DiaryService.updateDiary(coupleId, initialData.id, {
+                        title: title || '', // Ensure title is string
+                        content,
                         mood: selectedMood,
                         weather: selectedWeather,
                         date: selectedDate,
-                        title: title
-                    }
-                );
-            } else {
-                await createDiaryEntry(content, images, type, {
-                    mood: selectedMood,
-                    weather: selectedWeather,
-                    sender: userData?.name || user?.displayName || "나",
-                    date: selectedDate
-                });
+                        images: [...existingUrls, ...newUploadedUrls],
+                    });
+                } else {
+                    // Create
+                    await DiaryService.addDiary(coupleId, user.uid, {
+                        title: title || '', // Ensure title is string
+                        content,
+                        mood: selectedMood,
+                        weather: selectedWeather,
+                        date: selectedDate,
+                        images: newImages,
+                    });
+                }
+            } else if (type === 'Memory') {
+                if (initialData?.id) {
+                    // Memory Update (Not yet implemented in service, assume read-only or add later)
+                    alert("메모리 수정 기능은 준비 중입니다.");
+                } else {
+                    await MemoryService.addMemory(coupleId, user.uid, {
+                        content,
+                        images: newImages,
+                        date: selectedDate
+                    });
+                }
             }
 
             setTitle('');

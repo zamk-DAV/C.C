@@ -3,39 +3,36 @@ import { format, parseISO, isValid, getWeek, getYear, getMonth } from 'date-fns'
 import { ko } from 'date-fns/locale';
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { deleteDiaryEntry, type NotionItem } from '../lib/notion';
+import { DiaryService } from '../lib/firebase/services';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
+import { useData } from '../context/DataContext';
 import FeedWriteModal from '../components/home/FeedWriteModal';
 import { DiaryDetailModal } from '../components/diary/DiaryDetailModal';
 
 export const DiaryPage: React.FC = () => {
     const { user, userData, partnerData } = useAuth();
-    const { diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
+    const { diaries, loading: isLoading } = useData();
 
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
     // Edit & UX States
-    const [editingItem, setEditingItem] = useState<NotionItem | null>(null);
-    const [selectedItem, setSelectedItem] = useState<NotionItem | null>(null);
+    const [editingItem, setEditingItem] = useState<any | null>(null);
+    const [selectedItem, setSelectedItem] = useState<any | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
-    // Display author name with priority: partnerNickname > partnerData.name > "상대방"
-    const displayAuthorName = useCallback((item: NotionItem): string => {
-        // Check filtering prioritization: UID > Name
-        const isMe = (item.authorId && item.authorId === user?.uid) ||
-            (!item.authorId && (item.author === '나' || item.author === userData?.name));
+    // Display author name using Firestore authorId
+    const displayAuthorName = useCallback((item: any): string => {
+        const isMe = item.authorId === user?.uid;
 
         if (isMe) {
             return userData?.name || '나';
         } else {
-            // Partner's entry
             return userData?.partnerNickname || partnerData?.name || '상대방';
         }
     }, [userData, partnerData, user?.uid]);
 
-    // Real-time Sync Trigger & Last Checked Update
+    // Update Last Checked Timestamp
     useEffect(() => {
         if (user && userData?.coupleId) {
             const userRef = doc(db, 'users', user.uid);
@@ -45,27 +42,28 @@ export const DiaryPage: React.FC = () => {
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.stopPropagation();
-        if (!window.confirm("정말 이 추억을 삭제하시겠습니까? (Notion에서 아카이브됩니다)")) return;
+        if (!window.confirm("정말 이 추억을 삭제하시겠습니까? (복구할 수 없습니다)")) return;
 
         try {
-            await deleteDiaryEntry(id);
-            refreshData();
+            if (userData?.coupleId) {
+                await DiaryService.deleteDiary(userData.coupleId, id);
+            }
         } catch (error) {
             console.error("Delete failed:", error);
             alert("삭제에 실패했습니다.");
         }
     };
 
-    const handleEdit = (item: NotionItem, e: React.MouseEvent) => {
+    const handleEdit = (item: any, e: React.MouseEvent) => {
         e.stopPropagation();
         setEditingItem(item);
         setIsWriteModalOpen(true);
     };
 
     const handleCreateSuccess = () => {
-        refreshData();
         setIsWriteModalOpen(false);
         setEditingItem(null);
+        // Real-time updates handle refresh automatically
     };
 
     const toggleSection = (key: string) => {
@@ -75,21 +73,15 @@ export const DiaryPage: React.FC = () => {
         }));
     };
 
-    // Group items by week with month info
+    // Group items
     const groupedItems = useMemo(() => {
-        const sorted = [...diaryData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        const groups: { [key: string]: { items: NotionItem[], displayKey: string } } = {};
+        const sorted = [...diaries].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        const groups: { [key: string]: { items: any[], displayKey: string } } = {};
 
         sorted.forEach(item => {
-            if (!item.date) {
-                console.warn("[DiaryGroup] Missing date for item:", item.id);
-                return;
-            }
+            if (!item.date) return;
             const date = parseISO(item.date);
-            if (!isValid(date)) {
-                console.warn("[DiaryGroup] Invalid date for item:", item.id, item.date);
-                return;
-            }
+            if (!isValid(date)) return;
 
             const year = getYear(date);
             const month = getMonth(date) + 1;
@@ -103,24 +95,19 @@ export const DiaryPage: React.FC = () => {
 
             if (!groups[sortKey]) groups[sortKey] = { items: [], displayKey };
 
-            // Improved Filtering Logic: UID > Name
-            const isMe = (item.authorId && item.authorId === user?.uid) ||
-                (!item.authorId && (item.author === '나' || item.author === userData?.name));
+            const isMe = item.authorId === user?.uid;
 
             if (filter === 'all') groups[sortKey].items.push(item);
             else if (filter === 'me' && isMe) groups[sortKey].items.push(item);
             else if (filter === 'partner' && !isMe) groups[sortKey].items.push(item);
         });
 
-        console.log("[DiaryGroup] Final Groups:", Object.keys(groups).length, groups, "filter:", filter);
-
-        // Remove empty groups
         Object.keys(groups).forEach(key => {
             if (groups[key].items.length === 0) delete groups[key];
         });
 
         return groups;
-    }, [filter, diaryData, userData, user?.uid]);
+    }, [filter, diaries, user?.uid]);
 
     // Format date with day of week
     const formatDateWithDay = (dateStr: string) => {
@@ -133,7 +120,7 @@ export const DiaryPage: React.FC = () => {
         }
     };
 
-    if (isLoading && diaryData.length === 0) {
+    if (isLoading && diaries.length === 0) {
         return <div className="min-h-screen flex items-center justify-center bg-background text-text-secondary">Loading...</div>;
     }
 
@@ -145,7 +132,7 @@ export const DiaryPage: React.FC = () => {
                     <h1 className="text-xl font-bold tracking-tight">일기장</h1>
                 </div>
 
-                {/* Filter Tabs - Improved Contrast */}
+                {/* Filter Tabs */}
                 <div className="max-w-md mx-auto px-5 pb-4">
                     <div className="flex space-x-1 p-1 bg-secondary rounded-lg">
                         {['all', 'me', 'partner'].map((f) => (
@@ -171,7 +158,7 @@ export const DiaryPage: React.FC = () => {
 
                     return (
                         <section key={sortKey}>
-                            {/* Week Header - Collapsible Trigger */}
+                            {/* Week Header */}
                             <div
                                 onClick={() => toggleSection(sortKey)}
                                 className="flex items-center space-x-2 mb-4 group cursor-pointer select-none"
@@ -190,7 +177,7 @@ export const DiaryPage: React.FC = () => {
                             {/* Diary Grid */}
                             <div className={`grid grid-cols-2 gap-x-4 gap-y-8 transition-all duration-500 overflow-hidden ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
                                 {weekItems.map((item) => {
-                                    const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
+                                    const coverImage = item.images && item.images.length > 0 ? item.images[0] : null;
 
                                     return (
                                         <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => setSelectedItem(item)}>
@@ -234,7 +221,7 @@ export const DiaryPage: React.FC = () => {
 
                                                 {/* Author & Status */}
                                                 <div className="flex items-center gap-1.5">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name || item.author === user?.uid
+                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.authorId === user?.uid
                                                         ? 'bg-blue-500'
                                                         : 'bg-red-500'
                                                         }`}></span>
@@ -244,7 +231,7 @@ export const DiaryPage: React.FC = () => {
                                                 </div>
 
                                                 <p className="text-[13px] text-text-secondary font-serif leading-snug line-clamp-2">
-                                                    {item.title || item.previewText}
+                                                    {item.content || item.title}
                                                 </p>
                                             </div>
                                         </article>
@@ -254,25 +241,12 @@ export const DiaryPage: React.FC = () => {
                         </section>
                     );
                 })}
-
-                {/* Load More */}
-                {hasMoreDiary && (
-                    <div className="flex justify-center py-6">
-                        <button
-                            onClick={() => loadMoreDiary()}
-                            disabled={isLoading}
-                            className="text-xs font-medium text-text-secondary hover:text-primary transition-colors"
-                        >
-                            {isLoading ? '불러오는 중...' : '더 보기'}
-                        </button>
-                    </div>
-                )}
             </main>
 
             {/* Floating Action Button */}
             <button
                 onClick={() => {
-                    setEditingItem(null); // Clear editing state for new entry
+                    setEditingItem(null);
                     setIsWriteModalOpen(true);
                 }}
                 className="fixed bottom-24 right-6 size-14 bg-primary text-background rounded-full shadow-xl flex items-center justify-center transition-transform hover:scale-110 active:scale-95 z-10"
@@ -280,7 +254,7 @@ export const DiaryPage: React.FC = () => {
                 <span className="material-symbols-outlined text-2xl">add</span>
             </button>
 
-            {/* Write Modal */}
+            {/* Write Modal - Update passed props to match new structure */}
             <FeedWriteModal
                 isOpen={isWriteModalOpen}
                 onClose={() => {
@@ -289,15 +263,7 @@ export const DiaryPage: React.FC = () => {
                 }}
                 type="Diary"
                 onSuccess={handleCreateSuccess}
-                initialData={editingItem ? {
-                    id: editingItem.id,
-                    title: editingItem.title,
-                    content: editingItem.previewText, // Use previewText as content
-                    images: editingItem.images || (editingItem.coverImage ? [editingItem.coverImage] : []),
-                    date: editingItem.date,
-                    mood: editingItem.mood,
-                    weather: editingItem.weather
-                } : null}
+                initialData={editingItem}
             />
 
             {/* Diary Detail Modal */}

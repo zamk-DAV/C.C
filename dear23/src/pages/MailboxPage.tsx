@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { LetterWriteModal } from '../components/mailbox/LetterWriteModal';
 import { LetterDetailModal } from '../components/mailbox/LetterDetailModal';
-import { useLetterData } from '../context/NotionContext';
+import { useData } from '../context/DataContext';
 
 export const MailboxPage: React.FC = () => {
     const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<'received' | 'sent'>('received');
     const { user, userData, partnerData, coupleData } = useAuth();
-    const { letterData, isLoading } = useLetterData();
+    const { letters: letterData, loading: isLoading } = useData(); // Use DataContext
 
     // Modal States
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
@@ -17,20 +17,21 @@ export const MailboxPage: React.FC = () => {
 
     // Filter letters based on active tab and author
     const filteredLetters = letterData.filter(letter => {
-        const isFromMe = letter.author === 'Me';
+        const isFromMe = letter.senderId === user?.uid; // filtering by senderId
         if (activeTab === 'received') return !isFromMe;
         if (activeTab === 'sent') return isFromMe;
         return true;
     });
 
     const handleOpenLetter = (letter: any) => {
-        // Transform NotionItem to Postcard-like structure for the modal
+        // Direct mapping from Firestore LetterEntry
         setSelectedLetter({
             id: letter.id,
-            content: letter.previewText || letter.title, // In Notion, content might be in title or preview
-            senderName: letter.author,
+            content: letter.content,
+            senderName: letter.senderName,
             date: letter.date,
-            senderId: letter.author === userData?.name ? user?.uid : 'partner' // Mock ID for mapping
+            senderId: letter.senderId,
+            isRead: letter.isRead
         });
     };
 
@@ -112,7 +113,7 @@ export const MailboxPage: React.FC = () => {
                                         }`}>
                                         {isLocked
                                             ? '아직 열 수 없는 편지입니다...'
-                                            : letter.previewText || letter.title
+                                            : letter.content
                                         }
                                     </p>
                                 </div>
@@ -122,7 +123,7 @@ export const MailboxPage: React.FC = () => {
                                     <div className="flex flex-col gap-0.5">
                                         <span className={`text-[11px] font-bold tracking-wider ${isLocked ? 'text-text-secondary' : 'text-primary'
                                             }`}>
-                                            {activeTab === 'received' ? 'FROM.' : 'TO.'} {letter.author}
+                                            {activeTab === 'received' ? 'FROM.' : 'TO.'} {letter.senderName}
                                         </span>
                                         <span className={`text-[10px] uppercase tracking-widest text-text-secondary/60`}>
                                             {letter.date}

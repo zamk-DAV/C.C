@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { DatePickerModal } from '../common/DatePickerModal';
-import { createDiaryEntry } from '../../lib/notion';
+import { LetterService } from '../../lib/firebase/services';
 
 interface LetterWriteModalProps {
     isOpen: boolean;
@@ -17,6 +17,8 @@ interface LetterWriteModalProps {
 export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
     isOpen,
     onClose,
+    coupleId,
+    senderId,
     senderName,
     recipientName
 }) => {
@@ -30,16 +32,12 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
 
         setIsLoading(true);
         try {
-            // Save to Notion using unified category
-            await createDiaryEntry(
-                content.trim(),
-                [], // No images for now
-                'Letter',
-                {
-                    sender: senderName,
-                    date: scheduledDate || new Date().toISOString().split('T')[0]
-                }
-            );
+            await LetterService.addLetter(coupleId, senderId, {
+                content: content.trim(),
+                senderName: senderName,
+                recipientName: recipientName,
+                date: scheduledDate || new Date().toISOString().split('T')[0]
+            });
 
             setContent('');
             setScheduledDate('');

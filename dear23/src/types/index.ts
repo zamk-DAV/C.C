@@ -11,7 +11,7 @@ export interface UserData {
     partnerNickname?: string; // My nickname for the partner
     mbti?: string;
     birthDate?: string;
-    notionConfig?: { apiKey: string | null; databaseId: string | null };
+
     bgImage?: string | null;
     passcode?: string | null;
     theme?: string;
@@ -29,29 +29,13 @@ export interface CoupleData {
     members: string[]; // [uid1, uid2]
     startDate: string; // ISO string
     chatId: string;
-    notionConfig?: { apiKey: string | null; databaseId: string | null };
+
     notice?: { text: string; id: string; createdAt: any };
     typing?: Record<string, boolean>; // { [userId]: isTyping }
 }
 // Force Refresh
 
-export interface NotionItem {
-    id: string;
-    title: string;
-    date: string;
-    coverImage: string | null;
-    previewText: string;
-    type?: 'Diary' | 'Event' | 'Memory' | 'Letter';
-    sender?: string;
-    isRead?: boolean;
-    author?: string;
-    authorId?: string; // Added for UID based filtering
-    images?: string[];
-    tags?: string[];
-    content?: string;
-    mood?: string;
-    weather?: string;
-}
+
 
 export interface ChatMessage {
     id: string;
@@ -93,6 +77,7 @@ export interface CalendarEvent {
     isShared?: boolean;
     url?: string;
     images?: string[];
+    content?: string; // Main description
 }
 
 export interface MemoryItem {

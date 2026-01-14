@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
 import { db } from '../lib/firebase';
 import { collection, query, onSnapshot, orderBy } from 'firebase/firestore';
 import type { CalendarEvent } from '../types';
@@ -10,7 +9,7 @@ import { EventWriteModal } from '../components/calendar/EventWriteModal';
 import { motion } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../hooks/useHaptics';
-import { updateDiaryEntry } from '../lib/notion';
+import { EventService } from '../lib/firebase/services';
 
 interface DraggableEventProps {
     event: CalendarEvent;
@@ -93,8 +92,8 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
             </span>
             <div className="flex flex-col gap-1 pointer-events-none">
                 <p className="text-lg font-light leading-none">{event.title}</p>
-                {event.note && (
-                    <p className="text-[13px] text-text-secondary font-light italic">{event.note}</p>
+                {event.content && (
+                    <p className="text-[13px] text-text-secondary font-light italic">{event.content}</p>
                 )}
             </div>
 
@@ -122,8 +121,7 @@ export const CalendarPage: React.FC = () => {
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>(undefined);
 
-    const { coupleData } = useAuth();
-    const { refreshData } = useNotion();
+    const { user, coupleData } = useAuth();
     const { heavy, medium } = useHaptics();
 
     const [firestoreEvents, setFirestoreEvents] = useState<CalendarEvent[]>([]);
@@ -168,7 +166,9 @@ export const CalendarPage: React.FC = () => {
                 return {
                     id: doc.id,
                     ...data,
+                    // Handle Firestore Timestamp or ISO string
                     date: data.date?.toDate ? data.date.toDate() : new Date(data.date),
+                    endDate: data.endDate && (data.endDate.toDate ? data.endDate.toDate() : new Date(data.endDate)),
                     type: 'Event'
                 } as CalendarEvent;
             });
@@ -227,12 +227,14 @@ export const CalendarPage: React.FC = () => {
     );
 
     const handleEventSuccess = () => {
-        refreshData();
+        // No manual refresh needed as onSnapshot handles updates
         setIsEventModalOpen(false);
         setEditingEvent(undefined);
     };
 
     const handleEventDrop = async (event: CalendarEvent, newDate: string) => {
+        if (!coupleData?.id || !user?.uid) return;
+
         // Optimistic Update: Immediately update local state
         const previousEvents = [...firestoreEvents];
         const updatedEvents = previousEvents.map(e =>
@@ -242,23 +244,10 @@ export const CalendarPage: React.FC = () => {
 
         try {
             medium();
-            // Call API to update date
-            // Note: firestoreEvents update via snapshot listener when backend processes it
-            await updateDiaryEntry(
-                event.id,
-                event.title, // Keep title/content
-                [],
-                {
-                    date: newDate,
-                    title: event.title,
-                    mood: event.time ? `${event.time} - ${event.note || ''}`.trim() : event.note || undefined,
-                    endDate: event.endDate ? format(new Date(event.endDate), 'yyyy-MM-dd') : undefined,
-                    color: event.color,
-                    isImportant: event.isImportant,
-                    isShared: event.isShared
-                }
-            );
-            // No need to do anything else, snapshot will eventually confirm this
+            await EventService.updateEvent(coupleData.id, event.id, {
+                date: new Date(newDate)
+                // We only update the date here. Service should handle partial updates.
+            });
         } catch (error) {
             console.error("Failed to move event:", error);
             // Revert on failure

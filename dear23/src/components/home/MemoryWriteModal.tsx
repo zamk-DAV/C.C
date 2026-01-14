@@ -1,8 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { createDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
+import { MemoryService } from '../../lib/firebase/services';
 
 interface MemoryWriteModalProps {
     isOpen: boolean;
@@ -48,12 +48,27 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
     };
 
     const handleSubmit = async () => {
-        if (!content && images.length === 0) return;
+        if ((!content && images.length === 0) || !userData?.coupleId || !user) return;
 
         setIsLoading(true);
         try {
-            await createDiaryEntry(content, images, 'Memory', {
-                sender: userData?.name || user?.displayName || "나",
+            // Upload images logic if needed, but MemoryService.addMemory handles it if I check services.ts?
+            // services.ts: addMemory takes { content, images: { base64 }[], date }
+            // Wait, services.ts `addMemory` does NOT call `uploadImages` automatically?
+            // Let's check services.ts content again.
+            // I only viewed DiaryService mostly.
+            // MemoryService implementation:
+            /*
+            addMemory: async (coupleId, authorId, data) => {
+                 const imageUrls = await uploadImages(coupleId, data.images);
+                 await addDoc(..., { content: data.content, images: imageUrls, ... });
+            }
+            */
+            // Yes, standard pattern I used. So I pass objects with base64.
+
+            await MemoryService.addMemory(userData.coupleId, user.uid, {
+                content,
+                images: images.map(img => ({ base64: img.base64 })),
                 date: format(new Date(), 'yyyy-MM-dd')
             });
 
@@ -79,7 +94,7 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
                         onClick={onClose}
-                        className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+                        className="absolute inset-0 bg-black/80 backdrop-blur-sm"
                     />
 
                     {/* Modal Container - Simpler, lighter design */}
@@ -161,7 +176,7 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
                                                     <img src={img.base64} alt="preview" className="w-full h-full object-cover" />
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleRemoveImage(idx); }}
-                                                        className="absolute top-1.5 right-1.5 bg-background/60 text-primary rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-accent hover:text-background"
+                                                        className="absolute top-1.5 right-1.5 bg-black/60 text-white rounded-full p-1 opacity-100 sm:opacity-0 group-hover/item:opacity-100 transition-opacity hover:bg-red-500"
                                                     >
                                                         <span className="material-symbols-outlined text-[12px]">close</span>
                                                     </button>

@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
 import { cn } from '../../lib/utils';
-import { type NotionItem } from '../../types';
+import { type MemoryEntry } from '../../lib/firebase/services';
 
 interface MemoryFeedProps {
-    items: NotionItem[];
+    items: (MemoryEntry & { id: string })[];
 }
 
-const FeedCard: React.FC<{ item: NotionItem }> = ({ item }) => {
+const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) => {
     const [imageIndex, setImageIndex] = useState(0);
 
-    // Combine coverImage and images array if needed, or prefer images array if populated
-    // Logic: If images array exists and has content, use it. 
-    // If NOT, fall back to coverImage.
     const hasMultipleImages = item.images && item.images.length > 1;
-    const displayImages = (item.images && item.images.length > 0)
-        ? item.images
-        : (item.coverImage ? [item.coverImage] : []);
+    const displayImages = item.images || [];
 
     const currentImage = displayImages[imageIndex];
 
@@ -44,7 +39,7 @@ const FeedCard: React.FC<{ item: NotionItem }> = ({ item }) => {
                 ) : (
                     <div className="w-full h-full border border-border flex items-center justify-center p-12 text-center bg-secondary/10">
                         <p className="text-xl font-light leading-relaxed tracking-tight italic text-primary/80">
-                            "{item.previewText || item.title}"
+                            "{item.content}"
                         </p>
                     </div>
                 )}
@@ -85,7 +80,7 @@ const FeedCard: React.FC<{ item: NotionItem }> = ({ item }) => {
             </div>
 
             <div className="flex flex-col gap-1.5">
-                <p className="text-lg font-bold tracking-tighter uppercase text-primary line-clamp-1">{item.title}</p>
+                <p className="text-lg font-bold tracking-tighter uppercase text-primary line-clamp-1">{item.content}</p>
                 <div className="flex items-center justify-between">
                     <p className="text-[11px] opacity-40 font-bold uppercase tracking-widest text-primary">{item.date}</p>
                     {hasMultipleImages && (

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
+import { EventService } from '../../lib/firebase/services';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
@@ -9,6 +9,7 @@ import { DatePickerModal } from '../common/DatePickerModal';
 import { TimePickerModal } from '../common/TimePickerModal';
 import { ThemeToggle } from '../common/ThemeToggle';
 import { compressImage } from '../../utils/imageUtils';
+import { useAuth } from '../../context/AuthContext';
 
 interface EventWriteModalProps {
     isOpen: boolean;
@@ -25,6 +26,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     selectedDate = new Date(),
     editEvent
 }) => {
+    const { user, userData } = useAuth();
     const { medium, simpleClick } = useHaptics();
 
     const [title, setTitle] = useState('');
@@ -77,9 +79,11 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                 setIsImportant(editEvent.isImportant ?? false);
                 setIsShared(editEvent.isShared ?? true);
                 setUrl(editEvent.url || '');
+
+                // Handle existing images
                 if (editEvent.images && editEvent.images.length > 0) {
                     setImages(editEvent.images.map(imgUrl => ({
-                        base64: imgUrl,
+                        base64: '', // We don't have base64 for existing images, but we have URL
                         type: 'image/jpeg',
                         size: 0,
                         name: 'existing-image',
@@ -127,7 +131,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     };
 
     const handleSave = async () => {
-        if (!title.trim()) return;
+        if (!title.trim() || !userData?.coupleId || !user?.uid) return;
 
         setIsSubmitting(true);
         medium();
@@ -144,43 +148,43 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
             const dateString = buildIsoDate(startDate, startTime, isAllDay);
             const endDateString = buildIsoDate(endDate, endTime, isAllDay);
 
-            // Only send new images (base64) to backend
+            // Separate new images (base64) and existing images (urls)
             const newImages = images.filter(img => img.base64.startsWith('data:'));
+            const existingImages = images.filter(img => img.url).map(img => img.url!);
 
             if (editEvent) {
-                await updateDiaryEntry(
-                    editEvent.id,
-                    note, // Content goes to page body
-                    newImages,
-                    {
-                        date: dateString,
-                        title: title.trim(), // Title goes to Title property
-                        endDate: endDateString,
-                        color: selectedColor,
-                        isImportant: isImportant,
-                        isShared: isShared,
-                        url: url.trim()
-                    }
-                );
+                await EventService.updateEvent(userData.coupleId, editEvent.id, {
+                    title: title.trim(),
+                    content: note,
+                    date: new Date(dateString),
+                    endDate: endDateString ? new Date(endDateString) : undefined,
+                    color: selectedColor,
+                    isImportant: isImportant,
+                    isShared: isShared,
+                    url: url.trim(),
+                    time: isAllDay ? undefined : startTime,
+                    images: existingImages,
+                    newImages: newImages as any
+                });
             } else {
-                await createDiaryEntry(
-                    note, // Content goes to page body
-                    images,
-                    'Event',
-                    {
-                        date: dateString,
-                        title: title.trim(), // Title goes to Title property
-                        endDate: endDateString,
-                        color: selectedColor,
-                        isImportant: isImportant,
-                        isShared: isShared,
-                        url: url.trim()
-                    }
-                );
+                await EventService.addEvent(userData.coupleId, user.uid, {
+                    title: title.trim(),
+                    content: note,
+                    date: new Date(dateString),
+                    images: newImages as any[],
+                    endDate: endDateString ? new Date(endDateString) : undefined,
+                    color: selectedColor,
+                    isImportant: isImportant,
+                    isShared: isShared,
+                    url: url.trim(),
+                    time: isAllDay ? undefined : startTime,
+                    type: 'Event'
+                });
             }
             onSuccess();
         } catch (e) {
             console.error(e);
+            alert("일정 저장에 실패했습니다.");
         } finally {
             setIsSubmitting(false);
         }
