@@ -1,28 +1,29 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { format, parseISO, isValid, getWeek, getYear, getMonth } from 'date-fns';
-import { ko } from 'date-fns/locale';
+
 import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { deleteDiaryEntry, type NotionItem } from '../lib/notion';
+import { deleteAppItem } from '../services/firestore';
+import type { AppItem } from '../types';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
+import { useDiaryData } from '../context/DataContext';
 import FeedWriteModal from '../components/home/FeedWriteModal';
 import { DiaryDetailModal } from '../components/diary/DiaryDetailModal';
 
 export const DiaryPage: React.FC = () => {
-    const { user, userData, partnerData } = useAuth();
-    const { deleteOptimisticItem, diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
+    const { user, userData, partnerData, coupleData } = useAuth();
+    const { diaryData, hasMore: hasMoreDiary, loadMore: loadMoreDiary, refreshData, isLoading } = useDiaryData();
 
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
 
     // Edit & UX States
-    const [editingItem, setEditingItem] = useState<NotionItem | null>(null);
-    const [selectedItem, setSelectedItem] = useState<NotionItem | null>(null);
+    const [editingItem, setEditingItem] = useState<AppItem | null>(null);
+    const [selectedItem, setSelectedItem] = useState<AppItem | null>(null);
     const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
 
     // Display author name with priority: partnerNickname > partnerData.name > "상대방"
-    const displayAuthorName = useCallback((item: NotionItem): string => {
+    const displayAuthorName = useCallback((item: AppItem): string => {
         // Check filtering prioritization: UID > Name
         const isMe = (item.authorId && item.authorId === user?.uid) ||
             (!item.authorId && (item.author === '나' || item.author === userData?.name));
@@ -47,10 +48,10 @@ export const DiaryPage: React.FC = () => {
         e.stopPropagation();
         if (!window.confirm("정말 이 추억을 삭제하시겠습니까? (Notion에서 아카이브됩니다)")) return;
 
+        if (!coupleData) return;
+
         try {
-            // Optimistic Delete: NotionContext의 병합 로직에서 handles this via flag
-            deleteOptimisticItem('Diary', id);
-            await deleteDiaryEntry(id);
+            await deleteAppItem(coupleData.id, 'diaries', id);
         } catch (error) {
             console.error("Delete failed:", error);
             alert("삭제에 실패했습니다.");
@@ -58,7 +59,7 @@ export const DiaryPage: React.FC = () => {
         }
     };
 
-    const handleEdit = (item: NotionItem, e: React.MouseEvent) => {
+    const handleEdit = (item: AppItem, e: React.MouseEvent) => {
         e.stopPropagation();
         setEditingItem(item);
         setIsWriteModalOpen(true);
@@ -80,7 +81,7 @@ export const DiaryPage: React.FC = () => {
     // Group items by week with month info
     const groupedItems = useMemo(() => {
         const sorted = [...diaryData].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-        const groups: { [key: string]: { items: NotionItem[], displayKey: string } } = {};
+        const groups: { [key: string]: { items: AppItem[], displayKey: string } } = {};
 
         sorted.forEach(item => {
             if (!item.date) {
@@ -123,16 +124,7 @@ export const DiaryPage: React.FC = () => {
         return groups;
     }, [filter, diaryData, userData, user?.uid]);
 
-    // Format date with day of week
-    const formatDateWithDay = (dateStr: string) => {
-        try {
-            const date = parseISO(dateStr);
-            if (!isValid(date)) return dateStr;
-            return format(date, 'yyyy년 M월 d일 (EEEE)', { locale: ko });
-        } catch {
-            return dateStr;
-        }
-    };
+
 
     if (isLoading && diaryData.length === 0) {
         return <div className="min-h-screen flex items-center justify-center bg-background text-text-secondary">Loading...</div>;
@@ -171,77 +163,87 @@ export const DiaryPage: React.FC = () => {
                     const isCollapsed = collapsedSections[sortKey];
 
                     return (
-                        <section key={sortKey}>
-                            {/* Week Header - Collapsible Trigger */}
+                        <section key={sortKey} className="animate-in fade-in slide-in-from-bottom-4 duration-700">
+                            {/* Week Header - Elegant Serif Style */}
                             <div
                                 onClick={() => toggleSection(sortKey)}
-                                className="flex items-center space-x-2 mb-4 group cursor-pointer select-none"
+                                className="flex items-center gap-3 mb-6 group cursor-pointer select-none pl-1"
                             >
-                                <div className={`w-5 h-5 flex items-center justify-center rounded hover:bg-secondary transition-all duration-300 ${isCollapsed ? 'rotate-0' : 'rotate-90'}`}>
-                                    <span className="material-symbols-outlined text-text-secondary text-sm group-hover:text-primary transition-colors">
-                                        play_arrow
-                                    </span>
-                                </div>
-                                <h2 className="text-xs font-semibold text-text-secondary uppercase tracking-widest group-hover:text-primary transition-colors">
+                                <h2 className="text-lg font-serif italic text-primary/80 group-hover:text-primary transition-colors">
                                     {displayKey}
                                 </h2>
-                                <div className="h-px bg-border flex-grow ml-2 opacity-50"></div>
+                                <div className="h-[1px] bg-border flex-grow opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                                <span className={`material-symbols-outlined text-text-secondary text-lg transition-transform duration-300 ${isCollapsed ? 'rotate-180' : 'rotate-0'}`}>
+                                    expand_more
+                                </span>
                             </div>
 
-                            {/* Diary Grid */}
-                            <div className={`grid grid-cols-2 gap-x-4 gap-y-8 transition-all duration-500 overflow-hidden ${isCollapsed ? 'max-h-0 opacity-0' : 'max-h-[5000px] opacity-100'}`}>
-                                {weekItems.map((item) => {
+                            {/* Diary Grid - Polaroid Style */}
+                            <div className={`grid grid-cols-2 gap-x-5 gap-y-10 transition-all duration-500 ease-in-out ${isCollapsed ? 'hidden' : 'grid'}`}>
+                                {weekItems.map((item, index) => {
                                     const coverImage = item.coverImage || (item.images && item.images.length > 0 ? item.images[0] : null);
 
                                     return (
-                                        <article key={item.id} className="flex flex-col group cursor-pointer relative" onClick={() => setSelectedItem(item)}>
-                                            {/* Image area */}
-                                            <div className="relative w-full aspect-square mb-3 overflow-hidden rounded-lg bg-secondary border border-border">
-                                                {coverImage ? (
-                                                    <div
-                                                        className="w-full h-full bg-cover bg-center transition-all duration-500 grayscale group-hover:grayscale-0 group-active:grayscale-0"
-                                                        style={{ backgroundImage: `url('${coverImage}')` }}
-                                                    />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-text-secondary/30">
-                                                        <span className="material-symbols-outlined text-4xl">image</span>
-                                                    </div>
-                                                )}
+                                        <article
+                                            key={item.id}
+                                            className="group cursor-pointer relative flex flex-col items-center"
+                                            onClick={() => setSelectedItem(item)}
+                                            style={{ animationDelay: `${index * 50}ms` }}
+                                        >
+                                            {/* Photo Frame */}
+                                            <div className="relative w-full aspect-[4/5] bg-background p-3 pb-8 shadow-[0_2px_8px_rgba(0,0,0,0.08)] group-hover:shadow-[0_8px_24px_rgba(0,0,0,0.12)] group-hover:-translate-y-1 transition-all duration-300 border border-border/40 rotate-[0.5deg] group-hover:rotate-0">
+
+                                                {/* Image Area */}
+                                                <div className="w-full h-full relative overflow-hidden bg-secondary/30">
+                                                    {coverImage ? (
+                                                        <div
+                                                            className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-105 filter grayscale-[20%] group-hover:grayscale-0"
+                                                            style={{ backgroundImage: `url('${coverImage}')` }}
+                                                        />
+                                                    ) : (
+                                                        <div className="w-full h-full flex flex-col items-center justify-center text-text-secondary/40 gap-2">
+                                                            <span className="material-symbols-outlined text-3xl font-light">edit_note</span>
+                                                            <span className="text-[10px] font-serif tracking-widest uppercase">No Photo</span>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* Date on Polaroid Bottom */}
+                                                <div className="absolute bottom-2 right-3 left-3 flex justify-end">
+                                                    <time className="text-[10px] font-serif text-text-secondary/80 italic tracking-wide">
+                                                        {format(parseISO(item.date), 'MM.dd.yyyy')}
+                                                    </time>
+                                                </div>
 
                                                 {/* Actions Overlay */}
-                                                <div className="absolute top-2 right-2 flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10">
                                                     <button
                                                         onClick={(e) => handleEdit(item, e)}
-                                                        className="bg-black/50 p-1.5 rounded-full text-white hover:bg-primary transition-colors backdrop-blur-sm"
+                                                        className="bg-white/90 p-1.5 rounded-full text-primary hover:text-accent-color shadow-sm transition-colors"
                                                     >
                                                         <span className="material-symbols-outlined text-[14px]">edit</span>
                                                     </button>
                                                     <button
                                                         onClick={(e) => handleDelete(item.id, e)}
-                                                        className="bg-black/50 p-1.5 rounded-full text-white hover:bg-red-500 transition-colors backdrop-blur-sm"
+                                                        className="bg-white/90 p-1.5 rounded-full text-danger hover:bg-danger hover:text-white shadow-sm transition-colors"
                                                     >
                                                         <span className="material-symbols-outlined text-[14px]">delete</span>
                                                     </button>
                                                 </div>
                                             </div>
 
-                                            {/* Info (Item 4: Reordered metadata) */}
-                                            <div className="space-y-1.5 px-0.5">
-                                                <p className="text-[14px] font-bold text-primary leading-snug line-clamp-1 group-hover:text-primary/80 transition-colors">
-                                                    {item.title || item.previewText || '제목 없음'}
-                                                </p>
-                                                <div className="flex items-center justify-between">
-                                                    <time className="text-[10px] font-medium text-text-secondary uppercase tracking-tight">
-                                                        {formatDateWithDay(item.date)}
-                                                    </time>
-                                                    <div className="flex items-center gap-1.5">
-                                                        <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold tracking-tighter uppercase ${item.authorId === user?.uid
-                                                            ? 'bg-primary text-background'
-                                                            : 'bg-secondary text-text-secondary'
-                                                            }`}>
-                                                            {item.author === 'Partner' ? partnerData?.name || 'Partner' : item.author}
-                                                        </span>
-                                                    </div>
+                                            {/* Title Below Polaroid */}
+                                            <div className="mt-3 text-center px-1">
+                                                <h3 className="text-sm font-medium text-primary/90 line-clamp-1 font-serif">
+                                                    {item.title || '기록'}
+                                                </h3>
+                                                <div className="flex items-center justify-center gap-1 mt-1">
+                                                    {item.weather && (
+                                                        <span className="text-[10px] text-text-secondary">{item.weather}</span>
+                                                    )}
+                                                    {item.mood && (
+                                                        <span className="text-[10px] text-text-secondary">• {item.mood}</span>
+                                                    )}
                                                 </div>
                                             </div>
                                         </article>

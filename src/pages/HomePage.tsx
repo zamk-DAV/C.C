@@ -6,7 +6,7 @@ import { MemoryFeed } from '../components/home/MemoryFeed';
 import MemoryWriteModal from '../components/home/MemoryWriteModal';
 import { FeedDetailModal } from '../components/home/FeedDetailModal';
 import { useAuth } from '../context/AuthContext';
-import { useNotion } from '../context/NotionContext';
+import { useData } from '../context/DataContext';
 import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTimestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import type { ChatMessage, MemoryItem } from '../types';
@@ -14,7 +14,7 @@ import { format, differenceInMinutes, differenceInHours, differenceInDays } from
 
 export const HomePage: React.FC = () => {
     const { user, userData, partnerData, loading } = useAuth();
-    const { memoryData, hasMoreMemory, loadMoreMemory, refreshData, isLoading: notionLoading } = useNotion();
+    const { memoryData, hasMoreMemory, loadMoreMemory, refreshData, isLoading: notionLoading } = useData();
     const navigate = useNavigate();
 
     // Latest Message State

@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { useEventData } from '../context/NotionContext';
-import type { CalendarEvent, NotionItem } from '../types';
+import { useEventData } from '../context/DataContext';
+import type { CalendarEvent, AppItem } from '../types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { EventWriteModal } from '../components/calendar/EventWriteModal';
@@ -124,7 +124,7 @@ export const CalendarPage: React.FC = () => {
     const calendarEvents = useMemo(() => {
         return eventData
             .filter(item => !item.isOptimisticDelete)
-            .map((item: NotionItem): CalendarEvent => {
+            .map((item: AppItem): CalendarEvent => {
                 const eventDate = item.date ? parseISO(item.date) : new Date();
 
                 return {
@@ -212,7 +212,7 @@ export const CalendarPage: React.FC = () => {
     return (
         <div className="relative flex min-h-[100dvh] w-full flex-col max-w-md mx-auto overflow-x-hidden border-x border-border bg-background text-primary font-display transition-colors duration-300">
             {/* Header */}
-            <header className="flex items-center justify-between px-8 pt-16 pb-8">
+            <header className="flex items-center justify-between px-8 pt-[max(env(safe-area-inset-top)+1.5rem,4rem)] pb-8">
                 <button onClick={handlePrevMonth} className="flex items-center justify-center hover:text-primary/70 transition-colors">
                     <span className="material-symbols-outlined text-xl">arrow_back_ios</span>
                 </button>

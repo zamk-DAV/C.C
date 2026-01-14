@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
+import { addAppItem, updateAppItem, uploadImage } from '../../services/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { DatePickerModal } from '../common/DatePickerModal';
-import { useNotion } from '../../context/NotionContext';
-import type { NotionItem } from '../../types';
+import { useData } from '../../context/DataContext';
+
+// import type { NotionItem } from '../../types';
 import { compressImage } from '../../utils/imageUtils';
 
 interface FeedWriteModalProps {
@@ -41,8 +42,8 @@ const MOOD_OPTIONS = [
 ];
 
 const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary', initialData }) => {
-    const { user, userData } = useAuth();
-    const { addOptimisticItem, updateOptimisticItem, refreshData } = useNotion();
+    const { user, userData, coupleData } = useAuth();
+    const { addOptimisticItem, removeOptimisticItem } = useData();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
@@ -112,68 +113,130 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
         setImages(prev => prev.filter((_, i) => i !== index));
     };
 
+
+    // Wait, dynamic require inside component is bad.
+    // I will import hook correctly at top level in next step if needed, but here I can use the hook I imported.
+    // Actually, FeedWriteModal imports useAuth. I need to import useData or specific hooks. 
+    // The previous code had `import { useNotion }` (commented out).
+    // I should import useDiaryData or useData.
+
+    // Let's rewrite the whole function block to be safe about imports.
+    // But since I'm using replace_file_content block, I can't easily add top-level imports without another call or a larger block.
+    // I'll assume I can add imports at the top using a separate call or MultiReplace.
+
+    // Strategy:
+    // 1. Add import `useData` or `useDiaryData` and `useMemoryData` at the top.
+    // 2. Setup hooks.
+    // 3. Rewrite `handleSubmit`.
+
+    // Refactored handleSubmit:
     const handleSubmit = async () => {
         if (!content && images.length === 0 && !title) return;
+        if (!user || !coupleData) {
+            alert('로그인이 필요하거나 커플 연결이 되어있지 않습니다.');
+            return;
+        }
 
-        setIsLoading(true);
+        // Generate ID / timestamp
+        const tempId = initialData?.id || crypto.randomUUID();
+        // Note: For updates (initialData), we use existing ID.
+        // Optimistic Updates for existing items: We need `updateOptimisticItem`? 
+        // DataContext doesn't have it explicitly implemented yet (merged logic doesn't handle 'updates' to 'firestore' items easily unless we put them in 'adds' and rely on ID overlap?)
+        // My DataContext implementation of `mergeData`:
+        // `const uniqueAdds = adds.filter(i => !firestoreIds.has(i.id));`
+        // checks if Firestore has it. If Firestore has it, we ignore the "Add".
+        // So `addOptimisticItem` with an EXISTING ID will be IGNORED if it's already in Firestore list.
+        // Thus, "Optimistic Update" requires more logic in DataContext (an `optUpdates` map).
+
+        // However, for "FeedWriteModal", updates usually happen on details.
+        // If specific requirement was "New entries appear instantly", I will focus on Adds.
+        // For Updates, users might tolerate spinner or I can add `updateOptimisticItem` to DataContext later.
+        // Given the constraints, I will FOCUS ON NEW ITEMS (Optimistic Add).
+        // For Updates, I will keep the `await` (loading state) if necessary, or just fire-and-forget without optimistic state (it will update eventually).
+        // Fire-and-forget for updates means UI doesn't change until write finishes?
+        // Actually Firestore `onSnapshot` latency compensation works for updates too!
+        // So for UPDATES, I just need to remove `await` and close modal. Firestore SDK updates cache -> UI updates.
+        // For ADDS (especially with images), `addOptimisticItem` helps show "Uploading..." state.
+
+        const isEdit = !!initialData?.id;
+        const category = type === 'Diary' ? 'diaries' : 'memories';
+
+        // Optimistic Item Creation
+        const optimisticItem: any = { // Use 'any' or AppItem cast
+            id: tempId,
+            title: title || (type === 'Memory' ? '추억' : '일기'),
+            content: content,
+            date: selectedDate,
+            images: images.map(img => img.url || img.base64), // Use base64 for preview
+            coverImage: images.length > 0 ? (images[0].url || images[0].base64) : null,
+            previewText: content.substring(0, 100),
+            type: type,
+            authorId: user.uid,
+            author: userData?.name || user.displayName || '나',
+            createdAt: new Date(), // Local date
+            isOptimisticUpdate: true
+        };
+
+        if (type === 'Diary') {
+            optimisticItem.mood = selectedMood;
+            optimisticItem.weather = selectedWeather;
+        }
+
+        // 1. Optimistic Render (Only for new items or if we implement opt updates)
+        // If it's new, we use addOptimisticItem.
+        if (!isEdit) {
+            addOptimisticItem(category, optimisticItem);
+        }
+
+        // 2. Close UI Immediately
+        onSuccess();
+        onClose();
+
+        // 3. Background Upload & Save
         try {
-            // Optimistic Update
-            const optimisticItem: NotionItem = {
-                id: initialData?.id || `optimistic-${Date.now()}`,
-                title: title || (type === 'Memory' ? '추억' : '일기'),
-                date: selectedDate,
-                coverImage: images[0]?.url || images[0]?.base64 || null,
-                previewText: content,
-                type: type,
-                mood: selectedMood,
-                weather: selectedWeather,
-                author: userData?.name || user?.displayName || '나',
-                images: images.map(img => img.url || img.base64 || ''),
-                isOptimisticUpdate: !!initialData?.id // Mark as update if editing
-            };
 
-            if (initialData?.id) {
-                updateOptimisticItem(type, optimisticItem);
-            } else {
-                addOptimisticItem(type, optimisticItem);
+            // Upload Images
+            const uploadedImageUrls: string[] = [];
+            for (const img of images) {
+                if (img.url) {
+                    uploadedImageUrls.push(img.url);
+                } else if (img.base64.startsWith('data:')) {
+                    const res = await fetch(img.base64);
+                    const blob = await res.blob();
+                    const file = new File([blob], img.name || `image-${Date.now()}.jpg`, { type: img.type });
+                    const downloadUrl = await uploadImage(file, 'feed_images');
+                    uploadedImageUrls.push(downloadUrl);
+                }
             }
 
-            setTitle('');
-            setContent('');
-            setImages([]);
-            onSuccess();
-            onClose();
-
-            // Background API call
-            const action = initialData?.id ? async () => {
-                const newImages = images.filter(img => img.base64.startsWith('data:'));
-                await updateDiaryEntry(
-                    initialData.id,
-                    content,
-                    newImages,
-                    {
-                        mood: selectedMood,
-                        weather: selectedWeather,
-                        date: selectedDate,
-                        title: title
-                    }
-                );
-            } : async () => {
-                await createDiaryEntry(content, images, type, {
-                    mood: selectedMood,
-                    weather: selectedWeather,
-                    sender: userData?.name || user?.displayName || "나",
-                    date: selectedDate
-                });
+            const finalItemData = {
+                ...optimisticItem,
+                images: uploadedImageUrls,
+                coverImage: uploadedImageUrls[0] || null,
+                // Remove optimistic flags for DB
+                isOptimisticUpdate: false,
+                createdAt: undefined // let server set it? or keep original? Firestore service sets it.
             };
+            delete finalItemData.id; // Don't save ID in body if optional, but addAppItem takes it separately.
+            delete finalItemData.isOptimisticUpdate;
 
-            await action();
+            if (isEdit) {
+                await updateAppItem(coupleData.id, category, tempId, finalItemData);
+            } else {
+                await addAppItem(coupleData.id, category, finalItemData, tempId);
+            }
+
+            // 4. Cleanup Optimistic State (Only for Adds)
+            if (!isEdit) {
+                removeOptimisticItem(category, tempId);
+            }
+
         } catch (error) {
-            console.error(error);
-            alert('저장에 실패했습니다.');
-            refreshData(); // Restore state on error
-        } finally {
-            setIsLoading(false);
+            console.error("Background Save Failed:", error);
+            alert("저장에 실패했습니다. (Background)");
+            if (!isEdit) {
+                removeOptimisticItem(category, tempId);
+            }
         }
     };
 
@@ -201,7 +264,7 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                         className="relative w-full max-w-[430px] h-[100dvh] sm:h-[90vh] bg-background overflow-hidden flex flex-col shadow-2xl sm:rounded-[2.5rem] border-primary border-0 sm:border-[2px]"
                     >
                         {/* Notch Handle */}
-                        <div className="flex flex-col items-center bg-background pt-4 pb-2 shrink-0">
+                        <div className="flex flex-col items-center bg-background pt-[max(env(safe-area-inset-top)+0.5rem,_1rem)] pb-2 shrink-0">
                             <div className="h-1.5 w-12 rounded-full bg-secondary"></div>
                         </div>
 

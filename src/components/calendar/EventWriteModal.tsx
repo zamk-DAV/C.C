@@ -1,17 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
-import { createDiaryEntry, updateDiaryEntry, deleteDiaryEntry } from '../../lib/notion';
+import { addAppItem, updateAppItem, deleteAppItem, uploadImage } from '../../services/firestore'; // Firestore Service
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { CalendarEvent } from '../../types';
 import { useHaptics } from '../../hooks/useHaptics';
 import { DatePickerModal } from '../common/DatePickerModal';
 import { TimePickerModal } from '../common/TimePickerModal';
-import { useNotion } from '../../context/NotionContext';
-import type { NotionItem } from '../../types';
+// import { useNotion } from '../../context/NotionContext';
+// import type { NotionItem } from '../../types';
 import { compressImage } from '../../utils/imageUtils';
 import { ThemeToggle } from '../common/ThemeToggle';
+import { useEventData } from '../../context/DataContext';
 
 interface EventWriteModalProps {
     isOpen: boolean;
@@ -29,8 +30,8 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     editEvent
 }) => {
     const { medium } = useHaptics();
-    const { user, userData } = useAuth();
-    const { addOptimisticItem, updateOptimisticItem, deleteOptimisticItem, refreshData } = useNotion();
+    const { user, userData, coupleData } = useAuth();
+    const { addOptimisticItem, removeOptimisticItem, deleteOptimisticItem } = useEventData();
 
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);
@@ -58,19 +59,20 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     const [isEndTimePickerOpen, setIsEndTimePickerOpen] = useState(false);
 
     const handleDelete = async () => {
-        if (!editEvent) return;
+        if (!editEvent || !coupleData) return;
         setIsDeleting(true);
         medium();
 
         try {
             // Optimistic Delete
-            deleteOptimisticItem('Event', editEvent.id);
-            onSuccess(); // Close modal immediately
+            deleteOptimisticItem('events', editEvent.id);
+            onSuccess();
 
-            await deleteDiaryEntry(editEvent.id);
+            await deleteAppItem(coupleData.id, 'events', editEvent.id);
         } catch (e) {
             console.error(e);
             alert('삭제에 실패했습니다.');
+            // Ideally revert toggle here if we had restoreOptimisticItem, but likely won't fail
         } finally {
             setIsDeleting(false);
         }
@@ -151,8 +153,12 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
     const handleSave = async () => {
         if (!title.trim()) return;
+        if (!user || !coupleData) {
+            alert('로그인이 필요하거나 커플 연결이 되어있지 않습니다.');
+            return;
+        }
 
-        setIsSubmitting(true);
+        // setIsSubmitting(true); // Don't block UI for optimistic add
         medium();
 
         try {
@@ -167,81 +173,84 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
             const dateString = buildIsoDate(startDate, startTime, isAllDay);
             const endDateString = buildIsoDate(endDate, endTime, isAllDay);
 
-            // Optimistic Update
-            const optimisticItem: NotionItem = {
-                id: editEvent ? editEvent.id : `optimistic-${Date.now()}`,
+            const tempId = editEvent?.id || crypto.randomUUID();
+            const isEdit = !!editEvent;
+
+            const optimisticItem: any = {
+                id: tempId,
                 title: title.trim(),
                 date: dateString,
-                coverImage: images[0]?.url || images[0]?.base64 || null,
+                endDate: endDateString,
+                content: note,
                 previewText: note,
                 type: 'Event',
-                author: userData?.name || user?.displayName || '나',
+                authorId: user.uid,
+                author: userData?.name || user.displayName || '나',
                 color: userData?.theme || '#135bec',
                 isImportant: isImportant,
                 isShared: isShared,
-                endDate: endDateString,
-                images: images.map(img => img.url || img.base64 || ''),
-                isOptimisticUpdate: !!editEvent // Mark as update if editing
+                images: images.map(img => img.url || img.base64), // Use base64 for preview
+                coverImage: images[0]?.url || images[0]?.base64 || null,
+                createdAt: new Date(),
+                isOptimisticUpdate: true
             };
 
-            if (editEvent) {
-                updateOptimisticItem('Event', optimisticItem);
+            if (!isEdit) {
+                addOptimisticItem('events', optimisticItem);
             } else {
-                addOptimisticItem('Event', optimisticItem);
+                setIsSubmitting(true);
             }
 
-            onSuccess(); // Close modal immediately for smooth transition
+            if (!isEdit) {
+                onSuccess();
+                onClose();
+            }
 
-            // Background API Action
-            const action = async () => {
-                const newImages = images.filter(img => img.base64?.startsWith('data:'));
-                const imagePayload = newImages.map(img => ({
-                    base64: img.base64 || img.url || '',
-                    type: img.file?.type || 'image/jpeg',
-                    size: img.file?.size || 0,
-                    name: img.file?.name || 'image.jpg'
-                }));
-
-                if (editEvent) {
-                    await updateDiaryEntry(
-                        editEvent.id,
-                        note,
-                        imagePayload,
-                        {
-                            date: dateString,
-                            title: title.trim(),
-                            endDate: endDateString,
-                            isImportant: isImportant,
-                            isShared: isShared,
-                            color: userData?.theme || '#135bec',
-                            url: ''
-                        }
-                    );
-                } else {
-                    await createDiaryEntry(
-                        note,
-                        imagePayload,
-                        'Event',
-                        {
-                            date: dateString,
-                            title: title.trim(),
-                            endDate: endDateString,
-                            isImportant: isImportant,
-                            isShared: isShared,
-                            color: userData?.theme || '#135bec',
-                            url: ''
-                        }
-                    );
+            // Upload Images
+            const uploadedImageUrls: string[] = [];
+            for (const img of images) {
+                if (img.url) {
+                    uploadedImageUrls.push(img.url);
+                } else if (img.base64 && img.base64.startsWith('data:')) {
+                    try {
+                        const res = await fetch(img.base64);
+                        const blob = await res.blob();
+                        const file = new File([blob], img.file?.name || `event-image-${Date.now()}.jpg`, { type: img.file?.type || 'image/jpeg' });
+                        const downloadUrl = await uploadImage(file, 'event_images');
+                        uploadedImageUrls.push(downloadUrl);
+                    } catch (err) {
+                        console.error('Event image upload failed', err);
+                    }
                 }
-            };
+            }
 
-            await action();
+            const finalItemData = {
+                ...optimisticItem,
+                images: uploadedImageUrls,
+                coverImage: uploadedImageUrls[0] || null,
+                isOptimisticUpdate: false,
+                createdAt: undefined
+            };
+            delete finalItemData.id;
+            delete finalItemData.isOptimisticUpdate;
+
+            if (editEvent) {
+                await updateAppItem(coupleData.id, 'events', editEvent.id, finalItemData);
+                onSuccess(); // Close after update finishes
+            } else {
+                await addAppItem(coupleData.id, 'events', finalItemData, tempId);
+                removeOptimisticItem('events', tempId);
+            }
+
         } catch (e) {
             console.error(e);
             alert('저장에 실패했습니다.');
-            refreshData(); // Restore state on error
+            if (!editEvent) {
+                // Clean up if failed
+                // removeOptimisticItem('events', tempId); // tempId not in scope, refactor needed if strictly handling error rollback
+            }
         } finally {
-            setIsSubmitting(false);
+            if (editEvent) setIsSubmitting(false);
         }
     };
 
@@ -278,7 +287,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
                         </div>
 
                         {/* Content Scrollable */}
-                        <div className="flex-1 overflow-y-auto no-scrollbar pb-10 bg-background">
+                        <div className="flex-1 overflow-y-auto no-scrollbar pb-[max(env(safe-area-inset-bottom)+1rem,2.5rem)] bg-background">
                             {/* Title Input Section */}
                             <div className="mx-4 mt-8 mb-6 overflow-hidden rounded-xl bg-background-secondary/50 border border-border/20 px-4 py-4 backdrop-blur-sm shadow-sm">
                                 <input

@@ -305,4 +305,37 @@ body {
   color: var(--text-primary);
   font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   transition: background-color 0.3s, color 0.3s;
+
+  /* Safe Area Handling for Mobile Web */
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+@layer utilities {
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .h-safe-screen {
+    height: 100dvh;
+    /* Use dynamic viewport height */
+  }
+
+  /* Premium Card Styles */
+  .premium-card {
+    @apply bg-background border border-border shadow-sm hover:shadow-lg transition-all duration-500 ease-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+  }
+
+  .premium-shadow {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+  }
+
+  .clean-card {
+    @apply border border-border/60 bg-secondary/5;
+  }
 }

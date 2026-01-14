@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { db } from '../../lib/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { addAppItem } from '../../services/firestore';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { useLetterData } from '../../context/DataContext';
 
 interface LetterWriteModalProps {
     isOpen: boolean;
@@ -23,38 +23,63 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
     senderName,
     recipientName
 }) => {
+    const { addOptimisticItem, removeOptimisticItem } = useLetterData();
     const [content, setContent] = useState('');
-    const [isLoading, setIsLoading] = useState(false);
+
     const [scheduledDate, setScheduledDate] = useState('');
     const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
 
     const handleSend = async () => {
         if (!content.trim() || !coupleId) return;
 
-        setIsLoading(true);
-        try {
-            await addDoc(collection(db, 'couples', coupleId, 'postcards'), {
-                senderId,
-                senderName,
-                content: content.trim(),
-                createdAt: serverTimestamp(),
-                isRead: false,
-                openDate: scheduledDate || null
-            });
+        // Optimistic Add
+        const tempId = crypto.randomUUID();
+        const optimisticItem: any = {
+            id: tempId,
+            title: 'Letter',
+            content: content.trim(),
+            date: scheduledDate || new Date().toISOString(),
+            authorId: senderId,
+            author: senderName,
+            isRead: false,
+            isShared: false,
+            type: 'Letter',
+            images: [],
+            previewText: content.trim().substring(0, 50),
+            createdAt: new Date(),
+            isOptimisticUpdate: true
+        };
 
-            setContent('');
-            setScheduledDate('');
-            onClose();
+        addOptimisticItem('letters', optimisticItem);
+
+        // Close UI Immediately
+        onClose();
+        setContent('');
+        setScheduledDate('');
+
+        // Background Save
+        try {
+            const finalItemData = {
+                ...optimisticItem,
+                isOptimisticUpdate: false,
+                createdAt: undefined
+            };
+            delete finalItemData.id;
+            delete finalItemData.isOptimisticUpdate;
+
+            await addAppItem(coupleId, 'letters', finalItemData, tempId);
+
+            removeOptimisticItem('letters', tempId);
+
         } catch (error) {
-            console.error("Failed to send letter:", error);
+            console.error("Failed to send letter (background):", error);
             alert('편지 발송에 실패했습니다. 다시 시도해주세요.');
-        } finally {
-            setIsLoading(false);
+            removeOptimisticItem('letters', tempId);
         }
     };
 
     const handleClose = () => {
-        if (content.trim() && !isLoading) {
+        if (content.trim()) {
             if (window.confirm('작성 중인 편지가 있습니다. 정말 닫으시겠습니까?')) {
                 setContent('');
                 setScheduledDate('');
@@ -149,10 +174,10 @@ export const LetterWriteModal: React.FC<LetterWriteModalProps> = ({
                             {/* Send Button */}
                             <button
                                 onClick={handleSend}
-                                disabled={isLoading || !content.trim()}
+                                disabled={!content.trim()}
                                 className="w-full py-4 bg-primary text-background font-bold text-sm uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed transition-all hover:opacity-90 active:scale-[0.98]"
                             >
-                                {isLoading ? '발송 중...' : (scheduledDate ? '예약 발송' : '지금 보내기')}
+                                {scheduledDate ? '예약 발송' : '지금 보내기'}
                             </button>
                         </div>
                     </motion.div>

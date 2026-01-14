@@ -2,7 +2,8 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { MainLayout } from './components/layout/MainLayout';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthProvider } from './context/AuthContext';
-import { NotionProvider } from './context/NotionContext';
+
+import { DataProvider } from './context/DataContext';
 import { HomePage } from './pages/HomePage';
 import { ChatPage } from './pages/ChatPage';
 import { LoginPage } from './pages/LoginPage';
@@ -20,9 +21,7 @@ import { LockScreen } from './components/common/LockScreen';
 function AppContent() {
   const { isLocked, loading } = useAuth();
 
-  if (loading) return null; // or LoadingScreen, but AuthContext handles it internally usually. 
-  // Actually AuthContext returns loading screen, so we might not need this Check.
-  // But isLocked check should happen.
+  if (loading) return null;
 
   if (isLocked) {
     return <LockScreen />;
@@ -51,9 +50,9 @@ function App() {
     <BrowserRouter>
       <AuthProvider>
         <ThemeProvider>
-          <NotionProvider>
+          <DataProvider>
             <AppContent />
-          </NotionProvider>
+          </DataProvider>
         </ThemeProvider>
       </AuthProvider>
     </BrowserRouter>

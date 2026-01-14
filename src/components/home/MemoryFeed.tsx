@@ -12,7 +12,7 @@ export interface MemoryFeedProps {
 const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: MemoryItem) => void }) => {
     // Filter valid images. Fallback to imageUrl if images array is empty.
     const displayImages = item.images && item.images.length > 0
-        ? item.images
+        ? item.images.filter(img => img && typeof img === 'string')
         : (item.imageUrl ? [item.imageUrl] : []);
 
     // Helper to extract date
@@ -25,153 +25,85 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
     })() : '';
 
     const imageCount = displayImages.length;
-    const remainingCount = imageCount > 4 ? imageCount - 4 : 0;
+    const remainingCount = imageCount > 3 ? imageCount - 3 : 0;
 
-    // Single image layout (3:4 ratio)
+    // Common Text Overlay
+    const TextOverlay = () => (
+        <div className="absolute top-0 right-0 p-3 z-10">
+            <span className="bg-black/40 backdrop-blur-sm text-[10px] font-bold text-white px-2 py-1 rounded-full">{formattedDate}</span>
+        </div>
+    );
+
+    // Single image - Full width
     if (imageCount === 1) {
         return (
-            <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
-                <div className="relative w-full aspect-[3/4] rounded-sm overflow-hidden bg-secondary group">
-                    <div
-                        className="w-full h-full bg-cover bg-center transition-all duration-300"
-                        style={{ backgroundImage: `url('${displayImages[0]}')` }}
+            <div className="py-2 w-full cursor-pointer animate-in fade-in duration-500" onClick={() => onClick(item)}>
+                <div className="relative w-full rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all">
+                    <img
+                        src={displayImages[0]}
+                        alt={item.title || 'Memory'}
+                        className="w-full h-auto object-cover max-h-[500px]"
+                        loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-
-                    {/* Gradient & Content */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 p-6 w-full pointer-events-none">
-                        <span className="text-[10px] font-bold tracking-[0.2em] text-white/70 uppercase">
-                            {formattedDate}
-                        </span>
-                        <h2 className="font-serif text-2xl text-white mt-1 leading-tight italic line-clamp-2">
-                            {item.title || 'No content'}
-                        </h2>
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Two images layout (1 row, 2 columns - square)
-    if (imageCount === 2) {
-        return (
-            <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
-                <div className="relative w-full aspect-square rounded-sm overflow-hidden bg-secondary">
-                    <div className="grid grid-cols-2 gap-1.5 h-full">
-                        {displayImages.slice(0, 2).map((img, idx) => (
-                            <div key={idx} className="relative overflow-hidden group">
-                                <div
-                                    className="w-full h-full bg-cover bg-center transition-all duration-300"
-                                    style={{ backgroundImage: `url('${img}')` }}
-                                />
-                                <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-
-                                {/* Content overlay only on first image */}
-                                {idx === 0 && (
-                                    <>
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                                        <div className="absolute bottom-0 left-0 p-4 w-full pointer-events-none">
-                                            <span className="text-[9px] font-bold tracking-[0.2em] text-white/70 uppercase">
-                                                {formattedDate}
-                                            </span>
-                                            <h2 className="font-serif text-lg text-white mt-0.5 leading-tight italic line-clamp-1">
-                                                {item.title || 'No content'}
-                                            </h2>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            </div>
-        );
-    }
-
-    // Three images layout (2 top, 1 bottom wide)
-    if (imageCount === 3) {
-        return (
-            <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
-                <div className="relative w-full rounded-sm overflow-hidden bg-secondary">
-                    <div className="grid grid-rows-2 gap-1.5">
-                        {/* Top row: 2 images */}
-                        <div className="grid grid-cols-2 gap-1.5 aspect-[2/1]">
-                            {displayImages.slice(0, 2).map((img, idx) => (
-                                <div key={idx} className="relative overflow-hidden group">
-                                    <div
-                                        className="w-full h-full bg-cover bg-center transition-all duration-300"
-                                        style={{ backgroundImage: `url('${img}')` }}
-                                    />
-                                    <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-
-                                    {/* Content overlay only on first image */}
-                                    {idx === 0 && (
-                                        <>
-                                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                                            <div className="absolute bottom-0 left-0 p-4 w-full pointer-events-none">
-                                                <span className="text-[9px] font-bold tracking-[0.2em] text-white/70 uppercase">
-                                                    {formattedDate}
-                                                </span>
-                                                <h2 className="font-serif text-lg text-white mt-0.5 leading-tight italic line-clamp-1">
-                                                    {item.title || 'No content'}
-                                                </h2>
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            ))}
+                    <TextOverlay />
+                    {item.title && (
+                        <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/60 to-transparent">
+                            <p className="text-white font-medium text-sm line-clamp-1">{item.title}</p>
                         </div>
-                        {/* Bottom row: 1 wide image */}
-                        <div className="relative overflow-hidden group aspect-[2/1]">
-                            <div
-                                className="w-full h-full bg-cover bg-center transition-all duration-300"
-                                style={{ backgroundImage: `url('${displayImages[2]}')` }}
-                            />
-                            <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-                        </div>
-                    </div>
+                    )}
                 </div>
             </div>
         );
     }
 
-    // Four or more images layout (2x2 grid)
+    // Multiple images - Main + Thumbnails (Instagram style gallery hint)
     return (
-        <div className="py-6 w-full cursor-pointer" onClick={() => onClick(item)}>
-            <div className="relative w-full aspect-square rounded-sm overflow-hidden bg-secondary">
-                <div className="grid grid-cols-2 grid-rows-2 gap-1.5 h-full">
-                    {displayImages.slice(0, 4).map((img, idx) => (
-                        <div key={idx} className="relative overflow-hidden group">
-                            <div
-                                className="w-full h-full bg-cover bg-center transition-all duration-300"
-                                style={{ backgroundImage: `url('${img}')` }}
+        <div className="py-2 w-full cursor-pointer animate-in fade-in duration-500" onClick={() => onClick(item)}>
+            <div className="relative rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all">
+                {/* Main Large Image */}
+                <div className="w-full aspect-[4/3] relative">
+                    <img
+                        src={displayImages[0]}
+                        alt="Main memory"
+                        className="w-full h-full object-cover"
+                        loading="lazy"
+                    />
+                    <TextOverlay />
+                </div>
+
+                {/* Thumbnails Row */}
+                <div className="grid grid-cols-3 gap-0.5 mt-0.5 h-24">
+                    {displayImages.slice(1, 3).map((img, idx) => (
+                        <div key={idx} className="relative w-full h-full">
+                            <img
+                                src={img}
+                                alt={`Memory ${idx + 2}`}
+                                className="w-full h-full object-cover"
+                                loading="lazy"
                             />
-                            <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors" />
-
-                            {/* Content overlay only on first image */}
-                            {idx === 0 && (
-                                <>
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
-                                    <div className="absolute bottom-0 left-0 p-3 w-full pointer-events-none">
-                                        <span className="text-[8px] font-bold tracking-[0.2em] text-white/70 uppercase">
-                                            {formattedDate}
-                                        </span>
-                                        <h2 className="font-serif text-base text-white mt-0.5 leading-tight italic line-clamp-1">
-                                            {item.title || 'No content'}
-                                        </h2>
-                                    </div>
-                                </>
-                            )}
-
-                            {/* +N badge on 4th image if more images exist */}
-                            {idx === 3 && remainingCount > 0 && (
-                                <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center">
-                                    <span className="text-3xl font-bold text-white">
-                                        +{remainingCount}
-                                    </span>
-                                </div>
-                            )}
+                        </div>
+                    ))}
+                    {/* More indicator or 3rd image */}
+                    {imageCount >= 4 ? (
+                        <div className="relative w-full h-full">
+                            <img
+                                src={displayImages[3]}
+                                alt="More"
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                            />
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <span className="text-white font-bold text-lg">+{remainingCount}</span>
+                            </div>
+                        </div>
+                    ) : (displayImages[3] && (
+                        <div className="relative w-full h-full">
+                            <img
+                                src={displayImages[3]}
+                                alt="Memory 4"
+                                className="w-full h-full object-cover"
+                                loading="lazy"
+                            />
                         </div>
                     ))}
                 </div>
@@ -230,21 +162,24 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                     if (item.type === 'image' && hasImages) {
                         return <MemoryImageCard key={item.id} item={item} onClick={handleItemClick} />;
                     } else {
-                        // Text Entry Logic
+                        // Text Entry Logic - Clean Note Card
                         const formattedDate = formatDate(item.date);
                         return (
                             <div
                                 key={item.id}
-                                className="flex items-baseline justify-between py-5 border-b border-dashed border-border cursor-pointer hover:bg-secondary/30 transition-colors"
+                                className="py-2 w-full animate-in fade-in duration-500 cursor-pointer group"
                                 onClick={() => handleItemClick(item)}
                             >
-                                <div className="text-xs font-bold text-text-secondary w-12 shrink-0">
-                                    {formattedDate}
-                                </div>
-                                <div className="flex-1 text-right">
-                                    <h3 className="font-serif text-lg text-primary italic leading-tight">
-                                        {item.quote || item.title || 'No content'}
+                                <div className="bg-secondary/20 p-5 rounded-2xl border border-border/40 hover:border-primary/20 transition-all hover:bg-secondary/40 relative overflow-hidden">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{formattedDate}</span>
+                                        <span className="material-symbols-outlined text-text-secondary/30 text-[16px]">format_quote</span>
+                                    </div>
+                                    <h3 className="font-medium text-lg text-primary leading-relaxed line-clamp-3">
+                                        {item.quote || item.title || '기록 없음'}
                                     </h3>
+                                    {/* Decorative corner */}
+                                    <div className="absolute -bottom-4 -right-4 w-12 h-12 bg-primary/5 rounded-full blur-xl group-hover:bg-primary/10 transition-colors"></div>
                                 </div>
                             </div>
                         );

@@ -2,7 +2,7 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import type { MemoryItem } from '../../types';
 import { format, parseISO } from 'date-fns';
-import { fetchNotionPageContent } from '../../lib/notion';
+// import { fetchNotionPageContent } from '../../lib/notion';
 
 interface FeedDetailModalProps {
     isOpen: boolean;
@@ -24,43 +24,9 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
         }
     }, [isOpen]);
 
-    // Lazy load extra images from Notion Page Content
+    // Notion image fetching logic removed - Firestore stores all images in item.images
     useEffect(() => {
-        const fetchExtraImages = async () => {
-            if (!item || !isOpen) return;
-
-            // Strategy: Always fetch for consistency, but silently.
-
-            try {
-                const response = await fetchNotionPageContent(item.id);
-
-                if (response.data && response.data.results) {
-                    const blockImages: string[] = [];
-                    response.data.results.forEach((block: any) => {
-                        if (block.type === 'image') {
-                            const url = block.image.type === 'external' ? block.image.external.url : block.image.file.url;
-                            if (url) blockImages.push(url);
-                        }
-                    });
-
-                    if (blockImages.length > 0) {
-                        setExtraImages(prev => {
-                            // Filter out duplicates that might already exist in item.images
-                            const existing = new Set([...prev, ...(item.images || []), ...(item.imageUrl ? [item.imageUrl] : [])]);
-                            const newUnique = blockImages.filter(url => !existing.has(url));
-                            if (newUnique.length === 0) return prev;
-                            return [...prev, ...newUnique];
-                        });
-                    }
-                }
-            } catch (error) {
-                console.error("Failed to fetch extra images:", error);
-            }
-        };
-
-        if (isOpen && item) {
-            fetchExtraImages();
-        }
+        // No-op for now as Firestore stores all images in the 'images' field
     }, [isOpen, item]);
 
     // Safe derivation of values for hooks
@@ -178,7 +144,7 @@ export const FeedDetailModal: React.FC<FeedDetailModalProps> = ({ isOpen, onClos
                         className="fixed inset-0 z-50 flex flex-col bg-black"
                     >
                         {/* Header */}
-                        <header className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm shrink-0">
+                        <header className="flex items-center justify-between px-4 pb-3 pt-[max(env(safe-area-inset-top),_0.75rem)] bg-black/80 backdrop-blur-sm shrink-0">
                             <button
                                 onClick={onClose}
                                 className="p-2 -ml-2 text-white/80 hover:text-white transition-colors"

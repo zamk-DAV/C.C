@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { createDiaryEntry } from '../../lib/notion';
+import { addAppItem, uploadImage } from '../../services/firestore';
 import { useAuth } from '../../context/AuthContext';
-import { useNotion } from '../../context/NotionContext';
-import type { NotionItem } from '../../types';
+import { compressImage } from '../../utils/imageUtils';
+import { useMemoryData } from '../../context/DataContext';
 
 interface MemoryWriteModalProps {
     isOpen: boolean;
@@ -13,10 +13,10 @@ interface MemoryWriteModalProps {
 }
 
 const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, onSuccess }) => {
-    const { user, userData } = useAuth();
-    const { addOptimisticItem, refreshData } = useNotion();
+    const { user, userData, coupleData } = useAuth();
+    const { addOptimisticItem, removeOptimisticItem } = useMemoryData();
     const [content, setContent] = useState('');
-    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
+    const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -28,21 +28,23 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
         }
     }, [isOpen]);
 
-    const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
             const files = Array.from(e.target.files);
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    setImages(prev => [...prev, {
-                        base64: reader.result as string,
-                        type: file.type,
-                        size: file.size,
-                        name: file.name
-                    }]);
-                };
-                reader.readAsDataURL(file);
-            });
+            setIsLoading(true);
+
+            try {
+                const compressedImages = await Promise.all(
+                    files.map(file => compressImage(file))
+                );
+
+                setImages(prev => [...prev, ...compressedImages]);
+            } catch (error) {
+                console.error("Image compression failed:", error);
+                alert("이미지 처리 중 오류가 발생했습니다.");
+            } finally {
+                setIsLoading(false);
+            }
         }
     };
 
@@ -52,40 +54,72 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
 
     const handleSubmit = async () => {
         if (!content && images.length === 0) return;
+        if (!user || !coupleData) {
+            alert('로그인이 필요하거나 커플 연결이 되어있지 않습니다.');
+            return;
+        }
 
-        setIsLoading(true);
-        const dateString = format(new Date(), 'yyyy-MM-dd');
-
-        // Optimistic Update
-        const optimisticItem: NotionItem = {
-            id: `optimistic-${Date.now()}`,
+        const tempId = crypto.randomUUID();
+        const optimisticItem: any = {
+            id: tempId,
             title: '추억',
-            date: dateString,
-            coverImage: images[0]?.base64 || null,
-            previewText: content,
-            type: 'Memory',
+            content: content,
+            date: format(new Date(), 'yyyy-MM-dd'),
+            images: images.map(img => img.url || img.base64),
+            authorId: user.uid,
             author: userData?.name || user?.displayName || '나',
-            images: images.map(img => img.base64)
+            type: 'Memory',
+            createdAt: new Date(),
+            isOptimisticUpdate: true
         };
 
+        // 1. Optimistic Add
+        addOptimisticItem('memories', optimisticItem);
+
+        // 2. Close UI Immediately
+        onSuccess();
+        onClose();
+        setContent(''); // Reset for next time immediately
+        setImages([]);
+
+        // 3. Background Upload & Save
         try {
-            addOptimisticItem('Memory', optimisticItem);
+            // Upload Images
+            const uploadedImageUrls: string[] = [];
+            for (const img of images) {
+                if (img.url) {
+                    uploadedImageUrls.push(img.url);
+                } else if (img.base64.startsWith('data:')) {
+                    try {
+                        const res = await fetch(img.base64);
+                        const blob = await res.blob();
+                        const file = new File([blob], img.name || `image-${Date.now()}.jpg`, { type: img.type });
+                        const downloadUrl = await uploadImage(file, 'feed_images');
+                        uploadedImageUrls.push(downloadUrl);
+                    } catch (uploadErr) {
+                        console.error("Image upload failed:", uploadErr);
+                    }
+                }
+            }
 
-            setContent('');
-            setImages([]);
-            onSuccess();
-            onClose();
+            const finalItemData = {
+                ...optimisticItem,
+                images: uploadedImageUrls,
+                isOptimisticUpdate: false,
+                createdAt: undefined // Server sets timestamp
+            };
+            delete finalItemData.id;
+            delete finalItemData.isOptimisticUpdate;
 
-            await createDiaryEntry(content, images, 'Memory', {
-                sender: userData?.name || user?.displayName || "나",
-                date: dateString
-            });
+            await addAppItem(coupleData.id, 'memories', finalItemData, tempId);
+
+            // 4. Cleanup Optimistic
+            removeOptimisticItem('memories', tempId);
+
         } catch (error) {
-            console.error("Memory save failed:", error);
+            console.error("Memory save failed (background):", error);
             alert('저장에 실패했습니다.');
-            refreshData(); // Restore UI state on failure
-        } finally {
-            setIsLoading(false);
+            removeOptimisticItem('memories', tempId);
         }
     };
 

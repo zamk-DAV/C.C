@@ -34,31 +34,49 @@ export interface CoupleData {
     typing?: Record<string, boolean>; // { [userId]: isTyping }
 }
 
-export interface NotionItem {
+export interface AppItem {
     id: string;
     title: string;
-    date: string;
-    coverImage: string | null;
+    date: string; // ISO String based on KST usually
+    coverImage: string | null; // URL
     previewText: string;
-    type?: 'Diary' | 'Event' | 'Memory' | 'Letter';
-    sender?: string;
-    isRead?: boolean;
-    author?: string; // Query-result provided author 'Me' | 'Partner' etc.
-    authorId?: string; // Added for UID based filtering
-    images?: string[];
-    tags?: string[];
+    type: 'Diary' | 'Event' | 'Memory' | 'Letter';
+
+    // Metadata
+    authorId: string; // UID of the creator
+    author?: string; // Display name 'Me' | 'Partner' (resolved on fetch)
+    coupleId: string;
+    createdAt?: any; // Firestore Timestamp
+    updatedAt?: any; // Firestore Timestamp
+
+    // Content
     content?: string;
+    images?: string[]; // Array of image URLs
+    tags?: string[];
+
+    // Diary Specific
     mood?: string;
     weather?: string;
-    // Enhanced Properties for Calendar & Rich Features
-    color?: string;
+
+    // Event Specific
+    color?: string; // hex code
     isImportant?: boolean;
-    isShared?: boolean;
     endDate?: string;
+
+    // Letter Specific
+    isRead?: boolean;
+    sender?: string; // Legacy field, prefer authorId logic
+
+    // Shared
+    isShared?: boolean;
+
     // Optimistic UI Flags
     isOptimisticUpdate?: boolean;
     isOptimisticDelete?: boolean;
 }
+
+// Alias for backward compatibility during migration
+export type NotionItem = AppItem;
 export interface ChatMessage {
     id: string;
     text: string;

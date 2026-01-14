@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 import { useAuth } from '../../context/AuthContext';
-import { useNotion } from '../../context/NotionContext';
+import { useDiaryData } from '../../context/DataContext';
 import { db } from '../../lib/firebase';
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
 
@@ -12,7 +12,7 @@ export const MainLayout = () => {
 
     const [unreadMailCount, setUnreadMailCount] = React.useState(0);
     const { user, userData, coupleData } = useAuth();
-    const { diaryData } = useNotion();
+    const { diaryData } = useDiaryData();
 
     // Check for New Diary - using Context data instead of API call
     const hasNewDiary = useMemo(() => {
@@ -32,7 +32,7 @@ export const MainLayout = () => {
         if (!coupleData?.id || !user?.uid) return;
 
         const q = query(
-            collection(db, 'couples', coupleData.id, 'postcards'),
+            collection(db, 'couples', coupleData.id, 'letters'),
             where('isRead', '==', false)
         );
 
