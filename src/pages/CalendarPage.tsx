@@ -6,7 +6,7 @@ import type { CalendarEvent, NotionItem } from '../types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { EventWriteModal } from '../components/calendar/EventWriteModal';
-import { motion } from 'framer-motion';
+import { motion, useDragControls } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../hooks/useHaptics';
 
@@ -21,18 +21,54 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
     const { heavy, medium } = useHaptics();
     const [isDragging, setIsDragging] = React.useState(false);
     const [dropSuccess, setDropSuccess] = React.useState(false);
+    const dragControls = useDragControls();
 
     // Color Logic: Use primary if default/undefined, otherwise use custom color
     const isCustomColor = event.color && event.color !== 'default';
     const eventColor = isCustomColor ? event.color : undefined;
 
+    const isLongPressRef = React.useRef(false);
+
+    const bindLongPress = useGesture({
+        onPointerDown: () => {
+            isLongPressRef.current = false;
+        },
+        onLongPress: (state) => {
+            // Prevent default touch behavior to stop context menu
+            const e = state.event;
+            // Native TouchEvent doesn't have preventDefault on the event object directly in React synthetic event sometimes, 
+            // but useGesture passes the native event.
+            if (e && e.cancelable) e.preventDefault();
+
+            isLongPressRef.current = true;
+            medium();
+            // Start the drag manually. We pass the event and set snapToCursor to true 
+            // so it picks up right under the finger.
+            dragControls.start(e as any, { snapToCursor: true });
+        }
+    }, {
+        longPress: { delay: 300 } // 300ms delay for long press
+    });
+
     return (
         <motion.div
             drag
+            dragListener={false} // Disable default drag listener
+            dragControls={dragControls} // Use manual controls
             dragConstraints={{ left: 0, right: 0, top: 0, bottom: 0 }}
             dragElastic={1}
             dragSnapToOrigin={true}
-            onTap={() => onClick(event)}
+            // Bind long press gesture to the element
+            {...bindLongPress() as any}
+
+            onClick={(e) => {
+                // If dragging was triggered by long press or drag controls are active, do not open modal
+                // We can check if `dragControls` component is active? No, simple ref is better.
+                // Actually easier: if long press triggered, we probably consumed the event.
+                // Let's rely on a check.
+                if (isDragging || isLongPressRef.current) return;
+                onClick(event);
+            }}
             initial={{ opacity: 1, scale: 1 }}
             animate={{
                 scale: dropSuccess ? [1, 1.05, 1] : 1,
@@ -76,7 +112,7 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
                     }
                 }
             }}
-            className={`py-5 flex items-center gap-5 group cursor-grab hover:bg-secondary/40 transition-all rounded-2xl px-4 -mx-2 bg-background relative overflow-hidden ${isDragging ? 'cursor-grabbing ring-2 ring-primary/30' : ''
+            className={`py-5 flex items-center gap-5 group cursor-grab hover:bg-secondary/40 transition-all rounded-2xl px-4 -mx-2 bg-background relative overflow-hidden select-none touch-pan-y ${isDragging ? 'cursor-grabbing ring-2 ring-primary/30' : ''
                 }`}
         >
             {/* Color Indicator */}
@@ -130,6 +166,11 @@ const DraggableEvent: React.FC<DraggableEventProps> = ({ event, onDrop, onClick,
                     className="absolute inset-0 border-2 border-primary/50 rounded-2xl bg-primary/5 pointer-events-none"
                 />
             )}
+
+            {/* Long Press Visual Hint (Optional) */}
+            <div className="absolute top-2 right-2 opacity-20 pointer-events-none">
+                <span className="material-symbols-outlined text-[14px]">touch_app</span>
+            </div>
         </motion.div>
     );
 };
