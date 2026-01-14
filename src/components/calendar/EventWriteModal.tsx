@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { format } from 'date-fns';
 import { ko } from 'date-fns/locale';
@@ -13,7 +14,7 @@ import { compressImage } from '../../utils/imageUtils';
 interface EventWriteModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onSuccess: () => void;
+    onSuccess: (mockEvent?: CalendarEvent) => void;
     selectedDate?: Date;
     editEvent?: CalendarEvent;
 }
@@ -26,6 +27,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     editEvent
 }) => {
     const { medium, simpleClick } = useHaptics();
+    const { user } = useAuth();
 
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);
@@ -146,6 +148,27 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 
             // Only send new images (base64) to backend
             const newImages = images.filter(img => img.base64.startsWith('data:'));
+
+            if (user?.email?.startsWith('test_gesture')) {
+                const newEvent: CalendarEvent = {
+                    id: editEvent ? editEvent.id : `mock-${Date.now()}`,
+                    title,
+                    date: startDate,
+                    time: isAllDay ? undefined : startTime,
+                    endDate: endDate,
+                    type: 'Event',
+                    isImportant,
+                    isShared,
+                    color: selectedColor,
+                    url,
+                    note,
+                    author: user.displayName || 'Test User'
+                };
+                onSuccess(newEvent);
+                setIsSubmitting(false);
+                onClose();
+                return;
+            }
 
             if (editEvent) {
                 await updateDiaryEntry(

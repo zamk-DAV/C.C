@@ -62,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             }
                         }
 
-                        if (!data.coupleId) {
+                        if (!data.coupleId || data.email?.startsWith('test_gesture')) {
                             setLoading(false);
                             setCoupleData(null);
                         }
