@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useAuth } from '../context/AuthContext';
+import React, { useState, useMemo } from 'react';
+// import { useAuth } from '../context/AuthContext';
 import { useEventData } from '../context/NotionContext';
 import { updateDiaryEntry } from '../lib/notion';
 import type { CalendarEvent, NotionItem } from '../types';
@@ -120,7 +120,7 @@ export const CalendarPage: React.FC = () => {
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>(undefined);
 
-    const { coupleData } = useAuth();
+    // const { coupleData } = useAuth();
     // Use Notion Data instead of Firestore
     const { eventData, isLoading: isNotionLoading, refreshData } = useEventData();
     const { heavy, medium } = useHaptics();
