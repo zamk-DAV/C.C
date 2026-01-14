@@ -214,7 +214,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
                                 style={{ opacity: dragDistance }}
                             />
 
-                            <div {...bind() as any} className="w-full h-full flex items-center justify-center touch-action-none">
+                            <div {...bind() as any} className="w-full h-full flex items-center justify-center touch-none">
                                 {images.length > 0 ? (
                                     <motion.img
                                         key={currentImageIndex}
