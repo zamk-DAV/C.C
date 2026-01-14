@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { format, parseISO } from 'date-fns';
 import type { MemoryItem } from '../../types';
 
@@ -56,15 +56,24 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
                     ))}
                 </div>
 
-                {/* Indicators (Dots) */}
+                {/* Image Count Badge (Item 2) */}
                 {displayImages.length > 1 && (
-                    <div className="absolute top-4 right-4 flex gap-1.5 z-10 pointer-events-none">
+                    <div className="absolute top-4 right-4 px-2.5 py-1 rounded-full bg-black/40 backdrop-blur-md border border-white/10 z-10 pointer-events-none">
+                        <span className="text-[10px] font-bold text-white tracking-widest">
+                            {currentIndex + 1} / {displayImages.length}
+                        </span>
+                    </div>
+                )}
+
+                {/* Indicators (Dots) - Moved to bottom (Item 2) */}
+                {displayImages.length > 1 && (
+                    <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5 z-10 pointer-events-none">
                         {displayImages.map((_, idx) => (
                             <div
                                 key={idx}
                                 className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${idx === currentIndex
-                                        ? 'bg-white scale-110'
-                                        : 'bg-white/40'
+                                    ? 'bg-white scale-110'
+                                    : 'bg-white/40'
                                     }`}
                             />
                         ))}
@@ -102,6 +111,25 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
             onItemClick(item);
         }
     };
+
+    // Preload Images (Item 3)
+    useEffect(() => {
+        if (!items.length) return;
+
+        // Preload first 10 images or so
+        const imagesToPreload = items
+            .slice(0, 10)
+            .flatMap(item => {
+                if (item.images && item.images.length > 0) return item.images;
+                if (item.imageUrl) return [item.imageUrl];
+                return [];
+            });
+
+        imagesToPreload.forEach(url => {
+            const img = new Image();
+            img.src = url;
+        });
+    }, [items]);
 
     return (
         <section className="px-6 pb-24">

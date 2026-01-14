@@ -11,7 +11,7 @@ import { DiaryDetailModal } from '../components/diary/DiaryDetailModal';
 
 export const DiaryPage: React.FC = () => {
     const { user, userData, partnerData } = useAuth();
-    const { diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
+    const { deleteOptimisticItem, diaryData, hasMoreDiary, loadMoreDiary, refreshData, isLoading } = useNotion();
 
     const [filter, setFilter] = useState<'all' | 'me' | 'partner'>('all');
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
@@ -48,11 +48,13 @@ export const DiaryPage: React.FC = () => {
         if (!window.confirm("정말 이 추억을 삭제하시겠습니까? (Notion에서 아카이브됩니다)")) return;
 
         try {
+            // Optimistic Delete: NotionContext의 병합 로직에서 handles this via flag
+            deleteOptimisticItem('Diary', id);
             await deleteDiaryEntry(id);
-            refreshData();
         } catch (error) {
             console.error("Delete failed:", error);
             alert("삭제에 실패했습니다.");
+            refreshData(); // Restore state/clear flags on failure
         }
     };
 
@@ -112,10 +114,9 @@ export const DiaryPage: React.FC = () => {
             else if (filter === 'partner' && !isMe) groups[sortKey].items.push(item);
         });
 
-        console.log("[DiaryGroup] Final Groups:", Object.keys(groups).length, groups, "filter:", filter);
-
-        // Remove empty groups
+        // Filtering out items marked for optimistic deletion
         Object.keys(groups).forEach(key => {
+            groups[key].items = groups[key].items.filter(item => !item.isOptimisticDelete);
             if (groups[key].items.length === 0) delete groups[key];
         });
 
@@ -224,28 +225,24 @@ export const DiaryPage: React.FC = () => {
                                                 </div>
                                             </div>
 
-                                            {/* Info */}
-                                            <div className="space-y-2 px-0.5">
+                                            {/* Info (Item 4: Reordered metadata) */}
+                                            <div className="space-y-1.5 px-0.5">
+                                                <p className="text-[14px] font-bold text-primary leading-snug line-clamp-1 group-hover:text-primary/80 transition-colors">
+                                                    {item.title || item.previewText || '제목 없음'}
+                                                </p>
                                                 <div className="flex items-center justify-between">
-                                                    <time className="text-[10px] font-bold text-primary uppercase tracking-wide">
+                                                    <time className="text-[10px] font-medium text-text-secondary uppercase tracking-tight">
                                                         {formatDateWithDay(item.date)}
                                                     </time>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className={`px-1.5 py-0.5 rounded-[4px] text-[9px] font-bold tracking-tighter uppercase ${item.authorId === user?.uid
+                                                            ? 'bg-primary text-background'
+                                                            : 'bg-secondary text-text-secondary'
+                                                            }`}>
+                                                            {item.author === 'Partner' ? partnerData?.name || 'Partner' : item.author}
+                                                        </span>
+                                                    </div>
                                                 </div>
-
-                                                {/* Author & Status */}
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className={`w-1.5 h-1.5 rounded-full ${item.author === '나' || item.author === userData?.name || item.author === user?.uid
-                                                        ? 'bg-blue-500'
-                                                        : 'bg-red-500'
-                                                        }`}></span>
-                                                    <span className="text-[10px] font-medium text-text-secondary">
-                                                        {displayAuthorName(item)}
-                                                    </span>
-                                                </div>
-
-                                                <p className="text-[13px] text-text-secondary font-serif leading-snug line-clamp-2">
-                                                    {item.title || item.previewText}
-                                                </p>
                                             </div>
                                         </article>
                                     );

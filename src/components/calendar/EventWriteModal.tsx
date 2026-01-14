@@ -8,7 +8,8 @@ import type { CalendarEvent } from '../../types';
 import { useHaptics } from '../../hooks/useHaptics';
 import { DatePickerModal } from '../common/DatePickerModal';
 import { TimePickerModal } from '../common/TimePickerModal';
-import { ThemeToggle } from '../common/ThemeToggle';
+import { useNotion } from '../../context/NotionContext';
+import type { NotionItem } from '../../types';
 import { compressImage } from '../../utils/imageUtils';
 
 interface EventWriteModalProps {
@@ -28,6 +29,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 }) => {
     const { medium } = useHaptics();
     const { user, userData } = useAuth();
+    const { addOptimisticItem, updateOptimisticItem, deleteOptimisticItem } = useNotion();
 
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);
@@ -55,18 +57,19 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
     const [isEndTimePickerOpen, setIsEndTimePickerOpen] = useState(false);
 
     const handleDelete = async () => {
-        if (!editEvent || !window.confirm('정말 이 일정을 삭제하시겠습니까?')) return;
-
+        if (!editEvent) return;
         setIsDeleting(true);
         medium();
 
         try {
+            // Optimistic Delete
+            deleteOptimisticItem('Event', editEvent.id);
+            onSuccess(); // Close modal immediately
+
             await deleteDiaryEntry(editEvent.id);
-            onSuccess(); // Trigger refresh
-            onClose();
-        } catch (error) {
-            console.error("Failed to delete event:", error);
-            alert("일정 삭제에 실패했습니다.");
+        } catch (e) {
+            console.error(e);
+            alert('삭제에 실패했습니다.');
         } finally {
             setIsDeleting(false);
         }
@@ -163,76 +166,79 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
             const dateString = buildIsoDate(startDate, startTime, isAllDay);
             const endDateString = buildIsoDate(endDate, endTime, isAllDay);
 
-            // Only send new images (base64) to backend
-            const newImages = images.filter(img => img.base64?.startsWith('data:'));
-
-            if (user?.email?.startsWith('test_gesture')) {
-                const newEvent: CalendarEvent = {
-                    id: editEvent ? editEvent.id : `mock-${Date.now()}`,
-                    title,
-                    date: startDate,
-                    time: isAllDay ? undefined : startTime,
-                    endDate: endDate,
-                    type: 'Event',
-                    isImportant,
-                    isShared,
-                    color: userData?.theme || '#135bec',
-                    url: '',
-                    note,
-                    author: user.displayName || 'Test User'
-                };
-                onSuccess(newEvent);
-                setIsSubmitting(false);
-                onClose();
-                return;
-            }
+            // Optimistic Update
+            const optimisticItem: NotionItem = {
+                id: editEvent ? editEvent.id : `optimistic-${Date.now()}`,
+                title: title.trim(),
+                date: dateString,
+                coverImage: images[0]?.url || images[0]?.base64 || null,
+                previewText: note,
+                type: 'Event',
+                author: userData?.name || user?.displayName || '나',
+                color: userData?.theme || '#135bec',
+                isImportant: isImportant,
+                isShared: isShared,
+                endDate: endDateString,
+                images: images.map(img => img.url || img.base64 || ''),
+                isOptimisticUpdate: !!editEvent // Mark as update if editing
+            };
 
             if (editEvent) {
-                await updateDiaryEntry(
-                    editEvent.id,
-                    note, // Content goes to page body
-                    newImages.map(img => ({
-                        base64: img.base64 || img.url || '',
-                        type: img.file?.type || 'image/jpeg',
-                        size: img.file?.size || 0,
-                        name: img.file?.name || 'image.jpg'
-                    })),
-                    {
-                        date: dateString,
-                        title: title.trim(), // Title goes to Title property
-                        endDate: endDateString,
-                        isImportant: isImportant,
-                        isShared: isShared,
-                        // Defaults
-                        color: userData?.theme || '#135bec',
-                        url: ''
-                    }
-                );
+                updateOptimisticItem('Event', optimisticItem);
             } else {
-                await createDiaryEntry(
-                    note, // Content goes to page body
-                    images.map(img => ({
-                        base64: img.base64 || img.url || '',
-                        type: img.file?.type || 'image/jpeg',
-                        size: img.file?.size || 0,
-                        name: img.file?.name || 'image.jpg'
-                    })),
-                    'Event',
-                    {
-                        date: dateString,
-                        title: title.trim(), // Title goes to Title property
-                        endDate: endDateString,
-                        isImportant: isImportant,
-                        isShared: isShared,
-                        // Defaults
-                        color: userData?.theme || '#135bec',
-                        url: ''
-                    }
-                );
+                addOptimisticItem('Event', optimisticItem);
             }
-            onSuccess();
+
+            onSuccess(); // Close modal immediately for smooth transition
+
+            // Background API Action
+            const action = async () => {
+                const newImages = images.filter(img => img.base64?.startsWith('data:'));
+                const imagePayload = newImages.map(img => ({
+                    base64: img.base64 || img.url || '',
+                    type: img.file?.type || 'image/jpeg',
+                    size: img.file?.size || 0,
+                    name: img.file?.name || 'image.jpg'
+                }));
+
+                if (editEvent) {
+                    await updateDiaryEntry(
+                        editEvent.id,
+                        note,
+                        imagePayload,
+                        {
+                            date: dateString,
+                            title: title.trim(),
+                            endDate: endDateString,
+                            isImportant: isImportant,
+                            isShared: isShared,
+                            color: userData?.theme || '#135bec',
+                            url: ''
+                        }
+                    );
+                } else {
+                    await createDiaryEntry(
+                        note,
+                        imagePayload,
+                        'Event',
+                        {
+                            date: dateString,
+                            title: title.trim(),
+                            endDate: endDateString,
+                            isImportant: isImportant,
+                            isShared: isShared,
+                            color: userData?.theme || '#135bec',
+                            url: ''
+                        }
+                    );
+                }
+            };
+
+            await action();
         } catch (e) {
             console.error(e);
+            alert('저장에 실패했습니다.');
+            refreshData(); // Restore state on error
         } finally {
             setIsSubmitting(false);
         }

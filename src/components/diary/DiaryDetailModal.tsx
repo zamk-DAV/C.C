@@ -2,7 +2,7 @@ import React, { useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
-import type { NotionItem } from '../../lib/notion';
+import type { NotionItem } from '../../types';
 import { useNotion } from '../../context/NotionContext';
 
 interface DiaryDetailModalProps {
@@ -26,12 +26,12 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     const images = item
         ? (item.images && item.images.length > 0 ? item.images : (item.coverImage ? [item.coverImage] : []))
         : [];
-    const hasMultipleImages = images.length > 1;
 
-    // Format date for header
-    const formattedDate = item && item.date ? (() => {
+    const title = item?.title;
+    const content = item?.content;
+    const date = item?.date ? (() => {
         try {
-            return format(parseISO(item.date), 'yyyy. M. d. a h:mm', { locale: ko });
+            return format(parseISO(item.date), 'yyyy. M. d. (EEEE)', { locale: ko });
         } catch {
             return item.date;
         }
@@ -42,7 +42,6 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
         const threshold = 50;
         const velocity = 500;
 
-        // Horizontal swipe for image navigation
         if (Math.abs(info.offset.x) > Math.abs(info.offset.y)) {
             if (info.offset.x < -threshold || info.velocity.x < -velocity) {
                 if (currentImageIndex < images.length - 1) {
@@ -55,17 +54,12 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
             }
         }
 
-        // Vertical swipe to close
         if (info.offset.y > 100 || info.velocity.y > velocity) {
             onClose();
         }
     }, [currentImageIndex, images.length, onClose]);
 
-    // Download image
-    const handleDownload = async () => {
-        if (images.length === 0) return;
-        const imageUrl = images[currentImageIndex];
-
+    const handleDownload = async (imageUrl: string) => {
         try {
             const response = await fetch(imageUrl);
             const blob = await response.blob();
@@ -88,119 +82,107 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     return (
         <AnimatePresence>
             {isOpen && (
-                <>
-                    {/* Backdrop */}
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        className="fixed inset-0 bg-black z-50"
-                    />
-
-                    {/* Bottom Sheet Container */}
-                    <motion.div
-                        initial={{ y: '100%' }}
-                        animate={{ y: 0 }}
-                        exit={{ y: '100%' }}
-                        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-                        drag="y"
-                        dragConstraints={{ top: 0, bottom: 0 }}
-                        dragElastic={{ top: 0, bottom: 0.5 }}
-                        onDragEnd={(_, info) => {
-                            if (info.offset.y > 100) onClose();
-                        }}
-                        className="fixed inset-0 z-50 flex flex-col bg-black"
-                    >
-                        {/* Header */}
-                        <header className="flex items-center justify-between px-4 py-3 bg-black/80 backdrop-blur-sm shrink-0">
-                            <button
-                                onClick={onClose}
-                                className="p-2 -ml-2 text-white/80 hover:text-white transition-colors"
-                            >
-                                <span className="material-symbols-outlined text-2xl">arrow_back</span>
-                            </button>
-
-                            <div className="flex flex-col items-center">
-                                <span className="text-white font-medium text-sm">{authorName}</span>
-                                <span className="text-white/50 text-xs">{formattedDate}</span>
-                            </div>
-
-                            <div className="w-10" />
-                        </header>
-
-                        {/* Image Area */}
-                        <motion.div
-                            className="flex-1 flex items-center justify-center overflow-hidden"
-                            drag={hasMultipleImages ? "x" : false}
-                            dragConstraints={{ left: 0, right: 0 }}
-                            dragElastic={0.2}
-                            onDragEnd={handleDragEnd}
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="fixed inset-0 z-[100] bg-background flex flex-col pt-14"
+                >
+                    {/* Header */}
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-background/80 backdrop-blur-md">
+                        <button
+                            onClick={onClose}
+                            className="material-symbols-outlined text-primary hover:text-text-secondary transition-colors"
                         >
-                            {images.length > 0 ? (
-                                <motion.img
-                                    key={currentImageIndex}
-                                    initial={{ opacity: 0.5 }}
-                                    animate={{ opacity: 1 }}
-                                    src={images[currentImageIndex]}
-                                    alt={`Image ${currentImageIndex + 1}`}
-                                    className="max-w-full max-h-full object-contain select-none"
-                                    draggable={false}
-                                    onError={() => {
-                                        // If image fails (likely 403 due to expiry), try refreshing data once
-                                        if (!retryRef.current) {
-                                            console.log("[DiaryDetail] Image load failed. Attempting refresh...");
-                                            retryRef.current = true;
-                                            refreshData().then(() => {
-                                                console.log("[DiaryDetail] Data refreshed. Retrying image...");
-                                            });
-                                        }
-                                    }}
-                                />
-                            ) : (
-                                <div className="text-white/50 text-center">
-                                    <span className="material-symbols-outlined text-6xl">image</span>
-                                    <p className="mt-2">No image</p>
-                                </div>
-                            )}
-                        </motion.div>
+                            arrow_back
+                        </button>
+                        <div className="flex flex-col items-center">
+                            <span className="text-[10px] uppercase font-bold tracking-[0.2em] text-text-secondary">Diary Entry</span>
+                            <span className="text-[12px] font-medium text-primary">{date}</span>
+                        </div>
+                        <div className="w-6" />
+                    </div>
 
-                        {/* Image Counter */}
-                        {hasMultipleImages && (
-                            <div className="absolute top-1/2 left-0 right-0 flex justify-center pointer-events-none">
-                                <div className="bg-black/60 text-white text-xs px-3 py-1 rounded-full">
-                                    {currentImageIndex + 1} / {images.length}
-                                </div>
+                    {/* Scrollable Content */}
+                    <div className="flex-1 overflow-y-auto no-scrollbar pb-24">
+                        {/* Image Section */}
+                        {images.length > 0 && (
+                            <div className="relative w-full aspect-[4/5] bg-secondary overflow-hidden mb-8">
+                                <motion.div
+                                    className="flex h-full"
+                                    drag="x"
+                                    dragConstraints={{ left: 0, right: 0 }}
+                                    onDragEnd={handleDragEnd}
+                                    animate={{ x: `-${currentImageIndex * 100}%` }}
+                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                >
+                                    {images.map((img, idx) => (
+                                        <div key={idx} className="w-full h-full flex-shrink-0 flex items-center justify-center p-4">
+                                            <img
+                                                src={img}
+                                                alt={`Diary Image ${idx + 1}`}
+                                                className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
+                                                draggable={false}
+                                            />
+                                        </div>
+                                    ))}
+                                </motion.div>
+
+                                {/* Image Indicators */}
+                                {images.length > 1 && (
+                                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-1.5 z-10">
+                                        {images.map((_, idx) => (
+                                            <div
+                                                key={idx}
+                                                className={`w-1.5 h-1.5 rounded-full transition-all shadow-sm ${idx === currentImageIndex ? 'bg-primary scale-125' : 'bg-primary/20'}`}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* Image Count Badge */}
+                                {images.length > 1 && (
+                                    <div className="absolute top-4 right-4 px-2 py-1 rounded-full bg-black/30 backdrop-blur-md border border-white/10">
+                                        <span className="text-[10px] font-bold text-white">{currentImageIndex + 1} / {images.length}</span>
+                                    </div>
+                                )}
                             </div>
                         )}
 
-                        {/* Dot Indicators */}
-                        {hasMultipleImages && (
-                            <div className="absolute bottom-20 left-0 right-0 flex justify-center gap-1.5">
-                                {images.map((_, idx) => (
-                                    <button
-                                        key={idx}
-                                        onClick={() => setCurrentImageIndex(idx)}
-                                        className={`w-1.5 h-1.5 rounded-full transition-colors ${idx === currentImageIndex ? 'bg-white' : 'bg-white/30'
-                                            }`}
-                                    />
-                                ))}
+                        {/* Text Content Section */}
+                        <div className="px-8 space-y-6">
+                            <div className="space-y-4">
+                                <h1 className="text-3xl font-serif text-primary italic leading-tight">
+                                    {title || 'Untitled Entry'}
+                                </h1>
+                                <div className="h-[1px] w-12 bg-primary/20" />
                             </div>
-                        )}
 
-                        {/* Bottom Bar - Download Only */}
-                        <footer className="flex items-center justify-center h-16 bg-black border-t border-white/10 shrink-0">
-                            <button
-                                onClick={handleDownload}
-                                disabled={images.length === 0}
-                                className="p-3 text-white/70 hover:text-white transition-colors disabled:opacity-30"
-                                title="다운로드"
-                            >
-                                <span className="material-symbols-outlined text-2xl">download</span>
-                            </button>
-                        </footer>
-                    </motion.div>
-                </>
+                            <p className="text-[16px] text-primary/80 leading-relaxed font-serif whitespace-pre-wrap">
+                                {content || '내용이 없습니다.'}
+                            </p>
+
+                            {/* Metadata & Actions */}
+                            <div className="pt-12 border-t border-border/30 flex items-center justify-between">
+                                <div className="flex flex-col">
+                                    <span className="text-[10px] text-text-secondary uppercase tracking-widest font-bold">Author</span>
+                                    <span className="text-[14px] text-primary font-medium">{authorName}</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    {images.length > 0 && (
+                                        <button
+                                            onClick={() => handleDownload(images[currentImageIndex])}
+                                            className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary text-text-secondary hover:text-primary transition-all text-xs border border-border/50"
+                                        >
+                                            <span className="material-symbols-outlined text-[18px]">download</span>
+                                            이미지 저장
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </motion.div>
             )}
         </AnimatePresence>
     );

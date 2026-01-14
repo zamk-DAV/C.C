@@ -9,6 +9,7 @@ import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { PinInput } from '../components/common/PinInput';
 import { useTheme } from '../context/ThemeContext';
 import { ProfileEditModal } from '../components/settings/ProfileEditModal';
+import { motion } from 'framer-motion';
 
 export const SettingsPage: React.FC = () => {
     const { user, userData, partnerData, coupleData } = useAuth();
@@ -54,6 +55,27 @@ export const SettingsPage: React.FC = () => {
         { id: 'everest-night', name: '밤하늘', color: '#a1a2ab' },
         { id: 'dark-mode', name: '다크', color: '#ffffff' },
     ];
+
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 10 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: {
+                duration: 0.4
+            }
+        }
+    };
 
     const [databases, setDatabases] = useState<any[]>([]);
     const [isSearching, setIsSearching] = useState(false);
@@ -256,7 +278,7 @@ export const SettingsPage: React.FC = () => {
             <div className="flex items-center bg-background p-6 pb-2 justify-between sticky top-0 z-10">
                 <div
                     onClick={() => navigate(-1)}
-                    className="text-primary flex size-10 shrink-0 items-center justify-start cursor-pointer"
+                    className="text-primary flex size-10 shrink-0 items-center justify-start cursor-pointer hover:opacity-60 transition-opacity"
                     data-icon="ArrowBack"
                     data-size="24px"
                 >
@@ -266,20 +288,25 @@ export const SettingsPage: React.FC = () => {
             </div>
 
             {/* Scrollable Area */}
-            <div className="flex-1 overflow-y-auto pb-32 no-scrollbar">
+            <motion.div
+                className="flex-1 overflow-y-auto pb-32 no-scrollbar"
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+            >
                 {/* Profiles Side-by-Side */}
-                <div className="flex px-6 py-8 justify-between items-center gap-4">
+                <motion.div variants={itemVariants} className="flex px-6 py-8 justify-between items-center gap-4">
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary relative cursor-pointer group"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-background-secondary relative cursor-pointer group shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
                             style={userData?.photoURL ? { backgroundImage: `url(${userData.photoURL})` } : {}}
                             onClick={() => {
                                 setEditTarget('ME');
                                 setProfileEditOpen(true);
                             }}
                         >
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                <span className="material-symbols-outlined text-white">edit</span>
+                            <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <span className="material-symbols-outlined text-background">edit</span>
                             </div>
                         </div>
                         <div className="text-center">
@@ -295,7 +322,7 @@ export const SettingsPage: React.FC = () => {
                     </div>
                     <div className="flex flex-col items-center gap-3 flex-1">
                         <div
-                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-secondary relative cursor-pointer group"
+                            className="bg-center bg-no-repeat aspect-square bg-cover rounded-2xl w-24 h-24 border border-border bg-background-secondary relative cursor-pointer group shadow-sm transition-all hover:scale-[1.02] hover:shadow-md"
                             style={partnerData?.photoURL ? { backgroundImage: `url(${partnerData.photoURL})` } : {}}
                             onClick={() => {
                                 if (!partnerData) return;
@@ -303,8 +330,8 @@ export const SettingsPage: React.FC = () => {
                                 setProfileEditOpen(true);
                             }}
                         >
-                            <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                <span className="material-symbols-outlined text-white">visibility</span>
+                            <div className="absolute inset-0 bg-primary/20 group-hover:bg-primary/40 rounded-2xl transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <span className="material-symbols-outlined text-background">visibility</span>
                             </div>
                         </div>
                         <div className="text-center">
@@ -314,22 +341,22 @@ export const SettingsPage: React.FC = () => {
                             </p>
                         </div>
                     </div>
-                </div>
+                </motion.div>
 
                 {/* D-Day Center Section */}
-                <div className="py-10 border-y border-border">
+                <motion.div variants={itemVariants} className="py-10 border-y border-border">
                     <p className="text-primary text-sm font-medium tracking-[0.2em] text-center uppercase mb-2 font-sans">우리가 함께한 날</p>
                     <h1 className="text-primary tracking-tighter text-[56px] font-extrabold leading-none text-center font-sans">{calculateDday()}일</h1>
-                </div>
+                </motion.div>
 
                 {/* Settings Sections */}
                 <div className="px-6 py-8 flex flex-col gap-10">
                     {/* Section 3: Date Picker Area */}
-                    <div className="flex flex-col gap-3">
+                    <motion.div variants={itemVariants} className="flex flex-col gap-3">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-text-secondary font-sans">처음 만난 날 설정</label>
-                        <div className="flex items-center justify-between p-4 border border-border rounded-xl relative">
+                        <div className="flex items-center justify-between p-4 border border-border rounded-xl relative hover:bg-background-secondary transition-colors group">
                             <span className="text-base font-medium font-sans text-primary">{startDate || '날짜를 선택하세요'}</span>
-                            <span className="material-symbols-outlined text-text-secondary">calendar_today</span>
+                            <span className="material-symbols-outlined text-text-secondary group-hover:text-primary transition-colors">calendar_today</span>
                             <input
                                 type="date"
                                 className="absolute inset-0 opacity-0 cursor-pointer w-full h-full full-click-date-picker"
@@ -337,10 +364,10 @@ export const SettingsPage: React.FC = () => {
                                 onChange={handleDateChange}
                             />
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Section 4: Theme Selection */}
-                    <div className="flex flex-col gap-3">
+                    <motion.div variants={itemVariants} className="flex flex-col gap-3">
                         <label className="text-[11px] font-bold uppercase tracking-widest text-text-secondary font-sans">테마 설정</label>
                         <div className="grid grid-cols-4 gap-3">
                             {themes.map((t) => (
@@ -349,34 +376,34 @@ export const SettingsPage: React.FC = () => {
                                     onClick={() => setTheme(t.id as any)}
                                     className={`aspect-square rounded-xl flex flex-col items-center justify-center gap-1 border transition-all ${theme === t.id
                                         ? 'border-primary scale-105 shadow-md ring-1 ring-primary'
-                                        : 'border-transparent hover:bg-secondary'
+                                        : 'border-transparent hover:bg-background-secondary'
                                         }`}
                                 >
                                     <div
-                                        className="w-8 h-8 rounded-full shadow-sm border border-gray-200"
+                                        className="w-8 h-8 rounded-full shadow-sm border border-border"
                                         style={{ backgroundColor: t.color }}
                                     />
                                     <span className="text-[10px] font-medium text-text-secondary font-sans">{t.name}</span>
                                 </button>
                             ))}
                         </div>
-                    </div>
+                    </motion.div>
 
                     {/* Section 5: Passcode */}
-                    <div className="flex items-center justify-between cursor-pointer" onClick={handlePasscodeClick}>
+                    <motion.div variants={itemVariants} className="flex items-center justify-between cursor-pointer group" onClick={handlePasscodeClick}>
                         <div>
-                            <p className="text-base font-bold font-sans text-primary">암호 잠금</p>
+                            <p className="text-base font-bold font-sans text-primary group-hover:opacity-70 transition-opacity">암호 잠금</p>
                             <p className="text-xs text-text-secondary font-sans">
                                 {userData?.passcode ? '앱 실행 시 암호 입력 (설정됨)' : '사용하지 않음'}
                             </p>
                         </div>
-                        <span className={`material-symbols-outlined ${userData?.passcode ? 'text-primary' : 'text-text-secondary'}`}>
+                        <span className={`material-symbols-outlined transition-all ${userData?.passcode ? 'text-primary scale-110' : 'text-text-secondary opacity-50'}`}>
                             {userData?.passcode ? 'lock' : 'lock_open'}
                         </span>
-                    </div>
+                    </motion.div>
 
                     {/* Section 6: Notion API Key & DB ID */}
-                    <div className="flex flex-col gap-3">
+                    <motion.div variants={itemVariants} className="flex flex-col gap-3">
                         <div className="flex justify-between items-center">
                             <label className="text-[11px] font-bold uppercase tracking-widest text-text-secondary font-sans">노션 연동 설정</label>
                             {userData?.notionConfig?.apiKey && <span className="text-[10px] text-primary font-bold font-sans">연동됨</span>}
@@ -384,7 +411,7 @@ export const SettingsPage: React.FC = () => {
 
                         <div className="relative flex gap-2">
                             <input
-                                className="flex-1 p-4 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans text-primary"
+                                className="flex-1 p-4 border border-border rounded-xl text-sm focus:outline-none focus:ring-1 focus:ring-primary bg-transparent font-sans text-primary transition-all focus:bg-background-secondary/30"
                                 placeholder="노션 API 키 (secret_...)"
                                 type={showKey ? "text" : "password"}
                                 value={notionKey}
@@ -421,14 +448,14 @@ export const SettingsPage: React.FC = () => {
                                     onChange={(e) => setNotionDbId(e.target.value)}
                                 >
                                     {databases.map(db => (
-                                        <option key={db.id} value={db.id} className="text-black">
+                                        <option key={db.id} value={db.id} className="text-text-primary bg-background">
                                             {db.icon?.emoji} {db.title}
                                         </option>
                                     ))}
                                 </select>
                             </div>
                         ) : notionDbId ? (
-                            <div className="p-4 border border-border rounded-xl bg-secondary">
+                            <div className="p-4 border border-border rounded-xl bg-background-secondary">
                                 <p className="text-xs text-text-secondary text-center">현재 데이터베이스 ID: {notionDbId.slice(0, 8)}...</p>
                                 <button onClick={handleSearchDatabases} className="w-full mt-2 text-xs text-primary font-bold underline">데이터베이스 다시 검색</button>
                             </div>
@@ -437,19 +464,19 @@ export const SettingsPage: React.FC = () => {
                         <button
                             onClick={handleSaveNotion}
                             disabled={isSaving || !notionDbId}
-                            className="bg-primary text-background py-3 rounded-xl font-bold text-sm mt-1 disabled:opacity-50"
+                            className="bg-primary text-background py-3 rounded-xl font-bold text-sm mt-1 disabled:opacity-50 hover:opacity-90 active:scale-[0.98] transition-all"
                         >
                             {isSaving ? '저장 중...' : '설정 저장'}
                         </button>
-                    </div>
+                    </motion.div>
 
                     {/* Section 7: Danger Zone */}
-                    <div className="flex flex-col gap-4 pt-4">
-                        <button onClick={handleLogout} className="text-left text-sm text-text-secondary font-medium hover:text-red-500 transition-colors font-sans">로그아웃</button>
-                        <button onClick={handleDisconnect} className="text-left text-sm text-text-secondary font-medium hover:text-red-500 transition-colors font-sans">연결 끊기</button>
-                    </div>
+                    <motion.div variants={itemVariants} className="flex flex-col gap-4 pt-4">
+                        <button onClick={handleLogout} className="text-left text-sm text-text-secondary font-medium hover:text-danger transition-colors font-sans">로그아웃</button>
+                        <button onClick={handleDisconnect} className="text-left text-sm text-text-secondary font-medium hover:text-danger transition-colors font-sans decoration-danger">연결 끊기</button>
+                    </motion.div>
                 </div>
-            </div>
+            </motion.div>
 
             {/* Passcode Modal Overlay */}
             {isPasscodeModalOpen && (

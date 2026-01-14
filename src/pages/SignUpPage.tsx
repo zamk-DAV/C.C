@@ -1,8 +1,4 @@
-import React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { motion } from 'framer-motion';
 
 export const SignUpPage: React.FC = () => {
     const navigate = useNavigate();
@@ -25,21 +21,17 @@ export const SignUpPage: React.FC = () => {
 
         setLoading(true);
         try {
-            // ID as Email logic
             const signupEmail = email.includes('@') ? email : `${email}@dear23.app`;
-
-            // 1. Create User
             const userCredential = await createUserWithEmailAndPassword(auth, signupEmail, password);
             const user = userCredential.user;
 
-            // 2. Add to Firestore 'users' collection with minimal data
             await setDoc(doc(db, "users", user.uid), {
                 uid: user.uid,
                 name: name,
                 email: signupEmail,
                 photoURL: null,
                 coupleId: null,
-                inviteCode: '',  // Will be generated in ConnectPage
+                inviteCode: '',
                 notionConfig: { apiKey: null, databaseId: null },
                 bgImage: null
             });
@@ -57,32 +49,52 @@ export const SignUpPage: React.FC = () => {
         }
     };
 
+    const containerVariants = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.08,
+                delayChildren: 0.1
+            }
+        }
+    };
+
+    const itemVariants = {
+        hidden: { opacity: 0, y: 15 },
+        visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
+    };
+
     return (
         <div className="min-h-[100dvh] bg-background text-primary font-display flex flex-col items-center w-full transition-colors duration-300">
-            <div className="relative flex h-screen w-full flex-col overflow-x-hidden max-w-[480px] bg-background border-x border-border">
+            <motion.div
+                variants={containerVariants}
+                initial="hidden"
+                animate="visible"
+                className="relative flex h-screen w-full flex-col overflow-x-hidden max-w-[480px] bg-background border-x border-border"
+            >
                 {/* Header */}
-                <header className="flex items-center justify-between px-6 py-6">
+                <motion.header variants={itemVariants} className="flex items-center justify-between px-6 py-6">
                     <div className="flex items-center">
                         <span
                             onClick={() => navigate(-1)}
-                            className="material-symbols-outlined text-primary text-2xl cursor-pointer opacity-80"
+                            className="material-symbols-outlined text-primary text-2xl cursor-pointer hover:opacity-60 transition-opacity"
                         >
                             chevron_left
                         </span>
                     </div>
-                    <div className="hidden text-[10px] uppercase tracking-[0.25em] font-bold opacity-30 text-text-secondary">Vol. 01 / Registration</div>
+                    <div className="text-[10px] uppercase tracking-[0.25em] font-bold opacity-30 text-text-secondary">Vol. 01 / Registration</div>
                     <div className="w-6"></div>
-                </header>
+                </motion.header>
 
                 <main className="flex-1 px-8 pt-8 pb-10 flex flex-col">
-                    <section className="mb-14">
-                        <span className="hidden text-[10px] font-bold uppercase tracking-[0.3em] block mb-3 opacity-40 text-text-secondary">The Beginning</span>
+                    <motion.section variants={itemVariants} className="mb-14">
                         <h1 className="text-4xl font-bold tracking-tight leading-tight text-primary font-sans">시작하기</h1>
-                    </section>
+                    </motion.section>
 
                     <form className="flex-1 space-y-10" onSubmit={handleSignUp}>
                         {/* Name Input */}
-                        <div className="group">
+                        <motion.div variants={itemVariants} className="group">
                             <label className="block text-[11px] font-bold mb-1 opacity-40 font-sans text-text-secondary">이름</label>
                             <input
                                 className="w-full bg-transparent border-t-0 border-l-0 border-r-0 border-b border-primary/20 soft-input focus:border-primary focus:ring-0 px-0 py-3 text-[16px] placeholder:text-text-secondary/30 font-sans transition-all text-primary"
@@ -91,10 +103,10 @@ export const SignUpPage: React.FC = () => {
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                             />
-                        </div>
+                        </motion.div>
 
                         {/* ID Input */}
-                        <div className="group">
+                        <motion.div variants={itemVariants} className="group">
                             <label className="block text-[11px] font-bold mb-1 opacity-40 font-sans text-text-secondary">아이디</label>
                             <input
                                 className="w-full bg-transparent border-t-0 border-l-0 border-r-0 border-b border-primary/20 soft-input focus:border-primary focus:ring-0 px-0 py-3 text-[16px] placeholder:text-text-secondary/30 font-sans transition-all text-primary"
@@ -103,10 +115,10 @@ export const SignUpPage: React.FC = () => {
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
                             />
-                        </div>
+                        </motion.div>
 
                         {/* Password Input */}
-                        <div className="group relative">
+                        <motion.div variants={itemVariants} className="group relative">
                             <label className="block text-[11px] font-bold mb-1 opacity-40 font-sans text-text-secondary">비밀번호</label>
                             <div className="relative">
                                 <input
@@ -116,12 +128,12 @@ export const SignUpPage: React.FC = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
-                                <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-text-secondary cursor-pointer text-xl">visibility</span>
+                                <span className="material-symbols-outlined absolute right-0 top-1/2 -translate-y-1/2 text-text-secondary cursor-pointer text-xl hover:text-primary transition-colors">visibility</span>
                             </div>
-                        </div>
+                        </motion.div>
 
                         {/* Password Confirm Input */}
-                        <div className="group">
+                        <motion.div variants={itemVariants} className="group">
                             <label className="block text-[11px] font-bold mb-1 opacity-40 font-sans text-text-secondary">비밀번호 확인</label>
                             <input
                                 className="w-full bg-transparent border-t-0 border-l-0 border-r-0 border-b border-primary/20 soft-input focus:border-primary focus:ring-0 px-0 py-3 text-[16px] placeholder:text-text-secondary/30 font-sans transition-all text-primary"
@@ -130,13 +142,13 @@ export const SignUpPage: React.FC = () => {
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
                             />
-                        </div>
+                        </motion.div>
 
-                        <div className="mt-12 space-y-8">
+                        <motion.div variants={itemVariants} className="mt-12 space-y-8">
                             <button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full bg-primary text-background py-5 rounded-[2rem] text-sm font-bold tracking-[0.05em] transition-all active:scale-[0.98] shadow-lg shadow-black/5 font-sans disabled:opacity-50"
+                                className="w-full bg-primary text-background py-5 rounded-[2rem] text-sm font-bold tracking-[0.05em] transition-all hover:opacity-90 active:scale-[0.98] shadow-lg shadow-black/5 font-sans disabled:opacity-50"
                             >
                                 {loading ? '가입 중...' : '가입 완료'}
                             </button>
@@ -145,11 +157,11 @@ export const SignUpPage: React.FC = () => {
                                     이미 계정이 있으신가요? <Link to="/login" className="text-primary font-bold underline underline-offset-4 decoration-1 decoration-primary/20 ml-1">로그인</Link>
                                 </p>
                             </div>
-                        </div>
+                        </motion.div>
                     </form>
                 </main>
                 <div className="h-8 w-full"></div>
-            </div>
+            </motion.div>
         </div>
     );
 };

@@ -4,6 +4,8 @@ import { format } from 'date-fns';
 import { createDiaryEntry, updateDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
 import { DatePickerModal } from '../common/DatePickerModal';
+import { useNotion } from '../../context/NotionContext';
+import type { NotionItem } from '../../types';
 import { compressImage } from '../../utils/imageUtils';
 
 interface FeedWriteModalProps {
@@ -40,6 +42,7 @@ const MOOD_OPTIONS = [
 
 const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary', initialData }) => {
     const { user, userData } = useAuth();
+    const { addOptimisticItem, updateOptimisticItem } = useNotion();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
@@ -114,7 +117,35 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
 
         setIsLoading(true);
         try {
+            // Optimistic Update
+            const optimisticItem: NotionItem = {
+                id: initialData?.id || `optimistic-${Date.now()}`,
+                title: title || (type === 'Memory' ? '추억' : '일기'),
+                date: selectedDate,
+                coverImage: images[0]?.url || images[0]?.base64 || null,
+                previewText: content,
+                type: type,
+                mood: selectedMood,
+                weather: selectedWeather,
+                author: userData?.name || user?.displayName || '나',
+                images: images.map(img => img.url || img.base64 || ''),
+                isOptimisticUpdate: !!initialData?.id // Mark as update if editing
+            };
+
             if (initialData?.id) {
+                updateOptimisticItem(type, optimisticItem);
+            } else {
+                addOptimisticItem(type, optimisticItem);
+            }
+
+            setTitle('');
+            setContent('');
+            setImages([]);
+            onSuccess();
+            onClose();
+
+            // Background API call
+            const action = initialData?.id ? async () => {
                 const newImages = images.filter(img => img.base64.startsWith('data:'));
                 await updateDiaryEntry(
                     initialData.id,
@@ -127,23 +158,20 @@ const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSucc
                         title: title
                     }
                 );
-            } else {
+            } : async () => {
                 await createDiaryEntry(content, images, type, {
                     mood: selectedMood,
                     weather: selectedWeather,
                     sender: userData?.name || user?.displayName || "나",
                     date: selectedDate
                 });
-            }
+            };
 
-            setTitle('');
-            setContent('');
-            setImages([]);
-            onSuccess();
-            onClose();
+            await action();
         } catch (error) {
             console.error(error);
             alert('저장에 실패했습니다.');
+            refreshData(); // Restore state on error
         } finally {
             setIsLoading(false);
         }

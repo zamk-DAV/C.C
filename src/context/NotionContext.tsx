@@ -31,6 +31,11 @@ interface NotionContextType {
     error: string | null;
     refreshData: () => Promise<void>;
     lastFetched: number | null;
+
+    // Optimistic UI Actions
+    addOptimisticItem: (category: 'Diary' | 'Memory' | 'Event' | 'Letter', item: NotionItem) => void;
+    updateOptimisticItem: (category: 'Diary' | 'Memory' | 'Event' | 'Letter', item: NotionItem) => void;
+    deleteOptimisticItem: (category: 'Diary' | 'Memory' | 'Event' | 'Letter', id: string) => void;
 }
 
 const NotionContext = createContext<NotionContextType | undefined>(undefined);
@@ -137,23 +142,38 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
                 fetchNotionData('Letter', undefined, 20)
             ]);
 
-            // 2. Update State & Cache
-            setDiaryData(diaryResult.data);
+            // 2. Update State & Cache with Optimistic Preservation
+            const mergeWithOptimistic = (current: NotionItem[], fresh: NotionItem[]) => {
+                const optimisticNew = current.filter(item => item.id.startsWith('optimistic-') && !item.isOptimisticDelete);
+                const updatedItems = current.filter(item => item.isOptimisticUpdate && !item.isOptimisticDelete);
+                const deletedIds = current.filter(item => item.isOptimisticDelete).map(item => item.id);
+
+                const mergedFresh = fresh
+                    .filter(fItem => !deletedIds.includes(fItem.id))
+                    .map(fItem => {
+                        const updated = updatedItems.find(u => u.id === fItem.id);
+                        return updated || fItem;
+                    });
+
+                return [...optimisticNew, ...mergedFresh];
+            };
+
+            setDiaryData(prev => mergeWithOptimistic(prev, diaryResult.data));
             saveToStorage(CACHE_KEY_DIARY, diaryResult.data);
             setHasMoreDiary(diaryResult.hasMore);
             setNextCursorDiary(diaryResult.nextCursor);
 
-            setMemoryData(memoryResult.data);
+            setMemoryData(prev => mergeWithOptimistic(prev, memoryResult.data));
             saveToStorage(CACHE_KEY_MEMORY, memoryResult.data);
             setHasMoreMemory(memoryResult.hasMore);
             setNextCursorMemory(memoryResult.nextCursor);
 
-            setEventData(eventResult.data);
+            setEventData(prev => mergeWithOptimistic(prev, eventResult.data));
             saveToStorage(CACHE_KEY_EVENT, eventResult.data);
             setHasMoreEvent(eventResult.hasMore);
             setNextCursorEvent(eventResult.nextCursor);
 
-            setLetterData(letterResult.data);
+            setLetterData(prev => mergeWithOptimistic(prev, letterResult.data));
             saveToStorage(CACHE_KEY_LETTER, letterResult.data);
             setHasMoreLetter(letterResult.hasMore);
             setNextCursorLetter(letterResult.nextCursor);
@@ -266,10 +286,8 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const refreshData = useCallback(async () => {
         clearNotionCache();
-        setDiaryData([]);
-        setMemoryData([]);
-        setEventData([]);
-        setLetterData([]);
+        // We don't clear state immediately to avoid flickering.
+        // The background fetch will overwrite it.
         setNextCursorDiary(null);
         setNextCursorMemory(null);
         setNextCursorEvent(null);
@@ -281,6 +299,31 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         hasInitializedRef.current = false;
         await fetchInitialData();
     }, [fetchInitialData]);
+
+    // Optimistic UI Implementation
+    const addOptimisticItem = useCallback((category: 'Diary' | 'Memory' | 'Event' | 'Letter', item: NotionItem) => {
+        const updater = (prev: NotionItem[]) => [item, ...prev];
+        if (category === 'Diary') setDiaryData(updater);
+        if (category === 'Memory') setMemoryData(updater);
+        if (category === 'Event') setEventData(updater);
+        if (category === 'Letter') setLetterData(updater);
+    }, []);
+
+    const updateOptimisticItem = useCallback((category: 'Diary' | 'Memory' | 'Event' | 'Letter', item: NotionItem) => {
+        const updater = (prev: NotionItem[]) => prev.map(i => i.id === item.id ? { ...item, isOptimisticUpdate: true } : i);
+        if (category === 'Diary') setDiaryData(updater);
+        if (category === 'Memory') setMemoryData(updater);
+        if (category === 'Event') setEventData(updater);
+        if (category === 'Letter') setLetterData(updater);
+    }, []);
+
+    const deleteOptimisticItem = useCallback((category: 'Diary' | 'Memory' | 'Event' | 'Letter', id: string) => {
+        const updater = (prev: NotionItem[]) => prev.map(i => i.id === id ? { ...i, isOptimisticDelete: true } : i);
+        if (category === 'Diary') setDiaryData(updater);
+        if (category === 'Memory') setMemoryData(updater);
+        if (category === 'Event') setEventData(updater);
+        if (category === 'Letter') setLetterData(updater);
+    }, []);
 
     const value: NotionContextType = {
         diaryData,
@@ -299,6 +342,9 @@ export const NotionProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         error,
         refreshData,
         lastFetched,
+        addOptimisticItem,
+        updateOptimisticItem,
+        deleteOptimisticItem,
     };
 
     return (

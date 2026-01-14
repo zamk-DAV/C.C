@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../lib/firebase';
 import { collection, query, orderBy, onSnapshot, addDoc, serverTimestamp, Timestamp, doc, updateDoc, getDoc, increment, writeBatch } from 'firebase/firestore';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
+import { storage } from '../lib/firebase';
 import { MessageBubble } from '../components/chat/MessageBubble';
 import { MobileMessageItem } from '../components/chat/interactions/MobileMessageItem';
 import { DesktopMessageItem } from '../components/chat/interactions/DesktopMessageItem';
@@ -37,6 +39,9 @@ export const ChatPage: React.FC = () => {
 
     const [showNewMessageToast, setShowNewMessageToast] = useState(false);
     const [isAtBottom, setIsAtBottom] = useState(true);
+    const [isDragging, setIsDragging] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
 
     // Auto-scroll to bottom combined with messages and typing status
@@ -167,51 +172,26 @@ export const ChatPage: React.FC = () => {
     };
 
     // Hooks
-    // Track chat activity status & Clear unread count
+    // Clear unread count when chat page is opened (Item 1 adjustment)
     useEffect(() => {
-        if (!user?.uid) return;
+        if (!user?.uid || document.visibilityState !== 'visible') return;
 
         const userRef = doc(db, 'users', user.uid);
+        updateDoc(userRef, { unreadCount: 0 }).catch(console.error);
 
-        const updateActivityStatus = (isActive: boolean) => {
-            const updateData: any = {
-                isChatActive: isActive,
-                lastActive: serverTimestamp()
-            };
+        if ('setAppBadge' in navigator) {
+            (navigator as any).setAppBadge(0).catch(console.error);
+        }
 
-            if (isActive) {
-                updateData.unreadCount = 0;
-            }
-
-            updateDoc(userRef, updateData).catch(console.error);
-
-            if (isActive && 'setAppBadge' in navigator) {
+        const handleFocus = () => {
+            updateDoc(userRef, { unreadCount: 0 }).catch(console.error);
+            if ('setAppBadge' in navigator) {
                 (navigator as any).setAppBadge(0).catch(console.error);
             }
         };
 
-        // Initial set (if visible)
-        if (document.visibilityState === 'visible') {
-            updateActivityStatus(true);
-        }
-
-        const handleVisibilityChange = () => {
-            if (document.visibilityState === 'visible') {
-                console.log("[Chat] App foregrounded -> Setting active");
-                updateActivityStatus(true);
-            } else {
-                console.log("[Chat] App backgrounded -> Setting inactive");
-                updateActivityStatus(false);
-            }
-        };
-
-        document.addEventListener('visibilitychange', handleVisibilityChange);
-
-        // Set inactive on unmount
-        return () => {
-            document.removeEventListener('visibilitychange', handleVisibilityChange);
-            updateActivityStatus(false);
-        };
+        window.addEventListener('focus', handleFocus);
+        return () => window.removeEventListener('focus', handleFocus);
     }, [user?.uid]);
 
     useFcmToken();
@@ -324,6 +304,80 @@ export const ChatPage: React.FC = () => {
 
         } catch (error) {
             console.error("Error sending message:", error);
+        }
+    };
+
+    const handleUploadFiles = async (files: FileList | File[]) => {
+        if (!user || !coupleData?.id) return;
+
+        const fileArray = Array.from(files);
+        for (const file of fileArray) {
+            if (!file.type.startsWith('image/')) {
+                alert('이미지 파일만 업로드 가능합니다.');
+                continue;
+            }
+
+            const storageRef = ref(storage, `chats/${coupleData.id}/${Date.now()}_${file.name}`);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            uploadTask.on('state_changed',
+                (snapshot) => {
+                    const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+                    setUploadProgress(progress);
+                },
+                (error) => {
+                    console.error("Upload failed:", error);
+                    setUploadProgress(null);
+                },
+                async () => {
+                    const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+
+                    // Send message with image
+                    const messageData: any = {
+                        imageUrl: downloadURL,
+                        senderId: user.uid,
+                        createdAt: serverTimestamp(),
+                        type: 'image',
+                        isRead: false,
+                        text: ''
+                    };
+
+                    await addDoc(collection(db, 'couples', coupleData.id, 'messages'), messageData);
+
+                    if (partnerData?.uid) {
+                        await updateDoc(doc(db, 'users', partnerData.uid), {
+                            unreadCount: increment(1)
+                        });
+                    }
+
+                    sendPushNotification('📷 사진을 보냈습니다.');
+                    setUploadProgress(null);
+                }
+            );
+        }
+    };
+
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragging(false);
+        if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+            handleUploadFiles(e.dataTransfer.files);
+        }
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files.length > 0) {
+            handleUploadFiles(e.target.files);
         }
     };
 
@@ -502,12 +556,39 @@ export const ChatPage: React.FC = () => {
                     }
                 </header >
 
-                {/* Main Chat Area */}
                 <main
                     className="flex-1 mt-[130px] mb-[100px] px-6 overflow-y-auto no-scrollbar scroll-smooth relative"
                     style={{ overflowAnchor: 'auto' }}
                     onScroll={handleScroll}
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
                 >
+                    {isDragging && (
+                        <div className="absolute inset-0 z-50 bg-primary/10 backdrop-blur-[2px] border-2 border-dashed border-primary m-4 rounded-2xl flex items-center justify-center pointer-events-none animate-in fade-in duration-200">
+                            <div className="bg-background/90 px-6 py-4 rounded-xl shadow-xl flex flex-col items-center gap-3">
+                                <span className="material-symbols-outlined text-4xl text-primary animate-bounce">upload</span>
+                                <span className="text-sm font-bold text-primary">파일을 여기에 내려놓으세요</span>
+                            </div>
+                        </div>
+                    )}
+
+                    {uploadProgress !== null && (
+                        <div className="fixed top-32 left-1/2 -translate-x-1/2 z-[60] w-48">
+                            <div className="bg-background/90 backdrop-blur-md p-3 rounded-xl shadow-lg border border-border">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-[10px] font-bold text-primary uppercase">Uploading...</span>
+                                    <span className="text-[10px] font-bold text-primary">{Math.round(uploadProgress)}%</span>
+                                </div>
+                                <div className="w-full h-1 bg-secondary rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-primary transition-all duration-300"
+                                        style={{ width: `${uploadProgress}%` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    )}
                     {
                         Object.keys(groupedMessages).map((dateKey) => (
                             <div key={dateKey}>
@@ -646,7 +727,21 @@ export const ChatPage: React.FC = () => {
                             handleSendMessage();
                         }}
                     >
-                        <button type="button" className="material-symbols-outlined text-[24px] font-light text-text-secondary hover:text-primary transition-colors">add</button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/*"
+                            multiple
+                            onChange={handleFileSelect}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="material-symbols-outlined text-[24px] font-light text-text-secondary hover:text-primary transition-colors"
+                        >
+                            add
+                        </button>
                         <input
                             className="flex-1 border-none focus:ring-0 text-[14px] placeholder:text-text-secondary/50 px-0 bg-transparent outline-none text-primary"
                             placeholder="메시지를 입력하세요"

@@ -33,7 +33,6 @@ export interface CoupleData {
     notice?: { text: string; id: string; createdAt: any };
     typing?: Record<string, boolean>; // { [userId]: isTyping }
 }
-// Force Refresh
 
 export interface NotionItem {
     id: string;
@@ -56,6 +55,9 @@ export interface NotionItem {
     isImportant?: boolean;
     isShared?: boolean;
     endDate?: string;
+    // Optimistic UI Flags
+    isOptimisticUpdate?: boolean;
+    isOptimisticDelete?: boolean;
 }
 export interface ChatMessage {
     id: string;

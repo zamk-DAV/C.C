@@ -3,6 +3,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
 import { createDiaryEntry } from '../../lib/notion';
 import { useAuth } from '../../context/AuthContext';
+import { useNotion } from '../../context/NotionContext';
+import type { NotionItem } from '../../types';
 
 interface MemoryWriteModalProps {
     isOpen: boolean;
@@ -12,6 +14,7 @@ interface MemoryWriteModalProps {
 
 const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { user, userData } = useAuth();
+    const { addOptimisticItem } = useNotion();
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);
@@ -51,19 +54,36 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
         if (!content && images.length === 0) return;
 
         setIsLoading(true);
+        const dateString = format(new Date(), 'yyyy-MM-dd');
+
+        // Optimistic Update
+        const optimisticItem: NotionItem = {
+            id: `optimistic-${Date.now()}`,
+            title: '추억',
+            date: dateString,
+            coverImage: images[0]?.base64 || null,
+            previewText: content,
+            type: 'Memory',
+            author: userData?.name || user?.displayName || '나',
+            images: images.map(img => img.base64)
+        };
+
         try {
-            await createDiaryEntry(content, images, 'Memory', {
-                sender: userData?.name || user?.displayName || "나",
-                date: format(new Date(), 'yyyy-MM-dd')
-            });
+            addOptimisticItem('Memory', optimisticItem);
 
             setContent('');
             setImages([]);
             onSuccess();
             onClose();
+
+            await createDiaryEntry(content, images, 'Memory', {
+                sender: userData?.name || user?.displayName || "나",
+                date: dateString
+            });
         } catch (error) {
-            console.error(error);
+            console.error("Memory save failed:", error);
             alert('저장에 실패했습니다.');
+            refreshData(); // Restore UI state on failure
         } finally {
             setIsLoading(false);
         }

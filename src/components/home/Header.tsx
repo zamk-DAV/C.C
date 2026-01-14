@@ -28,7 +28,7 @@ export const Header: React.FC<HeaderProps> = ({
     };
 
     return (
-        <header className="flex items-start justify-between px-6 pt-16 pb-12">
+        <header className="flex items-start justify-between px-6 pt-16 pb-12 border-b border-border/40 backdrop-blur-sm sticky top-0 z-50 bg-background/50">
             <div className="flex items-center">
                 <div
                     className={`toggle-pill ${isPushEnabled ? 'toggle-active' : ''}`}

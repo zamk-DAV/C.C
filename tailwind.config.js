@@ -15,6 +15,8 @@ export default {
                 'border': 'var(--border-color)',
                 'accent': 'var(--accent-color)',
                 'input-bg': 'var(--input-bg)',
+                'danger': 'var(--danger)',
+                'success': 'var(--success)',
 
                 // Keep backward compatibility if needed, or just let these override
                 "background-light": "var(--bg-color)", // alias

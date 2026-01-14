@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { type User, onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection, query, where } from 'firebase/firestore';
+import { doc, onSnapshot, collection, query, where, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../lib/firebase';
 import type { UserData, CoupleData } from '../types';
 import { LoadingScreen } from '../components/common/LoadingScreen';
@@ -138,16 +138,45 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     }, [user, userData?.coupleId]);
 
-    // Safety Timeout
+    // Global Presence Logic (Item 1)
     useEffect(() => {
-        const timer = setTimeout(() => {
-            if (loading) {
-                console.warn("Loading timed out. Forcing stop.");
-                setLoading(false);
+        if (!user?.uid) return;
+
+        const userRef = doc(db, 'users', user.uid);
+        let isActive = true;
+
+        const updatePresence = (online: boolean) => {
+            if (!user?.uid) return;
+            updateDoc(userRef, {
+                isChatActive: online, // Reuse this field for global online status as per user request
+                lastActive: serverTimestamp()
+            }).catch(err => console.error("[Auth] Presence update failed:", err));
+        };
+
+        const handleVisibilityChange = () => {
+            const nextActive = document.visibilityState === 'visible';
+            if (nextActive !== isActive) {
+                isActive = nextActive;
+                updatePresence(isActive);
             }
-        }, 15000);
-        return () => clearTimeout(timer);
-    }, [loading]);
+        };
+
+        const handleBeforeUnload = () => {
+            updatePresence(false);
+        };
+
+        // Initial check
+        updatePresence(document.visibilityState === 'visible');
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+        window.addEventListener('beforeunload', handleBeforeUnload);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+            window.removeEventListener('beforeunload', handleBeforeUnload);
+            updatePresence(false);
+        };
+    }, [user?.uid]);
 
     const unlockApp = () => {
         sessionStorage.setItem('app_unlocked', 'true');

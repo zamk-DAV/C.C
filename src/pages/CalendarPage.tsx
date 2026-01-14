@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 // import { useAuth } from '../context/AuthContext';
 import { useEventData } from '../context/NotionContext';
 import type { CalendarEvent, NotionItem } from '../types';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addMonths, subMonths, isSameDay, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import { EventWriteModal } from '../components/calendar/EventWriteModal';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useGesture } from '@use-gesture/react';
 import { useHaptics } from '../hooks/useHaptics';
 
@@ -115,36 +115,36 @@ export const CalendarPage: React.FC = () => {
     const [selectedDate, setSelectedDate] = useState(new Date());
     const [isEventModalOpen, setIsEventModalOpen] = useState(false);
     const [editingEvent, setEditingEvent] = useState<CalendarEvent | undefined>(undefined);
-    const [localEvents, setLocalEvents] = useState<CalendarEvent[]>([]);
+    const [direction, setDirection] = useState(0); // -1 for prev, 1 for next
 
     // Use Notion Data
     const { eventData, isLoading: isNotionLoading, refreshData } = useEventData();
     const { heavy, medium } = useHaptics();
 
-    // Map Notion Items to Calendar Events
+    // Map Notion Items to Calendar Events & Filter Deletions
     const calendarEvents = useMemo(() => {
-        return eventData.map((item: NotionItem): CalendarEvent => {
-            const eventDate = item.date ? parseISO(item.date) : new Date();
+        return eventData
+            .filter(item => !item.isOptimisticDelete)
+            .map((item: NotionItem): CalendarEvent => {
+                const eventDate = item.date ? parseISO(item.date) : new Date();
 
-            return {
-                id: item.id,
-                title: item.title,
-                date: eventDate,
-                time: item.date ? format(parseISO(item.date), 'HH:mm') : '00:00',
-                type: 'Event',
-                note: item.previewText || '',
-                author: item.author,
-                color: item.color,
-                isImportant: item.isImportant,
-                isShared: item.isShared,
-                endDate: item.endDate ? parseISO(item.endDate) : undefined
-            };
-        });
+                return {
+                    id: item.id,
+                    title: item.title,
+                    date: eventDate,
+                    time: item.date ? format(parseISO(item.date), 'HH:mm') : '00:00',
+                    type: 'Event',
+                    note: item.previewText || '',
+                    author: item.author,
+                    color: item.color,
+                    isImportant: item.isImportant,
+                    isShared: item.isShared,
+                    endDate: item.endDate ? parseISO(item.endDate) : undefined
+                };
+            });
     }, [eventData]);
 
-    const events = useMemo(() => {
-        return [...calendarEvents, ...localEvents];
-    }, [calendarEvents, localEvents]);
+    const events = calendarEvents;
 
     const loading = isNotionLoading && calendarEvents.length === 0;
 
@@ -156,8 +156,14 @@ export const CalendarPage: React.FC = () => {
     const startDay = getDay(monthStart);
     const emptyDays = Array.from({ length: startDay });
 
-    const handlePrevMonth = () => setCurrentDate(subMonths(currentDate, 1));
-    const handleNextMonth = () => setCurrentDate(addMonths(currentDate, 1));
+    const handlePrevMonth = () => {
+        setDirection(-1);
+        setCurrentDate(subMonths(currentDate, 1));
+    };
+    const handleNextMonth = () => {
+        setDirection(1);
+        setCurrentDate(addMonths(currentDate, 1));
+    };
 
     // Gestures for Month Navigation
     const bindGesture = useGesture(
@@ -187,12 +193,8 @@ export const CalendarPage: React.FC = () => {
         return dailyEvents.sort((a, b) => (a.time || '00:00').localeCompare(b.time || '00:00'));
     }, [events, selectedDate]);
 
-    const handleEventSuccess = (mockEvent?: CalendarEvent) => {
-        if (mockEvent) {
-            setLocalEvents(prev => [...prev, mockEvent]);
-        } else {
-            refreshData();
-        }
+    const handleEventSuccess = () => {
+        refreshData();
         setIsEventModalOpen(false);
         setEditingEvent(undefined);
     };
@@ -223,59 +225,80 @@ export const CalendarPage: React.FC = () => {
                 </button>
             </header>
 
-            {/* Calendar Grid */}
-            <div
-                {...bindGesture() as any}
-                className="px-8 mb-10 touch-pan-y"
-            >
-                {/* Days of Week */}
-                <div className="grid grid-cols-7 mb-4 border-b border-border pb-2">
-                    {['일', '월', '화', '수', '목', '금', '토'].map((day) => (
-                        <p key={day} className="text-[10px] font-medium tracking-widest flex items-center justify-center text-text-secondary">
-                            {day}
-                        </p>
-                    ))}
-                </div>
+            {/* Calendar Grid Section with Animation */}
+            <div className="relative px-8 mb-10 overflow-hidden min-h-[300px]">
+                <AnimatePresence initial={false} custom={direction} mode="wait">
+                    <motion.div
+                        key={currentDate.toISOString()}
+                        custom={direction}
+                        variants={{
+                            enter: (direction: number) => ({
+                                x: direction > 0 ? 300 : -300,
+                                opacity: 0
+                            }),
+                            center: {
+                                zIndex: 1,
+                                x: 0,
+                                opacity: 1
+                            },
+                            exit: (direction: number) => ({
+                                zIndex: 0,
+                                x: direction < 0 ? 300 : -300,
+                                opacity: 0
+                            })
+                        }}
+                        initial="enter"
+                        animate="center"
+                        exit="exit"
+                        transition={{
+                            x: { type: "spring", stiffness: 300, damping: 30 },
+                            opacity: { duration: 0.2 }
+                        }}
+                        className="w-full h-full"
+                    >
+                        <div
+                            {...bindGesture() as any}
+                            className="touch-pan-y"
+                        >
+                            <div className="grid grid-cols-7 gap-y-2">
+                                {emptyDays.map((_, i) => (
+                                    <div key={`empty-${i}`} className="h-10 w-full"></div>
+                                ))}
 
-                {/* Days Grid */}
-                <div className="grid grid-cols-7 gap-y-2">
-                    {/* Empty Slots */}
-                    {emptyDays.map((_, i) => (
-                        <div key={`empty-${i}`} className="h-10 w-full"></div>
-                    ))}
+                                {daysInMonth.map((day) => {
+                                    const isSelected = isSameDay(day, selectedDate);
+                                    const hasEvent = events.some(e => isSameDay(e.date, day));
 
-                    {/* Days */}
-                    {daysInMonth.map((day) => {
-                        const isSelected = isSameDay(day, selectedDate);
-                        const hasEvent = events.some(e => isSameDay(e.date, day));
-
-                        return (
-                            <button
-                                key={day.toString()}
-                                onClick={() => {
-                                    medium();
-                                    setSelectedDate(day);
-                                }}
-                                className="relative h-10 w-full flex flex-col items-center justify-center hover:bg-secondary rounded-full transition-colors active:scale-95 touch-manipulation"
-                            >
-                                {isSelected && (
-                                    <motion.div
-                                        layoutId="selected-day"
-                                        className="absolute size-9 rounded-full border border-primary/40 bg-secondary/30"
-                                        initial={false}
-                                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                                    />
-                                )}
-                                <span className={`relative text-base z-10 ${isSelected ? 'font-medium text-primary' : 'font-light text-text-secondary'}`}>
-                                    {format(day, 'd')}
-                                </span>
-                                {hasEvent && !isSelected && (
-                                    <div className="absolute bottom-1.5 w-[4px] h-[4px] bg-primary/80 rounded-full shadow-sm"></div>
-                                )}
-                            </button>
-                        );
-                    })}
-                </div>
+                                    return (
+                                        <button
+                                            key={day.toString()}
+                                            onClick={() => {
+                                                medium();
+                                                setSelectedDate(day);
+                                            }}
+                                            className="relative h-10 w-full flex flex-col items-center justify-center hover:bg-secondary rounded-full transition-colors active:scale-95 touch-manipulation"
+                                        >
+                                            {isSelected && (
+                                                <motion.div
+                                                    layoutId="selected-day"
+                                                    className="absolute size-9 rounded-full border border-primary/40 bg-secondary/30"
+                                                    initial={false}
+                                                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                                                />
+                                            )}
+                                            <span className={`relative text-base z-10 ${isSelected ? 'font-medium text-primary' : 'font-light text-text-secondary'}`}>
+                                                {format(day, 'd')}
+                                            </span>
+                                            {hasEvent && !isSelected && (
+                                                <div className="absolute bottom-1.5 w-[4px] h-[4px] bg-primary/80 rounded-full shadow-sm"></div>
+                                            )}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </motion.div>
+                </AnimatePresence>
             </div>
 
             {/* Selected Date Header */}

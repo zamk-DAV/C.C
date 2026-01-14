@@ -18,6 +18,8 @@
   --border-color: #e5e5e5;
   --accent-color: #000000;
   --input-bg: #ffffff;
+  --danger: #FF453A;
+  --success: #32D74B;
 }
 
 /* Theme 2: Apple (Warm Red) */
@@ -30,6 +32,8 @@
   --border-color: #E7AC98;
   --accent-color: #8B3A4A;
   --input-bg: #EDD6BD;
+  --danger: #B22222;
+  --success: #6B8E23;
 }
 
 /* Theme 3: Forest Friends (Natural Green) */
@@ -42,6 +46,8 @@
   --border-color: #DCCBC5;
   --accent-color: #5A6B51;
   --input-bg: #f5f5f5;
+  --danger: #CD5C5C;
+  --success: #556B2F;
 }
 
 /* Theme 4: Clay (Earthy) */
@@ -54,6 +60,8 @@
   --border-color: #DCC2C1;
   --accent-color: #6E6062;
   --input-bg: #f5f5f5;
+  --danger: #A52A2A;
+  --success: #2E8B57;
 }
 
 /* Theme 5: Calico Cat (Warm Brown) */
@@ -66,6 +74,8 @@
   --border-color: #F1D5C8;
   --accent-color: #8B7875;
   --input-bg: #f5f5f5;
+  --danger: #B22222;
+  --success: #6B8E23;
 }
 
 /* Theme 6: Morning Glow (Soft Orange) */
@@ -78,6 +88,8 @@
   --border-color: #E7E4DF;
   --accent-color: #AA7B65;
   --input-bg: #F5ECE6;
+  --danger: #D2691E;
+  --success: #8FBC8F;
 }
 
 /* Theme 7: Pastel (Soft Blue) */
@@ -90,6 +102,8 @@
   --border-color: #E6DFDB;
   --accent-color: #8A92A0;
   --input-bg: #F4ECE8;
+  --danger: #CD5C5C;
+  --success: #4682B4;
 }
 
 /* Theme 8: Purple Milktea (Soft Purple) */
@@ -102,6 +116,8 @@
   --border-color: #E2D4E0;
   --accent-color: #3C4362;
   --input-bg: #F5EDE6;
+  --danger: #9370DB;
+  --success: #4B0082;
 }
 
 /* Theme 9: Modern House (Dark Gray) */
@@ -114,6 +130,8 @@
   --border-color: #77726E;
   --accent-color: #B3B9C1;
   --input-bg: #2a2a2a;
+  --danger: #FF6666;
+  --success: #99FF99;
 }
 
 /* Theme 10: Grayscale (Dark) */
@@ -126,6 +144,8 @@
   --border-color: #616161;
   --accent-color: #dfdfdf;
   --input-bg: #1e2120;
+  --danger: #FF3B30;
+  --success: #4CD964;
 }
 
 /* Theme 11: Everest Night (Deep Navy) */
@@ -138,6 +158,8 @@
   --border-color: #575669;
   --accent-color: #a1a2ab;
   --input-bg: #1d1b28;
+  --danger: #FF453A;
+  --success: #30D158;
 }
 
 /* Theme 12: Dark Mode (Classic Dark) */
@@ -150,6 +172,8 @@
   --border-color: #333333;
   --accent-color: #ffffff;
   --input-bg: #1a1a1a;
+  --danger: #FF453A;
+  --success: #32D74B;
 }
 
 @layer components {
