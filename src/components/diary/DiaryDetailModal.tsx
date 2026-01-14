@@ -1,9 +1,9 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence, type PanInfo } from 'framer-motion';
 import { format, parseISO } from 'date-fns';
 import { ko } from 'date-fns/locale';
 import type { NotionItem } from '../../types';
-import { useNotion } from '../../context/NotionContext';
+
 
 interface DiaryDetailModalProps {
     isOpen: boolean;
@@ -18,9 +18,7 @@ export const DiaryDetailModal: React.FC<DiaryDetailModalProps> = ({
     item,
     authorName
 }) => {
-    const { refreshData } = useNotion();
     const [currentImageIndex, setCurrentImageIndex] = useState(0);
-    const retryRef = useRef(false);
 
     // Safe derivation of values for hooks
     const images = item

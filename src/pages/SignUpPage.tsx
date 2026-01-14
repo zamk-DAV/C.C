@@ -1,3 +1,8 @@
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
+import { auth, db } from '../lib/firebase';
 import { motion } from 'framer-motion';
 
 export const SignUpPage: React.FC = () => {

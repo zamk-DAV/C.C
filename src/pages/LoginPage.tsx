@@ -1,3 +1,7 @@
+import React from 'react';
+import { useNavigate, Link } from 'react-router-dom';
+import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence } from 'firebase/auth';
+import { auth } from '../lib/firebase';
 import { motion } from 'framer-motion';
 
 export const LoginPage: React.FC = () => {

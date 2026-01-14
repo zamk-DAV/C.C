@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 // import { useAuth } from '../context/AuthContext';
 import { useEventData } from '../context/NotionContext';
 import type { CalendarEvent, NotionItem } from '../types';

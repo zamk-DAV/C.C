@@ -14,7 +14,7 @@ interface MemoryWriteModalProps {
 
 const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, onSuccess }) => {
     const { user, userData } = useAuth();
-    const { addOptimisticItem } = useNotion();
+    const { addOptimisticItem, refreshData } = useNotion();
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string }[]>([]);
     const [isLoading, setIsLoading] = useState(false);

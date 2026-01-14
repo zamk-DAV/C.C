@@ -1,5 +1,9 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 import { uploadProfileImage } from '../../services/storage';
 import { motion, AnimatePresence } from 'framer-motion';
+import type { UserData } from '../../types';
 
 interface ProfileEditModalProps {
     isOpen: boolean;

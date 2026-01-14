@@ -11,6 +11,7 @@ import { TimePickerModal } from '../common/TimePickerModal';
 import { useNotion } from '../../context/NotionContext';
 import type { NotionItem } from '../../types';
 import { compressImage } from '../../utils/imageUtils';
+import { ThemeToggle } from '../common/ThemeToggle';
 
 interface EventWriteModalProps {
     isOpen: boolean;
@@ -29,7 +30,7 @@ export const EventWriteModal: React.FC<EventWriteModalProps> = ({
 }) => {
     const { medium } = useHaptics();
     const { user, userData } = useAuth();
-    const { addOptimisticItem, updateOptimisticItem, deleteOptimisticItem } = useNotion();
+    const { addOptimisticItem, updateOptimisticItem, deleteOptimisticItem, refreshData } = useNotion();
 
     const [title, setTitle] = useState('');
     const [isAllDay, setIsAllDay] = useState(false);

@@ -42,7 +42,7 @@ const MOOD_OPTIONS = [
 
 const FeedWriteModal: React.FC<FeedWriteModalProps> = ({ isOpen, onClose, onSuccess, type = 'Diary', initialData }) => {
     const { user, userData } = useAuth();
-    const { addOptimisticItem, updateOptimisticItem } = useNotion();
+    const { addOptimisticItem, updateOptimisticItem, refreshData } = useNotion();
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [images, setImages] = useState<{ base64: string, type: string, size: number, name: string, url?: string }[]>([]);
