@@ -116,7 +116,7 @@ export const MobileMessageItem: React.FC<MobileMessageItemProps> = ({
 
     return (
         <div
-            className="relative group touch-none active:z-50"
+            className="relative group touch-pan-y active:z-50"
             onTouchStart={handleTouchStart}
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
