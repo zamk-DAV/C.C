@@ -58,6 +58,13 @@ const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) =>
                     </div>
                 )}
 
+                {/* Debug Overlay */}
+                <div className="absolute top-0 left-0 w-full bg-black/70 text-green-400 text-[10px] p-2 break-all z-50 font-mono pointer-events-none">
+                    DEBUG URL: {currentImage || 'UNDEFINED'}
+                    <br />
+                    Status: {imgError ? 'ERROR' : 'LOADING/OK'}
+                </div>
+
                 {/* Navigation Buttons for Multiple Images */}
                 {hasMultipleImages && (
                     <>
