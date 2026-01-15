@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import type { MemoryItem } from '../../types';
 
@@ -7,9 +7,73 @@ export interface MemoryFeedProps {
     onLoadMore?: () => void;
     hasMore?: boolean;
     onItemClick?: (item: MemoryItem) => void;
+    onEdit?: (item: MemoryItem) => void;
+    onDelete?: (item: MemoryItem) => void;
 }
 
-const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: MemoryItem) => void }) => {
+const MoreButton = ({
+    onEdit,
+    onDelete
+}: {
+    onEdit?: () => void,
+    onDelete?: () => void
+}) => {
+    const [showMenu, setShowMenu] = useState(false);
+
+    if (!onEdit && !onDelete) return null;
+
+    return (
+        <div className="absolute top-2 right-2 z-20">
+            <button
+                onClick={(e) => { e.stopPropagation(); setShowMenu(!showMenu); }}
+                className="p-1 rounded-full bg-black/20 hover:bg-black/40 text-white backdrop-blur-sm transition-colors"
+                aria-label="More options"
+            >
+                <span className="material-symbols-outlined text-xl">more_vert</span>
+            </button>
+            {showMenu && (
+                <>
+                    <div
+                        className="fixed inset-0 z-10"
+                        onClick={(e) => { e.stopPropagation(); setShowMenu(false); }}
+                    />
+                    <div className="absolute right-0 mt-1 w-24 bg-white dark:bg-zinc-800 rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200 border border-border z-20">
+                        {onEdit && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setShowMenu(false); onEdit(); }}
+                                className="w-full px-4 py-2 text-left text-xs font-medium text-text-main hover:bg-secondary/50 flex items-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-sm">edit</span>
+                                수정
+                            </button>
+                        )}
+                        {onDelete && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setShowMenu(false); onDelete(); }}
+                                className="w-full px-4 py-2 text-left text-xs font-medium text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center gap-2"
+                            >
+                                <span className="material-symbols-outlined text-sm">delete</span>
+                                삭제
+                            </button>
+                        )}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
+const MemoryImageCard = ({
+    item,
+    onClick,
+    onEdit,
+    onDelete
+}: {
+    item: MemoryItem,
+    onClick: (item: MemoryItem) => void,
+    onEdit?: (item: MemoryItem) => void,
+    onDelete?: (item: MemoryItem) => void
+}) => {
     // Filter valid images. Fallback to imageUrl if images array is empty.
     const displayImages = item.images && item.images.length > 0
         ? item.images.filter(img => img && typeof img === 'string')
@@ -29,7 +93,7 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
 
     // Common Text Overlay
     const TextOverlay = () => (
-        <div className="absolute top-0 right-0 p-3 z-10">
+        <div className="absolute top-0 right-0 p-3 z-10 pointer-events-none">
             <span className="bg-black/40 backdrop-blur-sm text-[10px] font-bold text-white px-2 py-1 rounded-full">{formattedDate}</span>
         </div>
     );
@@ -39,7 +103,11 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
         const url = displayImages[0];
         return (
             <div className="py-2 w-full cursor-pointer animate-in fade-in duration-500" onClick={() => onClick(item)}>
-                <div className="relative w-full rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all">
+                <div className="relative w-full rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all group">
+                    <MoreButton
+                        onEdit={onEdit ? () => onEdit(item) : undefined}
+                        onDelete={onDelete ? () => onDelete(item) : undefined}
+                    />
                     <img
                         src={url}
                         alt={item.title || 'Memory'}
@@ -60,7 +128,12 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
     // Multiple images - Main + Thumbnails (Instagram style gallery hint)
     return (
         <div className="py-2 w-full cursor-pointer animate-in fade-in duration-500" onClick={() => onClick(item)}>
-            <div className="relative rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all">
+            <div className="relative rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all group">
+                <MoreButton
+                    onEdit={onEdit ? () => onEdit(item) : undefined}
+                    onDelete={onDelete ? () => onDelete(item) : undefined}
+                />
+
                 {/* Main Large Image */}
                 <div className="w-full aspect-[4/3] relative">
                     <img
@@ -96,7 +169,14 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
     );
 };
 
-export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMore, onItemClick }) => {
+export const MemoryFeed: React.FC<MemoryFeedProps> = ({
+    items,
+    onLoadMore,
+    hasMore,
+    onItemClick,
+    onEdit,
+    onDelete
+}) => {
     const formatDate = (dateStr?: string) => {
         if (!dateStr) return '';
         try {
@@ -144,7 +224,15 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                     const hasImages = (item.images && item.images.length > 0) || !!item.imageUrl;
 
                     if (item.type === 'image' && hasImages) {
-                        return <MemoryImageCard key={item.id} item={item} onClick={handleItemClick} />;
+                        return (
+                            <MemoryImageCard
+                                key={item.id}
+                                item={item}
+                                onClick={handleItemClick}
+                                onEdit={onEdit}
+                                onDelete={onDelete}
+                            />
+                        );
                     } else {
                         // Text Entry Logic - Clean Note Card
                         const formattedDate = formatDate(item.date);
@@ -154,7 +242,11 @@ export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items, onLoadMore, hasMo
                                 className="py-2 w-full animate-in fade-in duration-500 cursor-pointer group"
                                 onClick={() => handleItemClick(item)}
                             >
-                                <div className="bg-secondary/20 p-5 rounded-2xl border border-border/40 hover:border-primary/20 transition-all hover:bg-secondary/40 relative overflow-hidden">
+                                <div className="bg-secondary/20 p-5 rounded-2xl border border-border/40 hover:border-primary/20 transition-all hover:bg-secondary/40 relative overflow-hidden group-hover:shadow-md">
+                                    <MoreButton
+                                        onEdit={onEdit ? () => onEdit(item) : undefined}
+                                        onDelete={onDelete ? () => onDelete(item) : undefined}
+                                    />
                                     <div className="flex justify-between items-start mb-2">
                                         <span className="text-[10px] font-bold text-text-secondary uppercase tracking-widest">{formattedDate}</span>
                                         <span className="material-symbols-outlined text-text-secondary/30 text-[16px]">format_quote</span>

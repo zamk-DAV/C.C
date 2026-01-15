@@ -127,4 +127,5 @@ export interface MemoryItem {
     subtitle: string;
     date?: string;
     images?: string[];
+    content?: string;
 }

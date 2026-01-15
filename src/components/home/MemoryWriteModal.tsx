@@ -1,18 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { format } from 'date-fns';
-import { addAppItem, uploadImage } from '../../services/firestore';
+import { addAppItem, updateAppItem, uploadImage } from '../../services/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { compressImage } from '../../utils/imageUtils';
 import { useMemoryData } from '../../context/DataContext';
+import type { MemoryItem } from '../../types';
 
 interface MemoryWriteModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSuccess: () => void;
+    editItem?: MemoryItem | null;
 }
 
-const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, onSuccess }) => {
+const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, onSuccess, editItem }) => {
     const { user, userData, coupleData } = useAuth();
     const { addOptimisticItem, removeOptimisticItem } = useMemoryData();
     const [content, setContent] = useState('');
@@ -23,10 +25,22 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
 
     useEffect(() => {
         if (isOpen) {
-            setContent('');
-            setImages([]);
+            if (editItem) {
+                setContent(editItem.content || editItem.quote || '');
+                const existingImages = (editItem.images || []).map(url => ({
+                    base64: url, // Use URL as source for preview
+                    type: 'image/jpeg',
+                    size: 0,
+                    name: 'existing',
+                    url: url
+                }));
+                setImages(existingImages);
+            } else {
+                setContent('');
+                setImages([]);
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, editItem]);
 
     const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files) {
@@ -59,7 +73,10 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
             return;
         }
 
-        const tempId = crypto.randomUUID();
+        const isEditMode = !!editItem;
+        const tempId = isEditMode ? editItem.id : crypto.randomUUID();
+
+        // Optimistic Object (Only for Create)
         const optimisticItem: any = {
             id: tempId,
             title: '추억',
@@ -73,14 +90,20 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
             isOptimisticUpdate: true
         };
 
-        // 1. Optimistic Add
-        addOptimisticItem('memories', optimisticItem);
+        // 1. Optimistic Add (Only for Create)
+        if (!isEditMode) {
+            addOptimisticItem('memories', optimisticItem);
+        }
 
-        // 2. Close UI Immediately
-        onSuccess();
-        onClose();
-        setContent(''); // Reset for next time immediately
-        setImages([]);
+        // 2. UI Updates (Optimistic or Loading)
+        if (!isEditMode) {
+            onSuccess();
+            onClose();
+            setContent('');
+            setImages([]);
+        } else {
+            setIsLoading(true); // Show loading for edit
+        }
 
         // 3. Background Upload & Save
         try {
@@ -96,7 +119,6 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
                         const fileName = img.name || `image-${Date.now()}.jpg`;
                         const file = new File([blob], fileName, { type: img.type });
                         // Fixed: Use a proper path structure with coupleId and unique filename
-                        // The previous code was uploading to a single 'feed_images' file, overwriting it constantly.
                         const storagePath = `couples/${coupleData.id}/feed_images/${Date.now()}_${fileName}`;
 
                         const downloadUrl = await uploadImage(file, storagePath);
@@ -108,23 +130,38 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
             }
 
             const finalItemData = {
-                ...optimisticItem,
+                content: content,
                 images: uploadedImageUrls,
-                isOptimisticUpdate: false,
-                createdAt: undefined // Server sets timestamp
+                title: '추억', // Ensure title is present
+                // Don't overwrite basic metadata on edit usually, but okay for now
+                updatedAt: new Date()
             };
-            delete finalItemData.id;
-            delete finalItemData.isOptimisticUpdate;
 
-            await addAppItem(coupleData.id, 'memories', finalItemData, tempId);
+            if (isEditMode) {
+                await updateAppItem(coupleData.id, 'memories', editItem.id, finalItemData);
+                setIsLoading(false);
+                onSuccess();
+                onClose();
+            } else {
+                const newItemData = {
+                    ...optimisticItem,
+                    ...finalItemData,
+                    isOptimisticUpdate: false,
+                    createdAt: undefined // Server sets timestamp
+                };
+                delete newItemData.id;
+                delete newItemData.isOptimisticUpdate;
 
-            // 4. Cleanup Optimistic
-            removeOptimisticItem('memories', tempId);
+                await addAppItem(coupleData.id, 'memories', newItemData, tempId);
+                // 4. Cleanup Optimistic
+                removeOptimisticItem('memories', tempId);
+            }
 
         } catch (error) {
-            console.error("Memory save failed (background):", error);
+            console.error("Memory save failed:", error);
             alert('저장에 실패했습니다.');
-            removeOptimisticItem('memories', tempId);
+            if (!isEditMode) removeOptimisticItem('memories', tempId);
+            setIsLoading(false);
         }
     };
 

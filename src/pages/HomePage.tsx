@@ -11,16 +11,18 @@ import { doc, updateDoc, collection, query, orderBy, limit, onSnapshot, serverTi
 import { db } from '../lib/firebase';
 import type { ChatMessage, MemoryItem } from '../types';
 import { format, differenceInMinutes, differenceInHours, differenceInDays } from 'date-fns';
+import { deleteAppItem } from '../services/firestore';
 
 export const HomePage: React.FC = () => {
     const { user, userData, partnerData, loading } = useAuth();
-    const { memoryData, hasMoreMemory, loadMoreMemory, refreshData, isLoading: notionLoading } = useData();
+    const { memoryData, hasMoreMemory, loadMoreMemory, refreshData, isLoading: notionLoading, deleteOptimisticItem } = useData();
     const navigate = useNavigate();
 
     // Latest Message State
     const [latestMessage, setLatestMessage] = useState<ChatMessage | null>(null);
     const [isWriteModalOpen, setIsWriteModalOpen] = useState(false);
     const [selectedFeedItem, setSelectedFeedItem] = useState<MemoryItem | null>(null);
+    const [editingFeedItem, setEditingFeedItem] = useState<MemoryItem | null>(null);
 
     // Transform memoryData for MemoryFeed
     const memories = useMemo<MemoryItem[]>(() => {
@@ -32,9 +34,32 @@ export const HomePage: React.FC = () => {
             title: item.title,
             subtitle: item.previewText || '',
             date: item.date,
-            images: item.images
+            images: item.images,
+            content: item.content // Added for edit mode
         }));
     }, [memoryData]);
+
+    const handleEditFeedItem = (item: MemoryItem) => {
+        setEditingFeedItem(item);
+        setIsWriteModalOpen(true);
+    };
+
+    const handleDeleteFeedItem = async (item: MemoryItem) => {
+        if (!window.confirm('정말 삭제하시겠습니까?')) return;
+        if (!userData?.coupleId) return;
+
+        // Optimistic Delete
+        deleteOptimisticItem('memories', item.id);
+
+        try {
+            await deleteAppItem(userData.coupleId, 'memories', item.id);
+        } catch (error) {
+            console.error("Failed to delete item:", error);
+            alert("삭제에 실패했습니다.");
+            refreshData(); // Rollback by refreshing
+        }
+    };
+
 
     // Dynamic Time Formatter
     const formatTime = (dateString?: any) => {
@@ -179,13 +204,18 @@ export const HomePage: React.FC = () => {
                         hasMore={hasMoreMemory}
                         onLoadMore={handleLoadMore}
                         onItemClick={(item) => setSelectedFeedItem(item)}
+                        onEdit={handleEditFeedItem}
+                        onDelete={handleDeleteFeedItem}
                     />
 
                     {/* Floating Action Button for Adding Feed */}
                     <div className="fixed bottom-24 right-6 z-30">
                         <button
                             className="flex items-center justify-center size-14 rounded-full bg-text-main dark:bg-primary shadow-xl hover:scale-105 active:scale-95 transition-transform group"
-                            onClick={() => setIsWriteModalOpen(true)}
+                            onClick={() => {
+                                setEditingFeedItem(null);
+                                setIsWriteModalOpen(true);
+                            }}
                         >
                             <span className="material-symbols-outlined text-white text-3xl font-light">add</span>
                         </button>
@@ -193,10 +223,14 @@ export const HomePage: React.FC = () => {
 
                     <MemoryWriteModal
                         isOpen={isWriteModalOpen}
-                        onClose={() => setIsWriteModalOpen(false)}
+                        onClose={() => {
+                            setIsWriteModalOpen(false);
+                            setEditingFeedItem(null);
+                        }}
                         onSuccess={() => {
                             refreshData();
                         }}
+                        editItem={editingFeedItem}
                     />
 
                     <FeedDetailModal
