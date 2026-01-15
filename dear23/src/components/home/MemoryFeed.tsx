@@ -15,6 +15,10 @@ const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) =>
 
     const currentImage = displayImages[imageIndex];
 
+    console.log(`[Dear23 Debug] FeedCard rendering. ID: ${item.id}, ImageIndex: ${imageIndex}`);
+    console.log(`[Dear23 Debug] currentImage value:`, currentImage);
+    console.log(`[Dear23 Debug] hasMultipleImages: ${hasMultipleImages}, displayImages length: ${displayImages.length}`);
+
     const handleNext = (e: React.MouseEvent) => {
         e.stopPropagation();
         if (displayImages.length > 0) {
@@ -105,6 +109,7 @@ const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) =>
 };
 
 export const MemoryFeed: React.FC<MemoryFeedProps> = ({ items }) => {
+    console.log(`[Dear23 Debug] MemoryFeed mounted. Received items count: ${items.length}`);
     return (
         <section className="py-12">
             <div className="px-6 mb-8">
