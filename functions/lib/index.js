@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateDiaryEntry = exports.deleteDiaryEntry = exports.getNotionPageContent = exports.createDiaryEntry = exports.searchNotionDatabases = exports.getNotionDatabase = exports.validateNotionSchema = void 0;
+exports.cleanOldMessages = exports.updateDiaryEntry = exports.deleteDiaryEntry = exports.getNotionPageContent = exports.createDiaryEntry = exports.searchNotionDatabases = exports.getNotionDatabase = exports.validateNotionSchema = void 0;
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 const axios_1 = require("axios");
@@ -257,17 +257,26 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                 const dateProp = ((_d = props["dear23_날짜"]) === null || _d === void 0 ? void 0 : _d.date) || ((_e = props["Date"]) === null || _e === void 0 ? void 0 : _e.date) || ((_f = props["날짜"]) === null || _f === void 0 ? void 0 : _f.date) || ((_g = props["date"]) === null || _g === void 0 ? void 0 : _g.date);
                 const date = dateProp ? dateProp.start : "";
                 const endDate = dateProp ? (dateProp.end || null) : null;
-                // Extract Cover Image (Files & Media property: 'dear23_대표이미지')
+                // Extract Cover Image and All Images (Files & Media property: 'dear23_대표이미지')
                 const fileProp = ((_h = props["dear23_대표이미지"]) === null || _h === void 0 ? void 0 : _h.files) || [];
                 let coverImage = null;
-                if (fileProp.length > 0) {
-                    const file = fileProp[0];
+                const images = [];
+                // Extract all images from the files property
+                fileProp.forEach((file) => {
+                    let url = null;
                     if (file.type === "file") {
-                        coverImage = file.file.url; // Expiring URL
+                        url = file.file.url; // Expiring URL
                     }
                     else if (file.type === "external") {
-                        coverImage = file.external.url;
+                        url = file.external.url;
                     }
+                    if (url) {
+                        images.push(url);
+                    }
+                });
+                // Set coverImage to the first image
+                if (images.length > 0) {
+                    coverImage = images[0];
                 }
                 // Fallback Title: If untitled but has image -> "Photo"
                 if (!title || title === "Untitled") {
@@ -301,6 +310,7 @@ exports.getNotionDatabase = functions.https.onRequest((req, res) => {
                     date,
                     endDate,
                     coverImage,
+                    images,
                     previewText,
                     author,
                     mood,
@@ -817,5 +827,61 @@ exports.updateDiaryEntry = functions.https.onRequest((req, res) => {
             res.status(500).send({ error: error.message });
         }
     });
+});
+// Scheduled Function: Delete messages older than 7 days
+// Runs daily at 3:00 AM KST (6:00 PM UTC previous day)
+exports.cleanOldMessages = functions.pubsub.schedule('0 18 * * *')
+    .timeZone('UTC')
+    .onRun(async (context) => {
+    console.log('[CleanMessages] Starting scheduled cleanup...');
+    try {
+        const db = admin.firestore();
+        const sevenDaysAgo = admin.firestore.Timestamp.fromDate(new Date(Date.now() - 7 * 24 * 60 * 60 * 1000));
+        console.log(`[CleanMessages] Deleting messages older than: ${sevenDaysAgo.toDate().toISOString()}`);
+        // Get all couples
+        const couplesSnapshot = await db.collection('couples').get();
+        let totalDeleted = 0;
+        for (const coupleDoc of couplesSnapshot.docs) {
+            const coupleId = coupleDoc.id;
+            console.log(`[CleanMessages] Processing couple: ${coupleId}`);
+            // Query old messages
+            const oldMessagesQuery = db
+                .collection('couples')
+                .doc(coupleId)
+                .collection('messages')
+                .where('createdAt', '<', sevenDaysAgo);
+            const oldMessagesSnapshot = await oldMessagesQuery.get();
+            if (oldMessagesSnapshot.empty) {
+                console.log(`[CleanMessages] No old messages for couple ${coupleId}`);
+                continue;
+            }
+            // Delete in batches (Firestore limit: 500 per batch)
+            const batch = db.batch();
+            let batchCount = 0;
+            for (const messageDoc of oldMessagesSnapshot.docs) {
+                batch.delete(messageDoc.ref);
+                batchCount++;
+                totalDeleted++;
+                // Commit batch if it reaches 500
+                if (batchCount === 500) {
+                    await batch.commit();
+                    console.log(`[CleanMessages] Committed batch of 500 messages for couple ${coupleId}`);
+                    batchCount = 0;
+                }
+            }
+            // Commit remaining messages
+            if (batchCount > 0) {
+                await batch.commit();
+                console.log(`[CleanMessages] Committed final batch of ${batchCount} messages for couple ${coupleId}`);
+            }
+            console.log(`[CleanMessages] Deleted ${oldMessagesSnapshot.size} messages for couple ${coupleId}`);
+        }
+        console.log(`[CleanMessages] Cleanup completed. Total messages deleted: ${totalDeleted}`);
+        return null;
+    }
+    catch (error) {
+        console.error('[CleanMessages] Error during cleanup:', error);
+        throw error;
+    }
 });
 //# sourceMappingURL=index.js.map

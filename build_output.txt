@@ -1,0 +1,13 @@
+
+> dear23@0.0.0 build
+> tsc -b && vite build
+
+src/components/calendar/EventWriteModal.tsx(241,13): error TS2304: Cannot find name 'refreshData'.
+src/components/calendar/EventWriteModal.tsx(297,38): error TS2304: Cannot find name 'ThemeToggle'.
+src/components/calendar/EventWriteModal.tsx(352,38): error TS2304: Cannot find name 'ThemeToggle'.
+src/components/calendar/EventWriteModal.tsx(372,38): error TS2304: Cannot find name 'ThemeToggle'.
+src/components/diary/DiaryDetailModal.tsx(21,11): error TS6133: 'refreshData' is declared but its value is never read.
+src/components/diary/DiaryDetailModal.tsx(23,11): error TS6133: 'retryRef' is declared but its value is never read.
+src/components/home/FeedWriteModal.tsx(174,13): error TS2304: Cannot find name 'refreshData'.
+src/components/home/MemoryWriteModal.tsx(86,13): error TS2304: Cannot find name 'refreshData'.
+src/pages/CalendarPage.tsx(1,36): error TS6133: 'useEffect' is declared but its value is never read.

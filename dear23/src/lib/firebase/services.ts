@@ -66,7 +66,9 @@ export const uploadImage = async (coupleId: string, base64: string): Promise<str
     const storageRef = ref(storage, `couples/${coupleId}/images/${fileName}`);
 
     await uploadString(storageRef, base64, 'data_url');
-    return getDownloadURL(storageRef);
+    const url = await getDownloadURL(storageRef);
+    console.log("Uploaded Image URL:", url);
+    return url;
 };
 
 export const uploadImages = async (coupleId: string, images: { base64: string }[]): Promise<string[]> => {

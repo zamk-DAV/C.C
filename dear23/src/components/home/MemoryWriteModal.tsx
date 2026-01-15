@@ -50,6 +50,11 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
     const handleSubmit = async () => {
         if ((!content && images.length === 0) || !userData?.coupleId || !user) return;
 
+        console.log("Submitting memory. Content:", content, "Images count:", images.length);
+        if (images.length > 0) {
+            console.log("First image sample:", images[0].base64.substring(0, 50) + "...");
+        }
+
         setIsLoading(true);
         try {
             // Upload images logic if needed, but MemoryService.addMemory handles it if I check services.ts?

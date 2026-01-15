@@ -8,6 +8,7 @@ interface MemoryFeedProps {
 
 const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) => {
     const [imageIndex, setImageIndex] = useState(0);
+    const [imgError, setImgError] = useState(false);
 
     const hasMultipleImages = item.images && item.images.length > 1;
     const displayImages = item.images || [];
@@ -18,6 +19,7 @@ const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) =>
         e.stopPropagation();
         if (displayImages.length > 0) {
             setImageIndex((prev) => (prev + 1) % displayImages.length);
+            setImgError(false);
         }
     };
 
@@ -25,16 +27,24 @@ const FeedCard: React.FC<{ item: MemoryEntry & { id: string } }> = ({ item }) =>
         e.stopPropagation();
         if (displayImages.length > 0) {
             setImageIndex((prev) => (prev - 1 + displayImages.length) % displayImages.length);
+            setImgError(false);
         }
     };
 
     return (
         <div className="snap-center shrink-0 w-[82vw] flex flex-col gap-6 group">
             <div className="relative aspect-[4/5] w-full rounded-3xl overflow-hidden border border-neutral-100 bg-neutral-100">
-                {currentImage ? (
-                    <div
-                        className="w-full h-full bg-center bg-cover grayscale-img transition-all duration-300"
-                        style={{ backgroundImage: `url("${currentImage}")` }}
+                {currentImage && !imgError ? (
+                    <img
+                        src={currentImage}
+                        alt="Memory"
+                        className="w-full h-full object-cover transition-all duration-300"
+                        onLoad={() => console.log("Image loaded successfully:", currentImage)}
+                        onError={(e) => {
+                            console.error("Image load error for URL:", currentImage);
+                            console.error("Error event:", e);
+                            setImgError(true);
+                        }}
                     />
                 ) : (
                     <div className="w-full h-full border border-border flex items-center justify-center p-12 text-center bg-secondary/10">

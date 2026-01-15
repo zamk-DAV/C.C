@@ -21,12 +21,13 @@
 *   **Micro-interactions**: 버튼 호버, 화면 전환 등에 부드러운 애니메이션(`framer-motion`)을 적용합니다.
 *   **KakaoTalk Style Chat**: 채팅 UI는 카카오톡 스타일(좌/우 정렬, 아바타, 읽음 표시 위치 등)을 유지합니다.
 
-## 3. Notion 통합 표준 (Notion Optimization)
+## 3. 문제 해결 및 디버깅 (Problem Solving & Debugging)
 
-Notion API의 성능 한계를 극복하기 위해 최적화된 스키마를 활용합니다.
+작동하지 않는 기능이나 오류 발생 시, 다음과 같은 접근 방식을 취합니다.
 
-*   **Property Utilization**: 리스트 뷰에서 N+1 문제를 방지하기 위해 `dear23_대표이미지`(Files & Media)와 `dear23_내용미리보기`(Text) 속성을 최우선으로 리딩합니다.
-*   **Caching**: 불필요한 API 호출을 최소화하기 위해 `notion.ts`의 캐싱 및 스로틀링 메커니즘을 준수합니다.
+*   **Research & Search**: 오류가 발생하면 즉시 코드를 수정하기보다, 공식 문서나 관련 자료를 검색하여 정확한 원인과 해결책을 찾습니다.
+*   **Detailed Logging**: 추측에 의존하지 않고, 문제가 발생하는 지점에 상세한 로그를 추가하여 데이터 흐름과 오류 원인을 명확히 파악한 후 수정합니다.
+*   **Root Cause Analysis**: 로그와 검색 결과를 바탕으로 근본적인 원인을 해결하는 방향으로 진행합니다.
 
 ## 4. 금지 사항 (Strict Prohibitions)
 
