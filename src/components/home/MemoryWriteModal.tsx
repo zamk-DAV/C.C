@@ -93,8 +93,13 @@ const MemoryWriteModal: React.FC<MemoryWriteModalProps> = ({ isOpen, onClose, on
                     try {
                         const res = await fetch(img.base64);
                         const blob = await res.blob();
-                        const file = new File([blob], img.name || `image-${Date.now()}.jpg`, { type: img.type });
-                        const downloadUrl = await uploadImage(file, 'feed_images');
+                        const fileName = img.name || `image-${Date.now()}.jpg`;
+                        const file = new File([blob], fileName, { type: img.type });
+                        // Fixed: Use a proper path structure with coupleId and unique filename
+                        // The previous code was uploading to a single 'feed_images' file, overwriting it constantly.
+                        const storagePath = `couples/${coupleData.id}/feed_images/${Date.now()}_${fileName}`;
+
+                        const downloadUrl = await uploadImage(file, storagePath);
                         uploadedImageUrls.push(downloadUrl);
                     } catch (uploadErr) {
                         console.error("Image upload failed:", uploadErr);
