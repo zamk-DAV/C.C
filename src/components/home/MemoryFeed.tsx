@@ -34,16 +34,34 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
         </div>
     );
 
+    const [imgError, setImgError] = React.useState<Record<string, boolean>>({});
+
+    const handleImageError = (url: string) => {
+        console.error(`[Dear23 Debug] Image load error for URL: ${url}`);
+        setImgError(prev => ({ ...prev, [url]: true }));
+    };
+
+    // Debug Overlay Component
+    const DebugOverlay = ({ url }: { url: string }) => (
+        <div className="absolute top-0 left-0 w-full bg-black/70 text-green-400 text-[10px] p-2 break-all z-50 font-mono pointer-events-none text-left">
+            DEBUG: {url}<br />
+            STATUS: {imgError[url] ? 'ERROR' : 'LOADING/OK'}
+        </div>
+    );
+
     // Single image - Full width
     if (imageCount === 1) {
+        const url = displayImages[0];
         return (
             <div className="py-2 w-full cursor-pointer animate-in fade-in duration-500" onClick={() => onClick(item)}>
                 <div className="relative w-full rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all">
+                    <DebugOverlay url={url} />
                     <img
-                        src={displayImages[0]}
+                        src={url}
                         alt={item.title || 'Memory'}
                         className="w-full h-auto object-cover max-h-[500px]"
                         loading="lazy"
+                        onError={() => handleImageError(url)}
                     />
                     <TextOverlay />
                     {item.title && (
@@ -62,48 +80,35 @@ const MemoryImageCard = ({ item, onClick }: { item: MemoryItem, onClick: (item: 
             <div className="relative rounded-2xl overflow-hidden bg-secondary shadow-sm hover:shadow-md transition-all">
                 {/* Main Large Image */}
                 <div className="w-full aspect-[4/3] relative">
+                    <DebugOverlay url={displayImages[0]} />
                     <img
                         src={displayImages[0]}
                         alt="Main memory"
                         className="w-full h-full object-cover"
                         loading="lazy"
+                        onError={() => handleImageError(displayImages[0])}
                     />
                     <TextOverlay />
                 </div>
 
                 {/* Thumbnails Row */}
                 <div className="grid grid-cols-3 gap-0.5 mt-0.5 h-24">
-                    {displayImages.slice(1, 3).map((img, idx) => (
+                    {displayImages.slice(1, 4).map((img, idx) => (
                         <div key={idx} className="relative w-full h-full">
+                            <DebugOverlay url={img} />
                             <img
                                 src={img}
                                 alt={`Memory ${idx + 2}`}
                                 className="w-full h-full object-cover"
                                 loading="lazy"
+                                onError={() => handleImageError(img)}
                             />
-                        </div>
-                    ))}
-                    {/* More indicator or 3rd image */}
-                    {imageCount >= 4 ? (
-                        <div className="relative w-full h-full">
-                            <img
-                                src={displayImages[3]}
-                                alt="More"
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                            />
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                                <span className="text-white font-bold text-lg">+{remainingCount}</span>
-                            </div>
-                        </div>
-                    ) : (displayImages[3] && (
-                        <div className="relative w-full h-full">
-                            <img
-                                src={displayImages[3]}
-                                alt="Memory 4"
-                                className="w-full h-full object-cover"
-                                loading="lazy"
-                            />
+                            {/* More indicator for 4th item (index 2 in slice) if there are more than 4 items */}
+                            {idx === 2 && imageCount > 4 && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center pointer-events-none">
+                                    <span className="text-white font-bold text-lg">+{remainingCount}</span>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>

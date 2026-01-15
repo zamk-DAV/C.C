@@ -1,0 +1,46 @@
+### Page state
+- Page URL: http://localhost:5173/
+- Page Title: Dear23
+- Page Snapshot:
+```yaml
+- generic [ref=e24]:
+  - main [ref=e25]:
+    - generic [ref=e26]:
+      - generic [ref=e30]:
+        - paragraph [ref=e31]: 도현
+        - paragraph [ref=e32]: 현재 접속 중
+      - main [ref=e33]:
+        - link "나 16시간 전 ㅇㅁㄴㅇ" [ref=e35] [cursor=pointer]:
+          - /url: /chat
+          - generic [ref=e36]:
+            - generic [ref=e37]:
+              - paragraph [ref=e39]: 나
+              - paragraph [ref=e40]: 16시간 전
+            - paragraph [ref=e42]: ㅇㅁㄴㅇ
+        - generic [ref=e43]:
+          - heading "Memory Feed" [level=2] [ref=e46]
+          - button "add" [ref=e49] [cursor=pointer]:
+            - generic [ref=e50]: add
+  - navigation [ref=e51]:
+    - generic [ref=e52]:
+      - link "edit_note 일기" [ref=e53] [cursor=pointer]:
+        - /url: /diary
+        - generic [ref=e55]: edit_note
+        - generic [ref=e56]: 일기
+      - link "calendar_month 캘린더" [ref=e57] [cursor=pointer]:
+        - /url: /calendar
+        - generic [ref=e58]: calendar_month
+        - generic [ref=e59]: 캘린더
+      - link "home 홈" [ref=e60] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e62]: home
+        - generic [ref=e63]: 홈
+      - link "mail_outline 우편함" [ref=e64] [cursor=pointer]:
+        - /url: /mailbox
+        - generic [ref=e66]: mail_outline
+        - generic [ref=e67]: 우편함
+      - link "settings 설정" [ref=e68] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=e69]: settings
+        - generic [ref=e70]: 설정
+```

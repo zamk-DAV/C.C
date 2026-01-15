@@ -1,0 +1,31 @@
+### Page state
+- Page URL: http://localhost:5173/diary
+- Page Title: Dear23
+- Page Snapshot:
+```yaml
+- generic [ref=e24]:
+  - main [ref=e25]:
+    - generic [ref=e213]: Loading...
+  - navigation [ref=e51]:
+    - generic [ref=e52]:
+      - link "edit_note 일기" [active] [ref=e53] [cursor=pointer]:
+        - /url: /diary
+        - generic [ref=e55]: edit_note
+        - generic [ref=e56]: 일기
+      - link "calendar_month 캘린더" [ref=e57] [cursor=pointer]:
+        - /url: /calendar
+        - generic [ref=e58]: calendar_month
+        - generic [ref=e59]: 캘린더
+      - link "home 홈" [ref=e60] [cursor=pointer]:
+        - /url: /
+        - generic [ref=e62]: home
+        - generic [ref=e63]: 홈
+      - link "mail_outline 우편함" [ref=e64] [cursor=pointer]:
+        - /url: /mailbox
+        - generic [ref=e66]: mail_outline
+        - generic [ref=e67]: 우편함
+      - link "settings 설정" [ref=e68] [cursor=pointer]:
+        - /url: /settings
+        - generic [ref=e69]: settings
+        - generic [ref=e70]: 설정
+```
